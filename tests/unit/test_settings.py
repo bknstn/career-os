@@ -140,6 +140,21 @@ def test_rejects_an_invalid_lever_region(tmp_path: Path) -> None:
         load_sources_config(config_path)
 
 
+def test_rejects_an_unknown_source_kind(tmp_path: Path) -> None:
+    config_path = _write_sources(
+        tmp_path,
+        """
+        sources:
+          - key: unknown
+            kind: unknown
+            company_name: Unknown Company
+        """,
+    )
+
+    with pytest.raises(ConfigurationError, match="kind"):
+        load_sources_config(config_path)
+
+
 def test_rejects_a_missing_kind_specific_required_field(tmp_path: Path) -> None:
     config_path = _write_sources(
         tmp_path,

@@ -51,7 +51,7 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
-files = ["src"]
+files = ["src", "tests/typing"]
 python_version = "3.12"
 strict = true
 warn_unreachable = true

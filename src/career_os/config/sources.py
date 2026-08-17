@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 NonEmptyText = Annotated[str, Field(min_length=1)]
+KNOWN_SOURCE_KINDS = frozenset({"greenhouse", "lever", "ashby", "workable_public"})
 
 
 class ConfigurationError(ValueError):
