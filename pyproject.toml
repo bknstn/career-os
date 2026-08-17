@@ -10,10 +10,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
+    "alembic>=1.16",
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
+    "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
     "PyYAML>=6.0",
+    "SQLAlchemy>=2.0",
 ]
 keywords = ["career", "job-market", "market-explorer"]
 classifiers = [
@@ -55,4 +58,7 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers"]
+markers = [
+    "integration: requires an explicitly enabled local PostgreSQL database",
+]
 testpaths = ["tests"]
