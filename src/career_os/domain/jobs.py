@@ -11,6 +11,8 @@ from typing import Any
 
 def _require_utc_aware(value: datetime, *, field_name: str) -> datetime:
     """Return a UTC timestamp or reject a datetime without a usable offset."""
+    if not isinstance(value, datetime):
+        raise TypeError(f"{field_name} must be a datetime")
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field_name} must be timezone-aware")
     return value.astimezone(UTC)
@@ -18,6 +20,8 @@ def _require_utc_aware(value: datetime, *, field_name: str) -> datetime:
 
 def _require_nonempty_text(value: str, *, field_name: str) -> str:
     """Normalize stable identity fields without permitting empty values."""
+    if not isinstance(value, str):
+        raise TypeError(f"{field_name} must be a string")
     normalized = value.strip()
     if not normalized:
         raise ValueError(f"{field_name} must not be blank")
