@@ -1,0 +1,13 @@
+{
+  "jobs": [
+    {
+      "id": 12345,
+      "title": "Valid job retained",
+      "absolute_url": "https://boards.greenhouse.io/example/jobs/12345"
+    },
+    {"title": "Missing stable ID"},
+    "not a job object",
+    {"id": 12345, "title": "Duplicate stable ID"}
+  ],
+  "meta": {"total": 4}
+}

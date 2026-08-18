@@ -1,0 +1,24 @@
+{
+  "jobs": [
+    {
+      "id": 12345,
+      "internal_job_id": 42,
+      "title": "Senior Platform Engineer",
+      "updated_at": "2026-08-18T09:00:00-00:00",
+      "location": {"name": "Warsaw, Poland"},
+      "absolute_url": "https://boards.greenhouse.io/example/jobs/12345",
+      "content": "<p>Build resilient systems.</p>",
+      "departments": [{"id": 1, "name": "Engineering"}],
+      "offices": [{"id": 2, "name": "Warsaw"}],
+      "unknown_future_field": {"kept": ["without", "normalization"]}
+    },
+    {
+      "id": "67890",
+      "title": "Data Engineer",
+      "location": {"name": "Remote"},
+      "absolute_url": "https://boards.greenhouse.io/example/jobs/67890",
+      "content": "<p>Build data products.</p>"
+    }
+  ],
+  "meta": {"total": 2, "source": "recorded fixture"}
+}
