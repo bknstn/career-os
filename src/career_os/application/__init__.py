@@ -11,6 +11,12 @@ from career_os.application.collect import (
     CollectionService,
     CollectionStateTransitionError,
 )
+from career_os.application.lifecycle import (
+    LifecycleAction,
+    LifecycleMutationPort,
+    LifecycleResult,
+    LifecycleService,
+)
 
 __all__ = [
     "CollectionError",
@@ -22,4 +28,8 @@ __all__ = [
     "CollectionRunStore",
     "CollectionService",
     "CollectionStateTransitionError",
+    "LifecycleAction",
+    "LifecycleMutationPort",
+    "LifecycleResult",
+    "LifecycleService",
 ]

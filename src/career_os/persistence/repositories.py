@@ -64,6 +64,10 @@ class CanonicalVersionConflictError(PersistenceError):
     """A changed current posting would duplicate an immutable content version."""
 
 
+class LifecycleReconciliationConflictError(PersistenceError):
+    """A lifecycle mutation does not match a persisted complete collection run."""
+
+
 class JobUpsertAction(StrEnum):
     """The canonical-content outcome of a repository upsert."""
 
@@ -80,8 +84,11 @@ class JobUpsertResult:
     job_id: UUID
     content_hash: str
     changed_fields: tuple[str, ...]
+    reactivated: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.reactivated, bool):
+            raise TypeError("reactivated must be a bool")
         if self.action is JobUpsertAction.INSERTED:
             if self.changed_fields != CANONICAL_CONTENT_FIELDS:
                 raise ValueError("an inserted job must report all canonical content fields")
@@ -322,11 +329,24 @@ class CanonicalJobRepository:
     def _update_existing(
         self, job: JobPosting, candidate: CanonicalJobCandidate
     ) -> JobUpsertResult:
-        if candidate.observed_at <= job.last_seen_at:
+        reactivated = job.status == "inactive"
+        if reactivated:
+            if job.inactive_at is None:
+                raise LifecycleReconciliationConflictError(
+                    "an inactive job must retain the timestamp of its absence confirmation"
+                )
+            if candidate.observed_at <= job.inactive_at:
+                raise StaleObservationError(
+                    "candidate observation must be strictly newer than the absence confirmation"
+                )
+        elif candidate.observed_at <= job.last_seen_at:
             raise StaleObservationError(
                 "candidate observation must be strictly newer than the latest stored observation"
             )
         if job.content_hash == candidate.content_hash:
+            if reactivated:
+                job.status = "active"
+                job.inactive_at = None
             job.last_seen_at = candidate.observed_at
             job.raw_latest = _plain_json_object(candidate.raw_payload)
             self.session.flush()
@@ -335,6 +355,7 @@ class CanonicalJobRepository:
                 job_id=job.id,
                 content_hash=job.content_hash,
                 changed_fields=(),
+                reactivated=reactivated,
             )
 
         changed_fields = _changed_fields(job, candidate)
@@ -352,6 +373,9 @@ class CanonicalJobRepository:
             raise CanonicalVersionConflictError(
                 "candidate reverts to an already-recorded canonical content version"
             )
+        if reactivated:
+            job.status = "active"
+            job.inactive_at = None
         self._apply_candidate_content(job, candidate)
         self._add_version(job, candidate, changed_fields=changed_fields)
         self.session.flush()
@@ -360,6 +384,7 @@ class CanonicalJobRepository:
             job_id=job.id,
             content_hash=candidate.content_hash,
             changed_fields=changed_fields,
+            reactivated=reactivated,
         )
 
     @staticmethod
@@ -428,3 +453,80 @@ class CanonicalJobRepository:
                 changed_fields=list(changed_fields),
             )
         )
+
+
+@dataclass(slots=True)
+class SourceLifecycleRepository:
+    """Atomically reconcile one persisted complete run in a caller transaction."""
+
+    session: Session
+
+    def inactivate_unseen(self, *, run: CollectionRun, seen_external_ids: tuple[str, ...]) -> int:
+        """Mark source-local missing jobs inactive without committing the session."""
+        if run.status is not CollectionRunStatus.SUCCEEDED or run.finished_at is None:
+            raise LifecycleReconciliationConflictError(
+                "lifecycle reconciliation requires a terminal succeeded collection run"
+            )
+        if any(
+            not isinstance(external_id, str) or not external_id for external_id in seen_external_ids
+        ):
+            raise LifecycleReconciliationConflictError(
+                "seen external IDs must be sorted, deduplicated, and non-blank"
+            )
+        if seen_external_ids != tuple(sorted(set(seen_external_ids))):
+            raise LifecycleReconciliationConflictError(
+                "seen external IDs must be sorted, deduplicated, and non-blank"
+            )
+        source = _source_for_identity(
+            self.session,
+            source_key=run.source_key,
+            source_kind=run.source_kind,
+        )
+        persisted_run = self.session.scalar(
+            select(CollectionRunModel)
+            .where(
+                CollectionRunModel.id == _run_id_as_uuid(run.id),
+                CollectionRunModel.source_id == source.id,
+            )
+            .with_for_update()
+        )
+        if persisted_run is None:
+            raise LifecycleReconciliationConflictError(
+                "collection run is not persisted for this source"
+            )
+        if (
+            persisted_run.status != CollectionRunStatus.SUCCEEDED.value
+            or persisted_run.started_at != run.started_at
+            or persisted_run.finished_at != run.finished_at
+        ):
+            raise LifecycleReconciliationConflictError(
+                "persisted collection run is not the same completed source scan"
+            )
+
+        missing_condition = ~JobPosting.external_id.in_(seen_external_ids)
+        result = cast(
+            CursorResult[object],
+            self.session.execute(
+                update(JobPosting)
+                .where(
+                    JobPosting.source_id == source.id,
+                    JobPosting.status == "active",
+                    JobPosting.last_seen_at <= run.started_at,
+                    missing_condition,
+                )
+                .values(status="inactive", inactive_at=run.finished_at)
+            ),
+        )
+        inactivated_count = result.rowcount
+        if inactivated_count < 0:
+            raise LifecycleReconciliationConflictError(
+                "database did not report lifecycle update count"
+            )
+        if inactivated_count:
+            self.session.execute(
+                update(CollectionRunModel)
+                .where(CollectionRunModel.id == persisted_run.id)
+                .values(inactivated=CollectionRunModel.inactivated + inactivated_count)
+            )
+        self.session.flush()
+        return inactivated_count
