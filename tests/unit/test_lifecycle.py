@@ -76,6 +76,7 @@ def _result(
         status=status,
         finished_at=started_at,
         counts=RunCounts(items_fetched=len(postings)),
+        incomplete_reason="page timed out" if status is CollectionRunStatus.PARTIAL else None,
         error_summary="collection failed" if status is CollectionRunStatus.FAILED else None,
     )
     return CollectionResult(

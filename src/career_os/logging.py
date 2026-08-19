@@ -298,6 +298,7 @@ class SourceRunLogger:
         counts: RunCounts,
         finished_at: datetime | None = None,
         error: BaseException | None = None,
+        incomplete_reason: str | None = None,
     ) -> None:
         """Emit the terminal event with duration, counters, and safe error data."""
         completed_at = _as_utc(finished_at or self.clock(), field_name="finished_at")
@@ -307,13 +308,24 @@ class SourceRunLogger:
         if not isfinite(duration_seconds):
             raise ValueError("duration_seconds must be finite")
 
+        normalized_status = _require_nonblank(status, field_name="status")
+        if incomplete_reason is not None:
+            if normalized_status != "partial":
+                raise ValueError("incomplete_reason is permitted only for partial runs")
+            fields_incomplete_reason = _require_nonblank(
+                incomplete_reason, field_name="incomplete_reason"
+            )
+        else:
+            fields_incomplete_reason = None
         fields: dict[str, LogScalar] = {
-            "status": _require_nonblank(status, field_name="status"),
+            "status": normalized_status,
             "started_at": _timestamp(self.started_at),
             "finished_at": _timestamp(completed_at),
             "duration_seconds": duration_seconds,
             **counts.as_fields(),
         }
+        if fields_incomplete_reason is not None:
+            fields["incomplete_reason"] = sanitize_text(fields_incomplete_reason)
         level = stdlib_logging.INFO
         if error is not None:
             safe_error = safe_exception(error)

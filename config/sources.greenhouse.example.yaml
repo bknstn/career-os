@@ -1,0 +1,6 @@
+sources:
+  - key: example-greenhouse
+    kind: greenhouse
+    company_name: Example Inc.
+    board_token: example
+    enabled: true

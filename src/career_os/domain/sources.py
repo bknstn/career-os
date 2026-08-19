@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from math import isfinite
 from typing import Protocol, runtime_checkable
 
 from career_os.domain.jobs import RawJobPosting, _require_nonempty_text, _require_utc_aware
+from career_os.domain.runs import ScanDiagnostics
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,8 +51,11 @@ class ScanOutcome:
 
     status: ScanStatus
     incomplete_reason: str | None = None
+    diagnostics: ScanDiagnostics = field(default_factory=ScanDiagnostics)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.diagnostics, ScanDiagnostics):
+            raise TypeError("diagnostics must be ScanDiagnostics")
         if self.status is ScanStatus.COMPLETE:
             if self.incomplete_reason is not None:
                 raise ValueError("a complete scan cannot have an incomplete_reason")
@@ -72,6 +76,18 @@ class ScanOutcome:
 
 
 type FetchEvent = RawJobPosting | ScanOutcome
+
+
+class ScanFailedError(RuntimeError):
+    """A failed adapter scan with telemetry observed before the failure."""
+
+    def __init__(self, message: str, *, diagnostics: ScanDiagnostics | None = None) -> None:
+        super().__init__(message)
+        self.diagnostics = diagnostics or ScanDiagnostics()
+
+    def with_diagnostics(self, diagnostics: ScanDiagnostics) -> ScanFailedError:
+        """Return the same failure class annotated with final observed telemetry."""
+        return type(self)(str(self), diagnostics=diagnostics)
 
 
 @runtime_checkable

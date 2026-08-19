@@ -6,6 +6,34 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class ScanDiagnostics:
+    """Adapter-observed transport and rejected-record telemetry for one scan.
+
+    ``rejected_items`` is source-facing terminology. Collection maps it
+    explicitly to a durable run's ``failed_items`` counter, while canonical
+    processing failures remain ``normalization_errors``.
+    """
+
+    http_requests: int = 0
+    retry_count: int = 0
+    rate_limit_events: int = 0
+    rejected_items: int = 0
+
+    def __post_init__(self) -> None:
+        for field_name, value in self.as_fields().items():
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{field_name} must be a non-negative integer")
+
+    def as_fields(self) -> dict[str, int]:
+        return {
+            "http_requests": self.http_requests,
+            "retry_count": self.retry_count,
+            "rate_limit_events": self.rate_limit_events,
+            "rejected_items": self.rejected_items,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class RunCounts:
     """Non-negative counters shared by run state, logging, and later persistence."""
 

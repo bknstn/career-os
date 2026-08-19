@@ -418,6 +418,7 @@ def _partial_run(session_factory: sessionmaker[Session]) -> CollectionRun:
         status=CollectionRunStatus.PARTIAL,
         finished_at=_RUN_FINISHED_AT,
         counts=RunCounts(),
+        incomplete_reason="page timed out",
     )
     store.update(partial)
     return partial
@@ -435,6 +436,7 @@ def _unsafe_result(kind: str) -> CollectionResult | CollectionFailedError:
             status=CollectionRunStatus.PARTIAL,
             finished_at=_RUN_FINISHED_AT,
             counts=RunCounts(),
+            incomplete_reason="page timed out",
         )
         return CollectionResult(
             run=terminal,

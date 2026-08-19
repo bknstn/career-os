@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "PyYAML>=6.0",
     "SQLAlchemy>=2.0",
+    "typer>=0.16",
 ]
 keywords = ["career", "job-market", "market-explorer"]
 classifiers = [
@@ -30,6 +31,9 @@ classifiers = [
 [project.urls]
 Documentation = "https://github.com/bknstn/career-os#readme"
 Architecture = "https://github.com/bknstn/career-os/blob/main/docs/adr/0001-market-explorer-foundation.md"
+
+[project.scripts]
+career-os = "career_os.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/career_os"]

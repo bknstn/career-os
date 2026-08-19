@@ -19,6 +19,8 @@ from career_os.domain import (
     FetchEvent,
     RawJobPosting,
     RunCounts,
+    ScanDiagnostics,
+    ScanFailedError,
     ScanOutcome,
     ScanStatus,
     SourceAdapter,
@@ -67,6 +69,7 @@ class CollectionRun:
     started_at: datetime
     finished_at: datetime | None = None
     counts: RunCounts = field(default_factory=RunCounts)
+    incomplete_reason: str | None = None
     error_summary: str | None = None
 
     def __post_init__(self) -> None:
@@ -91,8 +94,12 @@ class CollectionRun:
             _as_utc(self.started_at, field_name="started_at"),
         )
         if self.status is CollectionRunStatus.RUNNING:
-            if self.finished_at is not None or self.error_summary is not None:
-                raise ValueError("a running collection run cannot be finished or have an error")
+            if (
+                self.finished_at is not None
+                or self.error_summary is not None
+                or self.incomplete_reason is not None
+            ):
+                raise ValueError("a running collection run cannot have terminal diagnostics")
             return
 
         if self.finished_at is None:
@@ -101,6 +108,12 @@ class CollectionRun:
         if finished_at < self.started_at:
             raise ValueError("finished_at must not be earlier than started_at")
         object.__setattr__(self, "finished_at", finished_at)
+        if self.status is CollectionRunStatus.PARTIAL:
+            if self.incomplete_reason is None or not self.incomplete_reason.strip():
+                raise ValueError("a partial collection run requires incomplete_reason")
+            object.__setattr__(self, "incomplete_reason", self.incomplete_reason.strip())
+        elif self.incomplete_reason is not None:
+            raise ValueError("only a partial collection run may have incomplete_reason")
         if self.status is CollectionRunStatus.FAILED:
             if self.error_summary is None or not self.error_summary.strip():
                 raise ValueError("a failed collection run requires error_summary")
@@ -132,6 +145,7 @@ class CollectionRun:
         status: CollectionRunStatus,
         finished_at: datetime,
         counts: RunCounts,
+        incomplete_reason: str | None = None,
         error_summary: str | None = None,
     ) -> CollectionRun:
         """Transition a running run exactly once to a terminal status."""
@@ -150,6 +164,7 @@ class CollectionRun:
             status=status,
             finished_at=finished_at,
             counts=counts,
+            incomplete_reason=incomplete_reason,
             error_summary=error_summary,
         )
 
@@ -167,6 +182,18 @@ class CollectionRunStore(Protocol):
         the stored state.  This permits collection recovery to attempt a failed
         transition without silently overwriting an unknown terminal state.
         """
+
+
+class TerminalRunProcessor(Protocol):
+    """Persist a terminal run and its downstream effects atomically.
+
+    Implementations receive a still-unpersisted terminal run. If they raise,
+    they must leave the run in its previously persisted ``running`` state so
+    :class:`CollectionService` can record a failed terminal transition.
+    """
+
+    def __call__(self, run: CollectionRun, postings: tuple[RawJobPosting, ...]) -> CollectionRun:
+        """Persist the terminal workflow and return the durable terminal snapshot."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +242,16 @@ class CollectionStateTransitionError(CollectionError):
     """A caller attempted an invalid in-memory collection run transition."""
 
 
+class CollectionProcessingError(CollectionError):
+    """Canonical processing failed after a complete scan with counted errors."""
+
+    def __init__(self, message: str, *, normalization_errors: int) -> None:
+        super().__init__(message)
+        if isinstance(normalization_errors, bool) or normalization_errors < 1:
+            raise ValueError("normalization_errors must be a positive integer")
+        self.normalization_errors = normalization_errors
+
+
 class CollectionFailedError(CollectionError):
     """Raised after the service has attempted to persist the failed terminal state."""
 
@@ -237,6 +274,7 @@ class CollectionService:
     run_id_factory: RunIdFactory
     clock: UtcClock = utcnow
     timeout_seconds: float = 30.0
+    terminal_run_processor: TerminalRunProcessor | None = None
 
     async def collect(self, *, source_key: str, adapter: SourceAdapter) -> CollectionResult:
         """Collect one source, returning partial data but raising for failed scans."""
@@ -286,13 +324,27 @@ class CollectionService:
                 if outcome.status is ScanStatus.COMPLETE
                 else CollectionRunStatus.PARTIAL
             )
-            counts = RunCounts(items_fetched=len(postings))
+            counts = self._counts_for_outcome(outcome=outcome, items_fetched=len(postings))
             final_run = run.finish(
                 status=status,
                 finished_at=_as_utc(self.clock(), field_name="finished_at"),
                 counts=counts,
+                incomplete_reason=outcome.incomplete_reason,
             )
-            self.run_store.update(final_run)
+            if self.terminal_run_processor is not None:
+                unprocessed_terminal_run = final_run
+                final_run = self.terminal_run_processor(unprocessed_terminal_run, tuple(postings))
+                if (
+                    final_run.status is not unprocessed_terminal_run.status
+                    or final_run.id != unprocessed_terminal_run.id
+                    or final_run.started_at != unprocessed_terminal_run.started_at
+                    or final_run.finished_at != unprocessed_terminal_run.finished_at
+                ):
+                    raise CollectionStateTransitionError(
+                        "complete run processor returned an incompatible terminal run"
+                    )
+            else:
+                self.run_store.update(final_run)
             self._log_finished(run_logger, final_run)
             return CollectionResult(
                 run=final_run,
@@ -347,7 +399,18 @@ class CollectionService:
         run_logger: SourceRunLogger,
     ) -> NoReturn:
         safe_error = safe_exception(error)
-        counts = RunCounts(items_fetched=len(postings))
+        diagnostics = self._failure_diagnostics(outcome=outcome, error=error)
+        normalization_errors = (
+            error.normalization_errors if isinstance(error, CollectionProcessingError) else 0
+        )
+        counts = RunCounts(
+            items_fetched=len(postings),
+            failed_items=diagnostics.rejected_items,
+            http_requests=diagnostics.http_requests,
+            retry_count=diagnostics.retry_count,
+            rate_limit_events=diagnostics.rate_limit_events,
+            normalization_errors=normalization_errors,
+        )
         try:
             finished_at = _as_utc(self.clock(), field_name="finished_at")
         except Exception as clock_error:
@@ -361,10 +424,42 @@ class CollectionService:
         )
         terminal_state_persisted = False
         try:
-            self.run_store.update(failed_run)
+            if self.terminal_run_processor is not None and not isinstance(
+                error, CollectionProcessingError
+            ):
+                failed_run = self.terminal_run_processor(failed_run, tuple(postings))
+            else:
+                self.run_store.update(failed_run)
             terminal_state_persisted = True
+        except CollectionProcessingError as processing_error:
+            failed_run = replace(
+                failed_run,
+                counts=RunCounts(
+                    items_fetched=failed_run.counts.items_fetched,
+                    failed_items=failed_run.counts.failed_items,
+                    http_requests=failed_run.counts.http_requests,
+                    retry_count=failed_run.counts.retry_count,
+                    rate_limit_events=failed_run.counts.rate_limit_events,
+                    normalization_errors=processing_error.normalization_errors,
+                ),
+            )
+            try:
+                self.run_store.update(failed_run)
+                terminal_state_persisted = True
+            except Exception as state_error:
+                error.add_note(f"Could not persist failed state: {type(state_error).__name__}")
         except Exception as state_error:
-            error.add_note(f"Could not persist failed state: {type(state_error).__name__}")
+            try:
+                # A terminal processor is optional enrichment around the
+                # authoritative failed transition; never leave a running run
+                # merely because that enrichment itself failed.
+                self.run_store.update(failed_run)
+                terminal_state_persisted = True
+            except Exception as fallback_error:
+                error.add_note(
+                    "Could not persist failed state: "
+                    f"{type(state_error).__name__}/{type(fallback_error).__name__}"
+                )
         self._log_failed(run_logger, failed_run, error)
         result = CollectionResult(
             run=failed_run,
@@ -373,6 +468,25 @@ class CollectionService:
             terminal_state_persisted=terminal_state_persisted,
         )
         raise CollectionFailedError(result) from error
+
+    @staticmethod
+    def _counts_for_outcome(*, outcome: ScanOutcome, items_fetched: int) -> RunCounts:
+        diagnostics = outcome.diagnostics
+        return RunCounts(
+            items_fetched=items_fetched,
+            failed_items=diagnostics.rejected_items,
+            http_requests=diagnostics.http_requests,
+            retry_count=diagnostics.retry_count,
+            rate_limit_events=diagnostics.rate_limit_events,
+        )
+
+    @staticmethod
+    def _failure_diagnostics(*, outcome: ScanOutcome | None, error: Exception) -> ScanDiagnostics:
+        if isinstance(error, ScanFailedError):
+            return error.diagnostics
+        if outcome is not None:
+            return outcome.diagnostics
+        return ScanDiagnostics()
 
     @staticmethod
     def _log_started(run_logger: SourceRunLogger) -> None:
@@ -386,7 +500,12 @@ class CollectionService:
         try:
             if run.finished_at is None:
                 return
-            run_logger.finished(status=run.status, counts=run.counts, finished_at=run.finished_at)
+            run_logger.finished(
+                status=run.status,
+                counts=run.counts,
+                finished_at=run.finished_at,
+                incomplete_reason=run.incomplete_reason,
+            )
         except Exception:
             return
 

@@ -21,7 +21,15 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from career_os.config.sources import GreenhouseSourceConfig
-from career_os.domain import FetchContext, FetchEvent, RawJobPosting, ScanOutcome, ScanStatus
+from career_os.domain import (
+    FetchContext,
+    FetchEvent,
+    RawJobPosting,
+    ScanDiagnostics,
+    ScanFailedError,
+    ScanOutcome,
+    ScanStatus,
+)
 
 _BASE_URL: Final = "https://boards-api.greenhouse.io/v1/boards"
 _DEFAULT_USER_AGENT: Final = "career-os/0.1.0 GreenhouseJobBoardAdapter"
@@ -35,7 +43,7 @@ type RetryJitter = Callable[[int], float]
 type UtcClock = Callable[[], datetime]
 
 
-class GreenhouseAdapterError(RuntimeError):
+class GreenhouseAdapterError(ScanFailedError):
     """Base error for an unusable Greenhouse request or adapter configuration."""
 
 
@@ -168,14 +176,19 @@ class GreenhouseAdapter:
 
     async def fetch(self, context: FetchContext) -> AsyncIterator[FetchEvent]:
         """Yield valid source records then an unambiguous terminal scan outcome."""
-        response = await self._request(context)
+        response, diagnostics = await self._request(context)
         if response.json_error is not None:
-            yield ScanOutcome(ScanStatus.PARTIAL, incomplete_reason=response.json_error)
+            yield ScanOutcome(
+                ScanStatus.PARTIAL,
+                incomplete_reason=response.json_error,
+                diagnostics=diagnostics,
+            )
             return
         if not isinstance(response.json_body, Mapping):
             yield ScanOutcome(
                 ScanStatus.PARTIAL,
                 incomplete_reason="Greenhouse response root was not an object",
+                diagnostics=diagnostics,
             )
             return
         jobs = response.json_body.get("jobs")
@@ -183,59 +196,133 @@ class GreenhouseAdapter:
             yield ScanOutcome(
                 ScanStatus.PARTIAL,
                 incomplete_reason="Greenhouse response did not contain a jobs list",
+                diagnostics=diagnostics,
             )
             return
 
         seen_external_ids: set[str] = set()
         incomplete_reasons = _completeness_reasons(response.json_body, jobs)
+        rejected_items = 0
         for index, item in enumerate(jobs):
             posting = _posting_from_item(
                 config=self.config, item=item, fetched_at=context.fetched_at
             )
             if posting is None:
                 incomplete_reasons.append(f"job item {index} was malformed")
+                rejected_items += 1
                 continue
             if posting.external_id in seen_external_ids:
                 incomplete_reasons.append(f"job item {index} duplicated an external ID")
+                rejected_items += 1
                 continue
             seen_external_ids.add(posting.external_id)
             yield posting
 
         if incomplete_reasons:
-            yield ScanOutcome(ScanStatus.PARTIAL, incomplete_reason="; ".join(incomplete_reasons))
+            yield ScanOutcome(
+                ScanStatus.PARTIAL,
+                incomplete_reason="; ".join(incomplete_reasons),
+                diagnostics=ScanDiagnostics(
+                    http_requests=diagnostics.http_requests,
+                    retry_count=diagnostics.retry_count,
+                    rate_limit_events=diagnostics.rate_limit_events,
+                    rejected_items=rejected_items,
+                ),
+            )
         else:
-            yield ScanOutcome(ScanStatus.COMPLETE)
+            yield ScanOutcome(ScanStatus.COMPLETE, diagnostics=diagnostics)
 
-    async def _request(self, context: FetchContext) -> GreenhouseHttpResponse:
+    async def _request(
+        self, context: FetchContext
+    ) -> tuple[GreenhouseHttpResponse, ScanDiagnostics]:
         url = f"{_BASE_URL}/{quote(self.config.board_token, safe='')}/jobs?content=true"
         headers = {"Accept": "application/json", "User-Agent": self.user_agent.strip()}
+        http_requests = retry_count = rate_limit_events = 0
         for attempt in range(self.max_attempts):
             try:
+                http_requests += 1
                 response = await self.http_client.get(
                     url=url,
                     headers=headers,
                     timeout_seconds=context.timeout_seconds,
                 )
-            except GreenhouseTransportError:
+            except Exception as error:
+                diagnostics = ScanDiagnostics(
+                    http_requests=http_requests,
+                    retry_count=retry_count,
+                    rate_limit_events=rate_limit_events,
+                )
+                transport_error = (
+                    error
+                    if isinstance(error, GreenhouseTransportError)
+                    else GreenhouseTransportError(
+                        "Greenhouse request transport failure", diagnostics=diagnostics
+                    )
+                )
                 if attempt + 1 == self.max_attempts:
-                    raise
-                await self._sleep_before_retry(attempt, retry_after=None)
+                    raise transport_error.with_diagnostics(diagnostics) from error
+                retry_count += 1
+                await self._retry_or_raise(
+                    attempt,
+                    retry_after=None,
+                    diagnostics=ScanDiagnostics(
+                        http_requests=http_requests,
+                        retry_count=retry_count,
+                        rate_limit_events=rate_limit_events,
+                    ),
+                )
                 continue
             if 200 <= response.status_code < 300:
-                return response
+                return response, ScanDiagnostics(
+                    http_requests=http_requests,
+                    retry_count=retry_count,
+                    rate_limit_events=rate_limit_events,
+                )
+            if response.status_code == 429:
+                rate_limit_events += 1
             if response.status_code not in _TRANSIENT_STATUS_CODES:
                 raise GreenhouseHttpError(
-                    f"Greenhouse request failed with non-retryable HTTP {response.status_code}"
+                    f"Greenhouse request failed with non-retryable HTTP {response.status_code}",
+                    diagnostics=ScanDiagnostics(
+                        http_requests=http_requests,
+                        retry_count=retry_count,
+                        rate_limit_events=rate_limit_events,
+                    ),
                 )
             if attempt + 1 == self.max_attempts:
                 raise GreenhouseHttpError(
-                    f"Greenhouse request exhausted retries after HTTP {response.status_code}"
+                    f"Greenhouse request exhausted retries after HTTP {response.status_code}",
+                    diagnostics=ScanDiagnostics(
+                        http_requests=http_requests,
+                        retry_count=retry_count,
+                        rate_limit_events=rate_limit_events,
+                    ),
                 )
-            await self._sleep_before_retry(
+            retry_count += 1
+            await self._retry_or_raise(
                 attempt,
                 retry_after=_retry_after_seconds(response.headers, utc_now=self.utc_now),
+                diagnostics=ScanDiagnostics(
+                    http_requests=http_requests,
+                    retry_count=retry_count,
+                    rate_limit_events=rate_limit_events,
+                ),
             )
         raise AssertionError("retry loop must return a response or raise")
+
+    async def _retry_or_raise(
+        self,
+        attempt: int,
+        *,
+        retry_after: float | None,
+        diagnostics: ScanDiagnostics,
+    ) -> None:
+        try:
+            await self._sleep_before_retry(attempt, retry_after=retry_after)
+        except Exception as error:
+            raise GreenhouseAdapterError(
+                "Greenhouse retry scheduling failed", diagnostics=diagnostics
+            ) from error
 
     async def _sleep_before_retry(self, attempt: int, *, retry_after: float | None) -> None:
         delay = retry_after if retry_after is not None else self.retry_jitter(attempt)
@@ -293,7 +380,7 @@ def _posting_from_item(
         source_kind="greenhouse",
         external_id=external_id,
         source_url=url,
-        apply_url=url,
+        apply_url=None,
         payload=cast(Mapping[str, Any], item),
         fetched_at=fetched_at,
     )

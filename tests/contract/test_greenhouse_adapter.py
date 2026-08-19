@@ -22,6 +22,8 @@ from career_os.domain import (
     FetchContext,
     FetchEvent,
     RawJobPosting,
+    ScanDiagnostics,
+    ScanFailedError,
     ScanOutcome,
     ScanStatus,
     SourceAdapter,
@@ -80,11 +82,13 @@ def test_populated_recording_preserves_source_native_payload_and_completes() -> 
     postings = [event for event in events if isinstance(event, RawJobPosting)]
     assert [posting.external_id for posting in postings] == ["12345", "67890"]
     assert postings[0].source_url == "https://boards.greenhouse.io/example/jobs/12345"
-    assert postings[0].apply_url == postings[0].source_url
+    assert postings[0].apply_url is None
     assert postings[0].fetched_at == _context().fetched_at
     assert postings[0].payload == payload["jobs"][0]
     assert postings[0].payload["unknown_future_field"] == {"kept": ["without", "normalization"]}
-    assert events[-1] == ScanOutcome(ScanStatus.COMPLETE)
+    assert events[-1] == ScanOutcome(
+        ScanStatus.COMPLETE, diagnostics=ScanDiagnostics(http_requests=1)
+    )
     assert client.requests == [
         (
             "https://boards-api.greenhouse.io/v1/boards/example-board/jobs?content=true",
@@ -102,7 +106,9 @@ def test_empty_recording_is_a_complete_empty_scan() -> None:
         config=_config(), http_client=_FakeHttpClient([_response(200, _fixture("empty.json"))])
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    assert _fetch(adapter) == [
+        ScanOutcome(ScanStatus.COMPLETE, diagnostics=ScanDiagnostics(http_requests=1))
+    ]
 
 
 def test_malformed_items_produce_a_partial_terminal_outcome_after_valid_evidence() -> None:
@@ -120,6 +126,7 @@ def test_malformed_items_produce_a_partial_terminal_outcome_after_valid_evidence
             "job item 1 was malformed; job item 2 was malformed; "
             "job item 3 duplicated an external ID"
         ),
+        diagnostics=ScanDiagnostics(http_requests=1, rejected_items=3),
     )
 
 
@@ -154,7 +161,11 @@ def test_unproven_response_total_keeps_valid_evidence_but_is_partial(
     events = _fetch(adapter)
 
     assert [event.external_id for event in events if isinstance(event, RawJobPosting)] == ["12345"]
-    assert events[-1] == ScanOutcome(ScanStatus.PARTIAL, incomplete_reason=reason)
+    assert events[-1] == ScanOutcome(
+        ScanStatus.PARTIAL,
+        incomplete_reason=reason,
+        diagnostics=ScanDiagnostics(http_requests=1),
+    )
     _assert_one_terminal_outcome(events)
 
 
@@ -176,6 +187,7 @@ def test_total_mismatch_and_malformed_item_are_combined_deterministically() -> N
             "Greenhouse response meta.total did not match jobs list length; "
             "job item 1 was malformed"
         ),
+        diagnostics=ScanDiagnostics(http_requests=1, rejected_items=1),
     )
     _assert_one_terminal_outcome(events)
 
@@ -250,7 +262,12 @@ def test_retry_after_is_honored_before_a_successful_retry() -> None:
         retry_jitter=lambda _attempt: 99.0,
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    assert _fetch(adapter) == [
+        ScanOutcome(
+            ScanStatus.COMPLETE,
+            diagnostics=ScanDiagnostics(http_requests=2, retry_count=1, rate_limit_events=1),
+        )
+    ]
     assert len(client.requests) == 2
     assert sleeps == [3.5]
 
@@ -275,7 +292,12 @@ def test_retry_after_http_date_is_honored_with_an_injected_utc_clock() -> None:
         utc_now=lambda: datetime(2026, 8, 18, 10, tzinfo=UTC),
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    assert _fetch(adapter) == [
+        ScanOutcome(
+            ScanStatus.COMPLETE,
+            diagnostics=ScanDiagnostics(http_requests=2, retry_count=1, rate_limit_events=1),
+        )
+    ]
     assert sleeps == [4.0]
 
 
@@ -298,7 +320,11 @@ def test_invalid_or_past_retry_after_falls_back_to_jitter(retry_after: str) -> N
         utc_now=lambda: datetime(2026, 8, 18, 10, tzinfo=UTC),
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    assert _fetch(adapter) == [
+        ScanOutcome(
+            ScanStatus.COMPLETE, diagnostics=ScanDiagnostics(http_requests=2, retry_count=1)
+        )
+    ]
     assert sleeps == [0.25]
 
 
@@ -325,7 +351,15 @@ def test_retry_delays_are_capped(
         retry_jitter=retry_jitter,
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    expected_rate_limits = 1 if isinstance(first_response, GreenhouseHttpResponse) else 0
+    assert _fetch(adapter) == [
+        ScanOutcome(
+            ScanStatus.COMPLETE,
+            diagnostics=ScanDiagnostics(
+                http_requests=2, retry_count=1, rate_limit_events=expected_rate_limits
+            ),
+        )
+    ]
     assert sleeps == [10.0]
 
 
@@ -341,7 +375,11 @@ def test_transient_transport_failure_retries_with_injected_jitter() -> None:
         retry_jitter=lambda attempt: [0.25, 0.5][attempt],
     )
 
-    assert _fetch(adapter) == [ScanOutcome(ScanStatus.COMPLETE)]
+    assert _fetch(adapter) == [
+        ScanOutcome(
+            ScanStatus.COMPLETE, diagnostics=ScanDiagnostics(http_requests=2, retry_count=1)
+        )
+    ]
     assert len(client.requests) == 2
     assert sleeps == [0.25]
 
@@ -362,6 +400,32 @@ def test_transient_http_retry_exhaustion_raises_after_the_bounded_attempts() -> 
 
     assert len(client.requests) == 3
     assert sleeps == [0.25, 0.5]
+
+
+def test_retry_scheduling_failure_retains_telemetry_after_an_attempt() -> None:
+    adapter = GreenhouseAdapter(
+        config=_config(),
+        http_client=_FakeHttpClient([_response(503, {})]),
+        retry_jitter=lambda _attempt: -1.0,
+    )
+
+    with pytest.raises(ScanFailedError) as raised:
+        _fetch(adapter)
+
+    assert raised.value.diagnostics == ScanDiagnostics(http_requests=1, retry_count=1)
+
+
+def test_unexpected_transport_failure_is_wrapped_with_observed_request_count() -> None:
+    adapter = GreenhouseAdapter(
+        config=_config(),
+        http_client=_FakeHttpClient([RuntimeError("socket implementation failed")]),
+        max_attempts=1,
+    )
+
+    with pytest.raises(ScanFailedError) as raised:
+        _fetch(adapter)
+
+    assert raised.value.diagnostics == ScanDiagnostics(http_requests=1)
 
 
 def test_adapter_implements_the_async_source_contract() -> None:

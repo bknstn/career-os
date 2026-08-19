@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.application.collect import CollectionRun, CollectionRunStatus
+from career_os.config.sources import SourceConfig, SourcesConfig
 from career_os.db import session_scope
 from career_os.domain.canonical import CANONICAL_CONTENT_FIELDS, CanonicalJobCandidate, JsonValue
 from career_os.persistence.models import (
@@ -37,6 +38,8 @@ _PERSISTED_RUN_COUNT_FIELDS: Final = (
     "failed_items",
     "http_requests",
     "retry_count",
+    "rate_limit_events",
+    "normalization_errors",
 )
 
 
@@ -66,6 +69,10 @@ class CanonicalVersionConflictError(PersistenceError):
 
 class LifecycleReconciliationConflictError(PersistenceError):
     """A lifecycle mutation does not match a persisted complete collection run."""
+
+
+class SourceConfigurationConflictError(PersistenceError):
+    """A source key would rewrite an immutable persisted source identity."""
 
 
 class JobUpsertAction(StrEnum):
@@ -100,6 +107,111 @@ class JobUpsertResult:
                 raise ValueError("an updated job must report changed fields")
         else:
             raise ValueError(f"unsupported job upsert action: {self.action!r}")
+
+
+@dataclass(slots=True)
+class SourceConfigurationRepository:
+    """Register validated non-secret source configuration before collection."""
+
+    session: Session
+
+    def sync(self, sources_config: SourcesConfig) -> None:
+        """Insert unseen source keys and refresh mutable settings for known keys.
+
+        A key is an operational identity: changing its kind or company would
+        make its existing job history ambiguous, so those changes fail closed.
+        """
+        for source_config in sources_config.sources:
+            self._sync_one(source_config)
+        self.session.flush()
+
+    def _sync_one(self, source_config: SourceConfig) -> None:
+        source = self.session.scalar(select(Source).where(Source.key == source_config.key))
+        source_config_json = cast(dict[str, object], source_config.model_dump(mode="json"))
+        if source is None:
+            self.session.add(
+                Source(
+                    key=source_config.key,
+                    kind=source_config.kind,
+                    company_name=source_config.company_name,
+                    config=source_config_json,
+                    enabled=source_config.enabled,
+                )
+            )
+            return
+        if source.kind != source_config.kind or source.company_name != source_config.company_name:
+            raise SourceConfigurationConflictError(
+                f"configured source key cannot change kind or company name: {source_config.key}"
+            )
+        source.config = source_config_json
+        source.enabled = source_config.enabled
+
+
+@dataclass(slots=True)
+class InspectionRepository:
+    """Read-only persistence queries used by the thin operational CLI."""
+
+    session: Session
+
+    def list_runs(self, *, failed_only: bool = False) -> list[RunInspection]:
+        statement = (
+            select(CollectionRunModel, Source.key, Source.kind)
+            .join(Source, CollectionRunModel.source_id == Source.id)
+            .order_by(CollectionRunModel.started_at.desc())
+        )
+        if failed_only:
+            statement = statement.where(
+                CollectionRunModel.status == CollectionRunStatus.FAILED.value
+            )
+        return [
+            RunInspection(run=run, source_key=key, source_kind=kind)
+            for run, key, kind in self.session.execute(statement)
+        ]
+
+    def get_run(self, run_id: UUID) -> RunInspection | None:
+        row = self.session.execute(
+            select(CollectionRunModel, Source.key, Source.kind)
+            .join(Source, CollectionRunModel.source_id == Source.id)
+            .where(CollectionRunModel.id == run_id)
+        ).one_or_none()
+        return (
+            None
+            if row is None
+            else RunInspection(run=row[0], source_key=row[1], source_kind=row[2])
+        )
+
+    def list_jobs(self, *, active_only: bool, company_name: str | None) -> list[JobInspection]:
+        statement = (
+            select(JobPosting, Source.key, Source.kind)
+            .join(Source, JobPosting.source_id == Source.id)
+            .order_by(JobPosting.last_seen_at.desc(), JobPosting.id)
+        )
+        if active_only:
+            statement = statement.where(JobPosting.status == "active")
+        if company_name is not None:
+            statement = statement.where(JobPosting.company_name == company_name)
+        return [
+            JobInspection(job=job, source_key=key, source_kind=kind)
+            for job, key, kind in self.session.execute(statement)
+        ]
+
+
+@dataclass(frozen=True, slots=True)
+class RunInspection:
+    """A collection run paired with its immutable source identity."""
+
+    run: CollectionRunModel
+    source_key: str
+    source_kind: str
+
+
+@dataclass(frozen=True, slots=True)
+class JobInspection:
+    """A canonical job paired with its immutable source identity."""
+
+    job: JobPosting
+    source_key: str
+    source_kind: str
 
 
 def _run_id_as_uuid(run_id: str) -> UUID:
@@ -223,6 +335,7 @@ class SqlAlchemyCollectionRunStore:
                         normalizer_version=self.normalizer_version,
                         taxonomy_version=self.taxonomy_version,
                         error_summary=run.error_summary,
+                        incomplete_reason=run.incomplete_reason,
                     )
                 )
                 session.flush()
@@ -237,38 +350,45 @@ class SqlAlchemyCollectionRunStore:
             raise CollectionRunPersistenceConflictError("a collection run update must be terminal")
         self._assert_persistable_counts(run)
         with session_scope(self.session_factory) as session:
-            source = _source_for_identity(
-                session, source_key=run.source_key, source_kind=run.source_kind
-            )
-            result = cast(
-                CursorResult[object],
-                session.execute(
-                    update(CollectionRunModel)
-                    .where(
-                        CollectionRunModel.id == _run_id_as_uuid(run.id),
-                        CollectionRunModel.source_id == source.id,
-                        CollectionRunModel.status == CollectionRunStatus.RUNNING.value,
-                    )
-                    .values(
-                        status=run.status.value,
-                        finished_at=run.finished_at,
-                        **_persisted_run_counts(run),
-                        error_summary=run.error_summary,
-                    )
-                ),
-            )
-            if result.rowcount != 1:
-                raise CollectionRunPersistenceConflictError(
-                    "collection run was not in the expected running state"
+            self.update_in_session(session, run)
+
+    def update_in_session(self, session: Session, run: CollectionRun) -> None:
+        """Apply the terminal compare-and-set inside a caller-owned transaction."""
+        if run.status is CollectionRunStatus.RUNNING:
+            raise CollectionRunPersistenceConflictError("a collection run update must be terminal")
+        self._assert_persistable_counts(run)
+        source = _source_for_identity(
+            session,
+            source_key=run.source_key,
+            source_kind=run.source_kind,
+        )
+        result = cast(
+            CursorResult[object],
+            session.execute(
+                update(CollectionRunModel)
+                .where(
+                    CollectionRunModel.id == _run_id_as_uuid(run.id),
+                    CollectionRunModel.source_id == source.id,
+                    CollectionRunModel.status == CollectionRunStatus.RUNNING.value,
                 )
+                .values(
+                    status=run.status.value,
+                    finished_at=run.finished_at,
+                    **_persisted_run_counts(run),
+                    error_summary=run.error_summary,
+                    incomplete_reason=run.incomplete_reason,
+                )
+            ),
+        )
+        if result.rowcount != 1:
+            raise CollectionRunPersistenceConflictError(
+                "collection run was not in the expected running state"
+            )
 
     @staticmethod
     def _assert_persistable_counts(run: CollectionRun) -> None:
-        if run.counts.rate_limit_events or run.counts.normalization_errors:
-            raise PersistenceError(
-                "the initial collection_runs schema cannot persist rate-limit or "
-                "normalization counts"
-            )
+        """All source-neutral counters have durable columns in the current schema."""
+        del run
 
 
 @dataclass(slots=True)

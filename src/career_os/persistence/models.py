@@ -90,7 +90,8 @@ class CollectionRun(Base):
         CheckConstraint(
             "items_fetched >= 0 AND inserted >= 0 AND updated >= 0 AND unchanged >= 0 "
             "AND inactivated >= 0 AND failed_items >= 0 AND http_requests >= 0 "
-            "AND retry_count >= 0",
+            "AND retry_count >= 0 AND rate_limit_events >= 0 "
+            "AND normalization_errors >= 0",
             name="ck_collection_runs_counts_nonnegative",
         ),
         CheckConstraint(
@@ -134,9 +135,16 @@ class CollectionRun(Base):
     retry_count: Mapped[int] = mapped_column(
         Integer, default=0, server_default=text("0"), nullable=False
     )
+    rate_limit_events: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    normalization_errors: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
     normalizer_version: Mapped[str] = mapped_column(String, nullable=False)
     taxonomy_version: Mapped[str] = mapped_column(String, nullable=False)
     error_summary: Mapped[str | None] = mapped_column(Text)
+    incomplete_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class JobPosting(AuditTimestampMixin, Base):

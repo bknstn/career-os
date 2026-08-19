@@ -25,6 +25,8 @@ from career_os.domain import (
     FetchEvent,
     RawJobPosting,
     RunCounts,
+    ScanDiagnostics,
+    ScanFailedError,
     ScanOutcome,
     ScanStatus,
 )
@@ -138,6 +140,30 @@ def test_complete_scan_transitions_running_to_succeeded_and_preserves_raw_postin
     assert adapter.fetch_contexts[0].run_id == "run-1"
 
 
+def test_complete_processor_failure_leaves_no_succeeded_terminal_transition() -> None:
+    store = _InMemoryRunStore()
+
+    def fail_complete_processor(
+        run: CollectionRun, postings: tuple[RawJobPosting, ...]
+    ) -> CollectionRun:
+        del run, postings
+        raise RuntimeError("canonical persistence failed")
+
+    service = _service(store)
+    service.terminal_run_processor = fail_complete_processor
+
+    failure = _failed_result(
+        service,
+        _FakeAdapter(events=[_posting(), ScanOutcome(ScanStatus.COMPLETE)]),
+    )
+
+    assert isinstance(failure.__cause__, RuntimeError)
+    assert [run.status for run in store.history] == [
+        CollectionRunStatus.RUNNING,
+        CollectionRunStatus.FAILED,
+    ]
+
+
 def test_empty_complete_scan_is_successful() -> None:
     store = _InMemoryRunStore()
 
@@ -194,6 +220,27 @@ def test_mid_stream_adapter_exception_fails_and_retains_observed_raw_postings() 
     assert failure.result.run.status is CollectionRunStatus.FAILED
     assert failure.result.postings == (_posting(),)
     assert failure.result.run.counts.items_fetched == 1
+
+
+def test_typed_adapter_failure_persists_observed_transport_telemetry() -> None:
+    store = _InMemoryRunStore()
+    failure = _failed_result(
+        _service(store),
+        _FakeAdapter(
+            events=[
+                ScanFailedError(
+                    "request exhausted",
+                    diagnostics=ScanDiagnostics(
+                        http_requests=3, retry_count=2, rate_limit_events=1
+                    ),
+                )
+            ]
+        ),
+    )
+
+    assert failure.result.run.counts == RunCounts(
+        http_requests=3, retry_count=2, rate_limit_events=1
+    )
 
 
 @pytest.mark.parametrize(
@@ -288,6 +335,47 @@ def test_collection_emits_bound_start_finish_counts_and_status_logs() -> None:
     assert events[1]["items_fetched"] == 1
     assert events[1]["duration_seconds"] == 2.0
     assert all(event["run_id"] == "run-1" for event in events)
+
+
+def test_partial_collection_logs_durable_reason_and_source_telemetry() -> None:
+    stream = StringIO()
+    store = _InMemoryRunStore()
+    service = _service(
+        store,
+        stream=stream,
+        clock=[
+            datetime(2026, 8, 17, tzinfo=UTC),
+            datetime(2026, 8, 17, 0, 0, 2, tzinfo=UTC),
+        ],
+    )
+
+    _collect(
+        service,
+        _FakeAdapter(
+            events=[
+                _posting(),
+                ScanOutcome(
+                    ScanStatus.PARTIAL,
+                    incomplete_reason="job item was malformed",
+                    diagnostics=ScanDiagnostics(
+                        http_requests=2,
+                        retry_count=1,
+                        rate_limit_events=1,
+                        rejected_items=1,
+                    ),
+                ),
+            ]
+        ),
+    )
+
+    finished = [json.loads(line) for line in stream.getvalue().splitlines()][1]
+    assert finished["status"] == "partial"
+    assert finished["incomplete_reason"] == "job item was malformed"
+    assert finished["failed_items"] == 1
+    assert finished["http_requests"] == 2
+    assert finished["retry_count"] == 1
+    assert finished["rate_limit_events"] == 1
+    assert finished["normalization_errors"] == 0
 
 
 def test_failed_collection_logs_a_sanitized_error_and_failed_status() -> None:

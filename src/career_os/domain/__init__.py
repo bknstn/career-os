@@ -7,10 +7,11 @@ from career_os.domain.canonical import (
     stable_json_dumps,
 )
 from career_os.domain.jobs import RawJobPosting
-from career_os.domain.runs import RunCounts
+from career_os.domain.runs import RunCounts, ScanDiagnostics
 from career_os.domain.sources import (
     FetchContext,
     FetchEvent,
+    ScanFailedError,
     ScanOutcome,
     ScanStatus,
     SourceAdapter,
@@ -23,6 +24,8 @@ __all__ = [
     "FetchEvent",
     "RawJobPosting",
     "RunCounts",
+    "ScanDiagnostics",
+    "ScanFailedError",
     "ScanOutcome",
     "ScanStatus",
     "SourceAdapter",
