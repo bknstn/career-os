@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 from career_os import cli
 from career_os.cli import _job_payload, _run_payload, _selected_sources, app
 from career_os.config.sources import (
+    AshbySourceConfig,
     ConfigurationError,
     GreenhouseSourceConfig,
     LeverSourceConfig,
@@ -48,7 +49,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         assert runner.invoke(app, arguments).exit_code == 0
 
 
-def test_sources_validate_accepts_greenhouse_and_lever_config_without_database_io(
+def test_sources_validate_accepts_greenhouse_lever_and_ashby_config_without_database_io(
     monkeypatch, tmp_path: Path
 ) -> None:
     config = tmp_path / "sources.yaml"
@@ -63,6 +64,10 @@ sources:
     kind: lever
     company_name: Example Lever
     site: example
+  - key: example-ashby
+    kind: ashby
+    company_name: Example Ashby
+    board_name: example
 """,
         encoding="utf-8",
     )
@@ -74,8 +79,8 @@ sources:
     result = CliRunner().invoke(app, ["sources", "validate", "--config", str(config)])
 
     assert result.exit_code == 0
-    assert '"registered_kinds": ["greenhouse", "lever"]' in result.output
-    assert '"sources": 2' in result.output
+    assert '"registered_kinds": ["ashby", "greenhouse", "lever"]' in result.output
+    assert '"sources": 3' in result.output
 
 
 def test_sources_validate_rejects_configured_kinds_without_an_available_adapter(
@@ -86,9 +91,9 @@ def test_sources_validate_rejects_configured_kinds_without_an_available_adapter(
         """
 sources:
   - key: future-source
-    kind: ashby
+    kind: workable_public
     company_name: Future Inc.
-    board_name: future
+    account_subdomain: future
 """,
         encoding="utf-8",
     )
@@ -96,7 +101,7 @@ sources:
     result = CliRunner().invoke(app, ["sources", "validate", "--config", str(config)])
 
     assert result.exit_code == 2
-    assert "no adapter factory registered for kind(s): ashby" in result.output
+    assert "no adapter factory registered for kind(s): workable_public" in result.output
 
 
 def test_database_errors_are_reported_with_a_nonzero_exit_without_a_traceback(monkeypatch) -> None:
@@ -140,6 +145,7 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
 ) -> None:
     greenhouse = _source("greenhouse", enabled=True)
     lever = _lever_source("lever", enabled=True)
+    ashby = _ashby_source("ashby", enabled=True)
     calls: list[tuple[str, str, str]] = []
 
     def result_for(source_key: str, status: str) -> SimpleNamespace:
@@ -173,12 +179,21 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
             calls.append(("lever", source_config.key, "succeeded"))
             return result_for(source_config.key, "succeeded")
 
+    class FakeAshbyIngestionService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        async def collect(self, *, source_config: AshbySourceConfig, **_kwargs: object):
+            calls.append(("ashby", source_config.key, "succeeded"))
+            return result_for(source_config.key, "succeeded")
+
     monkeypatch.setattr("career_os.cli.GreenhouseIngestionService", FakeGreenhouseIngestionService)
     monkeypatch.setattr("career_os.cli.LeverIngestionService", FakeLeverIngestionService)
+    monkeypatch.setattr("career_os.cli.AshbyIngestionService", FakeAshbyIngestionService)
 
     outcomes = asyncio.run(
         cli._collect_selected(
-            selected_sources=(greenhouse, lever),
+            selected_sources=(greenhouse, lever, ashby),
             registry=cli.adapter_registry(),
             session_factory=object(),
             logger=logging.getLogger(),
@@ -186,10 +201,15 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
         )
     )
 
-    assert calls == [("greenhouse", "greenhouse", "partial"), ("lever", "lever", "succeeded")]
+    assert calls == [
+        ("greenhouse", "greenhouse", "partial"),
+        ("lever", "lever", "succeeded"),
+        ("ashby", "ashby", "succeeded"),
+    ]
     assert [(outcome["source_key"], outcome["status"]) for outcome in outcomes] == [
         ("greenhouse", "partial"),
         ("lever", "succeeded"),
+        ("ashby", "succeeded"),
     ]
 
 
@@ -384,5 +404,15 @@ def _lever_source(key: str, *, enabled: bool) -> LeverSourceConfig:
         kind="lever",
         company_name=f"{key.title()} Lever",
         site=f"{key}-site",
+        enabled=enabled,
+    )
+
+
+def _ashby_source(key: str, *, enabled: bool) -> AshbySourceConfig:
+    return AshbySourceConfig(
+        key=key,
+        kind="ashby",
+        company_name=f"{key.title()} Ashby",
+        board_name=f"{key}-board",
         enabled=enabled,
     )

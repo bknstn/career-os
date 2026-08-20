@@ -1,0 +1,9 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {"isListed": true, "jobUrl": "https://jobs.ashbyhq.com/example/valid"},
+    {"isListed": true, "jobUrl": "   "},
+    {"isListed": "yes", "jobUrl": "https://jobs.ashbyhq.com/example/ambiguous"},
+    {"isListed": true, "jobUrl": "https://jobs.ashbyhq.com/example/valid"}
+  ]
+}

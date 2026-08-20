@@ -1,4 +1,4 @@
-"""Thin Typer interface for configured Greenhouse and Lever public boards."""
+"""Thin Typer interface for configured Greenhouse, Lever, and Ashby boards."""
 
 from __future__ import annotations
 
@@ -18,11 +18,18 @@ from career_os.adapters import (
     AdapterRegistration,
     AdapterRegistry,
     AdapterRegistryError,
+    AshbyAdapter,
     GreenhouseAdapter,
     LeverAdapter,
 )
-from career_os.application import GreenhouseIngestionService, IngestionError, LeverIngestionService
+from career_os.application import (
+    AshbyIngestionService,
+    GreenhouseIngestionService,
+    IngestionError,
+    LeverIngestionService,
+)
 from career_os.config.sources import (
+    AshbySourceConfig,
     ConfigurationError,
     GreenhouseSourceConfig,
     LeverSourceConfig,
@@ -78,6 +85,11 @@ def adapter_registry() -> AdapterRegistry:
                 config_type=LeverSourceConfig,
                 factory=_lever_adapter,
             ),
+            AdapterRegistration.for_config(
+                kind="ashby",
+                config_type=AshbySourceConfig,
+                factory=_ashby_adapter,
+            ),
         )
     )
 
@@ -88,6 +100,10 @@ def _greenhouse_adapter(source_config: GreenhouseSourceConfig) -> SourceAdapter:
 
 def _lever_adapter(source_config: LeverSourceConfig) -> SourceAdapter:
     return cast(SourceAdapter, LeverAdapter(config=source_config))
+
+
+def _ashby_adapter(source_config: AshbySourceConfig) -> SourceAdapter:
+    return cast(SourceAdapter, AshbyAdapter(config=source_config))
 
 
 def _load_and_validate_sources(config: Path) -> SourcesConfig:
@@ -215,6 +231,12 @@ async def _collect_selected(
             ).collect(source_config=source_config, adapter=adapter)
         elif isinstance(source_config, LeverSourceConfig):
             result = await LeverIngestionService(
+                session_factory=session_factory,
+                logger=logger,
+                request_timeout_seconds=request_timeout_seconds,
+            ).collect(source_config=source_config, adapter=adapter)
+        elif isinstance(source_config, AshbySourceConfig):
+            result = await AshbyIngestionService(
                 session_factory=session_factory,
                 logger=logger,
                 request_timeout_seconds=request_timeout_seconds,

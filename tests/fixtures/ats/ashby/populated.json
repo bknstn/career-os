@@ -1,0 +1,80 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "title": "Senior Data Engineer",
+      "location": "Warsaw, Poland",
+      "secondaryLocations": [
+        {
+          "location": "Remote - Poland",
+          "address": {
+            "addressLocality": "Warsaw",
+            "addressRegion": "Mazowieckie",
+            "addressCountry": "PL"
+          }
+        }
+      ],
+      "department": "Engineering",
+      "team": "Data Platform",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "descriptionHtml": "<p>Build reliable data systems.</p>",
+      "descriptionPlain": "Build reliable data systems.",
+      "publishedAt": "2026-08-20T09:30:00Z",
+      "employmentType": "FullTime",
+      "address": {"postalAddress": {"addressLocality": "Warsaw"}},
+      "jobUrl": "https://jobs.ashbyhq.com/example/senior-data-engineer",
+      "applyUrl": "https://jobs.ashbyhq.com/example/senior-data-engineer/application",
+      "compensation": {
+        "compensationTierSummary": "Poland senior engineering compensation",
+        "scrapeableCompensationSalarySummary": "PLN 300,000 - 420,000 annually",
+        "compensationTiers": [
+          {
+            "id": "tier-senior-data-engineer",
+            "tierSummary": "Senior Data Engineer",
+            "title": "Senior Data Engineer",
+            "additionalInformation": "Annual target compensation.",
+            "components": [
+              {
+                "id": "component-salary",
+                "summary": "PLN 300,000 - 420,000 annually",
+                "compensationType": "Salary",
+                "currencyCode": "PLN",
+                "minValue": 300000,
+                "maxValue": 420000,
+                "interval": "1 YEAR"
+              },
+              {
+                "id": "component-equity",
+                "summary": "Equity percentage grant",
+                "compensationType": "EquityPercentage",
+                "interval": "NONE",
+                "currencyCode": null,
+                "minValue": 0.01,
+                "maxValue": 0.05
+              }
+            ]
+          }
+        ],
+        "summaryComponents": [
+          {
+            "compensationType": "Salary",
+            "currencyCode": "PLN",
+            "minValue": 300000,
+            "maxValue": 420000,
+            "interval": "1 YEAR"
+          },
+          {
+            "compensationType": "EquityPercentage",
+            "interval": "NONE",
+            "currencyCode": null,
+            "minValue": 0.01,
+            "maxValue": 0.05
+          }
+        ]
+      },
+      "unknownFutureField": {"preserved": ["without", "normalization"]}
+    }
+  ]
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging as stdlib_logging
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
+from datetime import datetime
 from html import escape
 from typing import Protocol, TypeVar
 from uuid import uuid4
@@ -20,7 +21,12 @@ from career_os.application.collect import (
     CollectionService,
 )
 from career_os.application.lifecycle import LifecycleAction, LifecycleResult
-from career_os.config.sources import GreenhouseSourceConfig, LeverSourceConfig, SourceConfig
+from career_os.config.sources import (
+    AshbySourceConfig,
+    GreenhouseSourceConfig,
+    LeverSourceConfig,
+    SourceConfig,
+)
 from career_os.db import session_scope
 from career_os.domain import CanonicalJobCandidate, RawJobPosting, SourceAdapter
 from career_os.domain.runs import RunCounts
@@ -37,6 +43,7 @@ ConfigT = TypeVar("ConfigT", bound=SourceConfig, contravariant=True)
 
 GREENHOUSE_NORMALIZER_VERSION = "greenhouse-v1"
 LEVER_NORMALIZER_VERSION = "lever-v1"
+ASHBY_NORMALIZER_VERSION = "ashby-v1"
 NO_TAXONOMY_VERSION = "none-v1"
 
 
@@ -263,6 +270,68 @@ def lever_candidate(
     )
 
 
+def ashby_candidate(
+    source_config: AshbySourceConfig, posting: RawJobPosting
+) -> CanonicalJobCandidate:
+    """Map only documented Ashby canonical evidence; retain future fields raw."""
+    if posting.source_kind != "ashby" or posting.source_key != source_config.key:
+        raise IngestionError("raw posting identity does not match the configured Ashby source")
+    title = posting.payload.get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise IngestionError("Ashby raw posting has no non-blank title")
+    description_html = posting.payload.get("descriptionHtml")
+    description_plain = posting.payload.get("descriptionPlain")
+    if description_html is not None and not isinstance(description_html, str):
+        raise IngestionError("Ashby raw posting descriptionHtml was not a string")
+    if description_plain is not None and not isinstance(description_plain, str):
+        raise IngestionError("Ashby raw posting descriptionPlain was not a string")
+    html_text = html_to_text(description_html) if isinstance(description_html, str) else ""
+    canonical_html: str | None = description_html if html_text else None
+    if isinstance(description_plain, str) and clean_text(description_plain):
+        description_text = clean_text(description_plain)
+    elif html_text:
+        description_text = html_text
+    else:
+        raise IngestionError("Ashby raw posting has no non-blank description content")
+    return CanonicalJobCandidate(
+        source_key=source_config.key,
+        source_kind=source_config.kind,
+        external_id=posting.external_id,
+        company_name=source_config.company_name,
+        title_raw=title,
+        title_normalized=title,
+        description_html=canonical_html,
+        description_text=description_text,
+        department_raw=_optional_text(posting.payload.get("department")),
+        team_raw=_optional_text(posting.payload.get("team")),
+        source_url=posting.source_url,
+        apply_url=posting.apply_url,
+        published_at=_ashby_published_at(posting.payload.get("publishedAt")),
+        observed_at=posting.fetched_at,
+        raw_payload=posting.payload,
+        normalizer_version=ASHBY_NORMALIZER_VERSION,
+        taxonomy_version=NO_TAXONOMY_VERSION,
+    )
+
+
+def _optional_text(value: object) -> str | None:
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def _ashby_published_at(value: object) -> datetime | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise IngestionError("Ashby raw posting publishedAt was not a non-blank ISO timestamp")
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise IngestionError("Ashby raw posting publishedAt was not an ISO timestamp") from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise IngestionError("Ashby raw posting publishedAt was not timezone-aware")
+    return parsed
+
+
 @dataclass(frozen=True, slots=True)
 class _LeverDescription:
     """Canonical visible text plus only source-provided HTML evidence."""
@@ -427,6 +496,30 @@ class LeverIngestionService:
 
     async def collect(
         self, *, source_config: LeverSourceConfig, adapter: SourceAdapter
+    ) -> IngestionResult:
+        return await IngestionService(
+            session_factory=self.session_factory,
+            logger=self.logger,
+            request_timeout_seconds=self.request_timeout_seconds,
+            normalizer_version=self.normalizer_version,
+            taxonomy_version=self.taxonomy_version,
+            candidate_factory=self.candidate_factory,
+        ).collect(source_config=source_config, adapter=adapter)
+
+
+@dataclass(slots=True)
+class AshbyIngestionService:
+    """Thin Ashby composition over the source-neutral ingestion policy."""
+
+    session_factory: SessionFactory
+    logger: stdlib_logging.Logger
+    request_timeout_seconds: float
+    candidate_factory: CandidateFactory[AshbySourceConfig] = ashby_candidate
+    normalizer_version: str = ASHBY_NORMALIZER_VERSION
+    taxonomy_version: str = NO_TAXONOMY_VERSION
+
+    async def collect(
+        self, *, source_config: AshbySourceConfig, adapter: SourceAdapter
     ) -> IngestionResult:
         return await IngestionService(
             session_factory=self.session_factory,

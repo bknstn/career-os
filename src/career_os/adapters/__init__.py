@@ -1,5 +1,13 @@
 """Adapter construction boundary and concrete public-source clients."""
 
+from career_os.adapters.ashby import (
+    AshbyAdapter,
+    AshbyAdapterError,
+    AshbyHttpClient,
+    AshbyHttpError,
+    AshbyHttpResponse,
+    AshbyTransportError,
+)
 from career_os.adapters.greenhouse import (
     GreenhouseAdapter,
     GreenhouseAdapterError,
@@ -28,6 +36,12 @@ __all__ = [
     "AdapterRegistration",
     "AdapterRegistry",
     "AdapterRegistryError",
+    "AshbyAdapter",
+    "AshbyAdapterError",
+    "AshbyHttpClient",
+    "AshbyHttpError",
+    "AshbyHttpResponse",
+    "AshbyTransportError",
     "GreenhouseAdapter",
     "GreenhouseAdapterError",
     "GreenhouseHttpClient",

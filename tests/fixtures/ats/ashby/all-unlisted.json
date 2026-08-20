@@ -1,0 +1,10 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "title": "Closed role",
+      "isListed": false,
+      "jobUrl": "https://jobs.ashbyhq.com/example/closed-role"
+    }
+  ]
+}
