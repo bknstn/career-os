@@ -30,6 +30,7 @@ from career_os.application import (
     LeverIngestionService,
     WorkablePublicIngestionService,
 )
+from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
 from career_os.config.sources import (
     AshbySourceConfig,
     ConfigurationError,
@@ -60,12 +61,22 @@ app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job 
 sources_app = typer.Typer(no_args_is_help=True, help="Validate configured public job boards.")
 runs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted collection runs.")
 jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical jobs.")
+taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
 app.add_typer(sources_app, name="sources")
 app.add_typer(runs_app, name="runs")
 app.add_typer(jobs_app, name="jobs")
+app.add_typer(taxonomy_app, name="taxonomy")
 
 DEFAULT_SOURCES_CONFIG = Path("config/sources.yaml")
+DEFAULT_SKILL_TAXONOMY_CONFIG = Path("config/taxonomy/skills.v1.yaml")
+DEFAULT_GOLDEN_EXTRACTION_CORPUS = Path("tests/fixtures/taxonomy/golden_extraction.v1.yaml")
 _CONFIG_OPTION = typer.Option(DEFAULT_SOURCES_CONFIG, "--config", exists=False, dir_okay=False)
+_TAXONOMY_CONFIG_OPTION = typer.Option(
+    DEFAULT_SKILL_TAXONOMY_CONFIG, "--config", exists=False, dir_okay=False
+)
+_GOLDEN_CORPUS_OPTION = typer.Option(
+    DEFAULT_GOLDEN_EXTRACTION_CORPUS, "--golden", exists=False, dir_okay=False
+)
 _SOURCE_OPTION = typer.Option([], "--source", help="Collect only this configured source key.")
 _STRICT_OPTION = typer.Option(
     False,
@@ -168,6 +179,27 @@ def _selected_sources(
     if not selected:
         raise ConfigurationError("no enabled sources were selected")
     return selected
+
+
+@taxonomy_app.command("validate")
+def taxonomy_validate(
+    config: Path = _TAXONOMY_CONFIG_OPTION,
+    golden: Path = _GOLDEN_CORPUS_OPTION,
+) -> None:
+    """Validate taxonomy and golden-case structure without extraction or infrastructure I/O."""
+    try:
+        taxonomy = load_skill_taxonomy(config)
+        corpus = load_golden_extraction_corpus(golden, taxonomy=taxonomy)
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(
+        {
+            "taxonomy_version": taxonomy.version,
+            "skills": len(taxonomy.skills),
+            "categories": len(taxonomy.categories),
+            "cases": len(corpus.cases),
+        }
+    )
 
 
 @sources_app.command("validate")

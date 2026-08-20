@@ -1,0 +1,46 @@
+taxonomy_version: 1.0.0
+cases:
+  - id: backend_go_kafka_postgres
+    title: Senior go developer
+    description: Build Golang services with Kafka and PostgreSQL.
+    expected_skill_ids: [go, kafka, postgresql]
+    forbidden_skill_ids: [java, r]
+  - id: go_verb_is_not_language
+    description: Go to market with product partners and go live next quarter.
+    expected_skill_ids: []
+    forbidden_skill_ids: [go]
+  - id: data_r_language
+    title: Data scientist (R language)
+    sections:
+      requirements: Use R programming, Python, pandas, and BigQuery for experiments.
+    expected_skill_ids: [r, python, pandas, bigquery]
+    forbidden_skill_ids: [go, c]
+  - id: r_and_d_is_not_r_language
+    description: Partner with the R&D organization on product research.
+    expected_skill_ids: []
+    forbidden_skill_ids: [r]
+  - id: embedded_c_language
+    title: Embedded C developer
+    description: Develop C programming for devices with Docker-based builds.
+    expected_skill_ids: [c, docker]
+    forbidden_skill_ids: [cpp, csharp]
+  - id: c_suite_is_not_c_language
+    description: Present AWS cloud security posture to the C-suite.
+    expected_skill_ids: [aws]
+    forbidden_skill_ids: [c]
+  - id: platform_punctuation_case
+    title: PLATFORM engineer
+    description: Operate Kubernetes (K8s), Terraform, AWS, GitHub Actions, Prometheus, and Grafana.
+    expected_skill_ids: [kubernetes, terraform, aws, github_actions, prometheus, grafana]
+    forbidden_skill_ids: [azure]
+  - id: cloud_data_pipeline
+    title: Data platform engineer
+    sections:
+      stack: Apache Spark, Airflow, dbt, Snowflake Data Cloud, and AWS S3.
+    expected_skill_ids: [spark, airflow, dbt, snowflake, aws_s3]
+    forbidden_skill_ids: [mongodb]
+  - id: qualified_framework_aliases_avoid_ordinary_words
+    title: Frontend and API engineer
+    description: Build React.js interfaces and Express.js APIs; reactions and express opinions are not skills.
+    expected_skill_ids: [react, express]
+    forbidden_skill_ids: [swift]

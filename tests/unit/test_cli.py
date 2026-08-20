@@ -42,6 +42,8 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["collect", "--help"],
         ["sources", "--help"],
         ["sources", "validate", "--help"],
+        ["taxonomy", "--help"],
+        ["taxonomy", "validate", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -83,6 +85,41 @@ sources:
     assert result.exit_code == 0
     assert '"registered_kinds": ["ashby", "greenhouse", "lever"]' in result.output
     assert '"sources": 3' in result.output
+
+
+def test_taxonomy_validate_has_deterministic_offline_summary(monkeypatch) -> None:
+    def unexpected_io(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("taxonomy validate must not initialize settings or persistence")
+
+    monkeypatch.setattr("career_os.cli.load_settings", unexpected_io)
+    monkeypatch.setattr("career_os.cli.create_database_engine", unexpected_io)
+    result = CliRunner().invoke(app, ["taxonomy", "validate"])
+
+    assert result.exit_code == 0
+    assert result.output == (
+        '{"cases": 9, "categories": 14, "skills": 113, "taxonomy_version": "1.0.0"}\n'
+    )
+
+
+def test_taxonomy_validate_reports_sanitized_invalid_configuration(tmp_path: Path) -> None:
+    invalid = tmp_path / "invalid-skills.yaml"
+    invalid.write_text("version: invalid\nskills: []\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["taxonomy", "validate", "--config", str(invalid)])
+
+    assert result.exit_code == 2
+    assert "Invalid skill taxonomy" in result.output
+    assert "invalid" not in result.output.split("Error: ", maxsplit=1)[-1]
+
+
+def test_taxonomy_validate_rejects_invalid_golden_corpus(tmp_path: Path) -> None:
+    invalid = tmp_path / "invalid-golden.yaml"
+    invalid.write_text("taxonomy_version: 1.0.0\ncases: []\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["taxonomy", "validate", "--golden", str(invalid)])
+
+    assert result.exit_code == 2
+    assert "Invalid golden extraction corpus" in result.output
 
 
 def test_sources_validate_rejects_configured_kinds_without_an_available_adapter(

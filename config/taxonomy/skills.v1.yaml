@@ -1,0 +1,128 @@
+version: 1.0.0
+skills:
+  - {id: python, label: Python, category: language, aliases: [Python]}
+  - {id: java, label: Java, category: language, aliases: [Java]}
+  - {id: kotlin, label: Kotlin, category: language, aliases: [Kotlin]}
+  - {id: scala, label: Scala, category: language, aliases: [Scala]}
+  - {id: go, label: Go, category: language, aliases: [Go, Golang], ambiguous_aliases: [Go]}
+  - {id: rust, label: Rust, category: language, aliases: [Rust]}
+  - {id: c, label: C, category: language, aliases: [C], ambiguous_aliases: [C]}
+  - {id: cpp, label: C++, category: language, aliases: [C++]}
+  - {id: csharp, label: C#, category: language, aliases: [C#]}
+  - {id: javascript, label: JavaScript, category: language, aliases: [JavaScript, JS]}
+  - {id: typescript, label: TypeScript, category: language, aliases: [TypeScript, TS]}
+  - {id: ruby, label: Ruby, category: language, aliases: [Ruby]}
+  - {id: php, label: PHP, category: language, aliases: [PHP]}
+  - {id: r, label: R, category: language, aliases: [R, R-language], ambiguous_aliases: [R]}
+  - {id: swift, label: Swift, category: language, aliases: [Swift programming]}
+  - {id: sql, label: SQL, category: language, aliases: [SQL]}
+  - {id: bash, label: Bash, category: language, aliases: [Bash, shell scripting]}
+  - {id: django, label: Django, category: framework, aliases: [Django]}
+  - {id: flask, label: Flask, category: framework, aliases: [Flask]}
+  - {id: fastapi, label: FastAPI, category: framework, aliases: [FastAPI]}
+  - {id: spring_boot, label: Spring Boot, category: framework, aliases: [Spring Boot]}
+  - {id: spring, label: Spring Framework, category: framework, aliases: [Spring Framework]}
+  - {id: dotnet, label: .NET, category: framework, aliases: [.NET, dotnet]}
+  - {id: nodejs, label: Node.js, category: framework, aliases: [Node.js, NodeJS]}
+  - {id: express, label: Express, category: framework, aliases: [Express.js]}
+  - {id: nestjs, label: NestJS, category: framework, aliases: [NestJS]}
+  - {id: react, label: React, category: framework, aliases: [React.js]}
+  - {id: angular, label: Angular, category: framework, aliases: [Angular]}
+  - {id: vuejs, label: Vue.js, category: framework, aliases: [Vue.js, Vue]}
+  - {id: graphql, label: GraphQL, category: api, aliases: [GraphQL]}
+  - {id: rest_api, label: REST API, category: api, aliases: [REST API, RESTful]}
+  - {id: grpc, label: gRPC, category: api, aliases: [gRPC]}
+  - {id: openapi, label: OpenAPI, category: api, aliases: [OpenAPI, Swagger]}
+  - {id: postgresql, label: PostgreSQL, category: database, aliases: [PostgreSQL, Postgres]}
+  - {id: mysql, label: MySQL, category: database, aliases: [MySQL]}
+  - {id: mariadb, label: MariaDB, category: database, aliases: [MariaDB]}
+  - {id: sqlite, label: SQLite, category: database, aliases: [SQLite]}
+  - {id: oracle_database, label: Oracle Database, category: database, aliases: [Oracle Database]}
+  - {id: sql_server, label: SQL Server, category: database, aliases: [SQL Server, MSSQL]}
+  - {id: mongodb, label: MongoDB, category: database, aliases: [MongoDB]}
+  - {id: redis, label: Redis, category: database, aliases: [Redis]}
+  - {id: elasticsearch, label: Elasticsearch, category: database, aliases: [Elasticsearch]}
+  - {id: opensearch, label: OpenSearch, category: database, aliases: [OpenSearch]}
+  - {id: cassandra, label: Cassandra, category: database, aliases: [Cassandra]}
+  - {id: dynamodb, label: DynamoDB, category: database, aliases: [DynamoDB]}
+  - {id: clickhouse, label: ClickHouse, category: database, aliases: [ClickHouse]}
+  - {id: kafka, label: Apache Kafka, category: messaging, aliases: [Kafka, Apache Kafka]}
+  - {id: rabbitmq, label: RabbitMQ, category: messaging, aliases: [RabbitMQ]}
+  - {id: nats, label: NATS, category: messaging, aliases: [NATS]}
+  - {id: activemq, label: ActiveMQ, category: messaging, aliases: [ActiveMQ]}
+  - {id: sqs, label: Amazon SQS, category: messaging, aliases: [SQS, Amazon SQS]}
+  - {id: pubsub, label: Google Pub/Sub, category: messaging, aliases: [Google Pub/Sub, Pub/Sub]}
+  - {id: aws, label: AWS, category: cloud, aliases: [AWS, Amazon Web Services]}
+  - {id: azure, label: Microsoft Azure, category: cloud, aliases: [Azure, Microsoft Azure]}
+  - {id: google_cloud, label: Google Cloud, category: cloud, aliases: [Google Cloud, GCP]}
+  - {id: aws_ec2, label: Amazon EC2, category: cloud, aliases: [EC2, Amazon EC2]}
+  - {id: aws_lambda, label: AWS Lambda, category: cloud, aliases: [AWS Lambda]}
+  - {id: aws_s3, label: Amazon S3, category: cloud, aliases: [S3, Amazon S3]}
+  - {id: aws_eks, label: Amazon EKS, category: cloud, aliases: [EKS, Amazon EKS]}
+  - {id: azure_aks, label: Azure Kubernetes Service, category: cloud, aliases: [AKS, Azure Kubernetes Service]}
+  - {id: google_gke, label: Google Kubernetes Engine, category: cloud, aliases: [GKE, Google Kubernetes Engine]}
+  - {id: cloudflare, label: Cloudflare, category: cloud, aliases: [Cloudflare]}
+  - {id: docker, label: Docker, category: containers, aliases: [Docker]}
+  - {id: kubernetes, label: Kubernetes, category: containers, aliases: [Kubernetes, K8s]}
+  - {id: helm, label: Helm, category: containers, aliases: [Helm]}
+  - {id: openshift, label: OpenShift, category: containers, aliases: [OpenShift]}
+  - {id: istio, label: Istio, category: containers, aliases: [Istio]}
+  - {id: terraform, label: Terraform, category: iac, aliases: [Terraform]}
+  - {id: pulumi, label: Pulumi, category: iac, aliases: [Pulumi]}
+  - {id: ansible, label: Ansible, category: iac, aliases: [Ansible]}
+  - {id: cloudformation, label: CloudFormation, category: iac, aliases: [CloudFormation]}
+  - {id: chef, label: Chef, category: iac, aliases: [Chef Infra]}
+  - {id: puppet, label: Puppet, category: iac, aliases: [Puppet Enterprise]}
+  - {id: github_actions, label: GitHub Actions, category: cicd, aliases: [GitHub Actions]}
+  - {id: gitlab_ci, label: GitLab CI, category: cicd, aliases: [GitLab CI, GitLab CI/CD]}
+  - {id: jenkins, label: Jenkins, category: cicd, aliases: [Jenkins]}
+  - {id: circleci, label: CircleCI, category: cicd, aliases: [CircleCI]}
+  - {id: argocd, label: Argo CD, category: cicd, aliases: [Argo CD, ArgoCD]}
+  - {id: fluxcd, label: Flux CD, category: cicd, aliases: [Flux CD, FluxCD]}
+  - {id: prometheus, label: Prometheus, category: observability, aliases: [Prometheus]}
+  - {id: grafana, label: Grafana, category: observability, aliases: [Grafana]}
+  - {id: datadog, label: Datadog, category: observability, aliases: [Datadog]}
+  - {id: new_relic, label: New Relic, category: observability, aliases: [New Relic]}
+  - {id: splunk, label: Splunk, category: observability, aliases: [Splunk]}
+  - {id: opentelemetry, label: OpenTelemetry, category: observability, aliases: [OpenTelemetry, OTel]}
+  - {id: jaeger, label: Jaeger, category: observability, aliases: [Jaeger]}
+  - {id: sentry, label: Sentry, category: observability, aliases: [Sentry]}
+  - {id: oauth2, label: OAuth 2.0, category: security, aliases: [OAuth2, OAuth 2.0]}
+  - {id: openid_connect, label: OpenID Connect, category: security, aliases: [OpenID Connect, OIDC]}
+  - {id: jwt, label: JSON Web Token, category: security, aliases: [JWT, JSON Web Token]}
+  - {id: owasp, label: OWASP, category: security, aliases: [OWASP]}
+  - {id: vault, label: HashiCorp Vault, category: security, aliases: [HashiCorp Vault]}
+  - {id: sonarqube, label: SonarQube, category: security, aliases: [SonarQube]}
+  - {id: pytest, label: pytest, category: testing, aliases: [pytest]}
+  - {id: junit, label: JUnit, category: testing, aliases: [JUnit]}
+  - {id: jest, label: Jest, category: testing, aliases: [Jest]}
+  - {id: playwright, label: Playwright, category: testing, aliases: [Playwright]}
+  - {id: selenium, label: Selenium, category: testing, aliases: [Selenium]}
+  - {id: postman, label: Postman, category: testing, aliases: [Postman]}
+  - {id: airflow, label: Apache Airflow, category: data, aliases: [Airflow, Apache Airflow]}
+  - {id: dbt, label: dbt, category: data, aliases: [dbt]}
+  - {id: spark, label: Apache Spark, category: data, aliases: [Apache Spark]}
+  - {id: flink, label: Apache Flink, category: data, aliases: [Flink, Apache Flink]}
+  - {id: snowflake, label: Snowflake, category: data, aliases: [Snowflake Data Cloud]}
+  - {id: bigquery, label: BigQuery, category: data, aliases: [BigQuery]}
+  - {id: databricks, label: Databricks, category: data, aliases: [Databricks]}
+  - {id: pandas, label: pandas, category: data, aliases: [pandas]}
+  - {id: numpy, label: NumPy, category: data, aliases: [NumPy]}
+  - {id: pytorch, label: PyTorch, category: ml, aliases: [PyTorch]}
+  - {id: tensorflow, label: TensorFlow, category: ml, aliases: [TensorFlow]}
+  - {id: scikit_learn, label: scikit-learn, category: ml, aliases: [scikit-learn, sklearn]}
+  - {id: mlflow, label: MLflow, category: ml, aliases: [MLflow]}
+  - {id: kubeflow, label: Kubeflow, category: ml, aliases: [Kubeflow]}
+ambiguous_alias_rules:
+  - skill_id: go
+    alias: Go
+    positive_context_patterns: ["\\bGo\\s+(developer|service|runtime|language|programming)\\b", "\\bGolang\\b"]
+    negative_patterns: ["\\bgo\\s+to\\b", "\\bgo\\s+live\\b"]
+  - skill_id: r
+    alias: R
+    positive_context_patterns: ["\\bR\\s+(language|programming|developer|statistics)\\b", "\\bRStudio\\b"]
+    negative_patterns: ["\\bR&D\\b", "\\bR\\s*\\+"]
+  - skill_id: c
+    alias: C
+    positive_context_patterns: ['\bC\s+(language|programming|developer)\b', '\bC/C\+\+\b']
+    negative_patterns: ['\bC-suite\b', '\bgrade\s+C\b']
