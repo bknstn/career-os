@@ -1,4 +1,4 @@
-"""Thin Typer interface for the first Greenhouse ingestion vertical slice."""
+"""Thin Typer interface for configured Greenhouse and Lever public boards."""
 
 from __future__ import annotations
 
@@ -19,11 +19,13 @@ from career_os.adapters import (
     AdapterRegistry,
     AdapterRegistryError,
     GreenhouseAdapter,
+    LeverAdapter,
 )
-from career_os.application import GreenhouseIngestionService, IngestionError
+from career_os.application import GreenhouseIngestionService, IngestionError, LeverIngestionService
 from career_os.config.sources import (
     ConfigurationError,
     GreenhouseSourceConfig,
+    LeverSourceConfig,
     SourceConfig,
     SourcesConfig,
     load_sources_config,
@@ -62,14 +64,19 @@ _STRICT_OPTION = typer.Option(
 )
 
 
-def greenhouse_registry() -> AdapterRegistry:
-    """Return the explicit Phase-1 adapter registration set without I/O."""
+def adapter_registry() -> AdapterRegistry:
+    """Return the explicit available adapter registration set without I/O."""
     return AdapterRegistry(
         (
             AdapterRegistration.for_config(
                 kind="greenhouse",
                 config_type=GreenhouseSourceConfig,
                 factory=_greenhouse_adapter,
+            ),
+            AdapterRegistration.for_config(
+                kind="lever",
+                config_type=LeverSourceConfig,
+                factory=_lever_adapter,
             ),
         )
     )
@@ -79,9 +86,13 @@ def _greenhouse_adapter(source_config: GreenhouseSourceConfig) -> SourceAdapter:
     return cast(SourceAdapter, GreenhouseAdapter(config=source_config))
 
 
+def _lever_adapter(source_config: LeverSourceConfig) -> SourceAdapter:
+    return cast(SourceAdapter, LeverAdapter(config=source_config))
+
+
 def _load_and_validate_sources(config: Path) -> SourcesConfig:
     sources_config = load_sources_config(config)
-    greenhouse_registry().validate_sources(sources_config)
+    adapter_registry().validate_sources(sources_config)
     return sources_config
 
 
@@ -109,7 +120,7 @@ def _json_default(value: object) -> str:
 
 def _selected_sources(
     sources_config: SourcesConfig, requested_keys: Iterable[str]
-) -> tuple[GreenhouseSourceConfig, ...]:
+) -> tuple[SourceConfig, ...]:
     requested = tuple(dict.fromkeys(requested_keys))
     sources_by_key = {source.key: source for source in sources_config.sources}
     unknown = sorted(set(requested) - set(sources_by_key))
@@ -124,9 +135,7 @@ def _selected_sources(
         selected = tuple(source for source in sources_config.sources if source.enabled)
     if not selected:
         raise ConfigurationError("no enabled sources were selected")
-    if any(not isinstance(source, GreenhouseSourceConfig) for source in selected):
-        raise ConfigurationError("only Greenhouse sources are available in the Phase-1 CLI")
-    return tuple(source for source in selected if isinstance(source, GreenhouseSourceConfig))
+    return selected
 
 
 @sources_app.command("validate")
@@ -141,7 +150,7 @@ def sources_validate(
     _json_echo(
         {
             "config": str(config),
-            "registered_kinds": sorted(greenhouse_registry().registered_kinds),
+            "registered_kinds": sorted(adapter_registry().registered_kinds),
             "sources": len(sources_config.sources),
         }
     )
@@ -162,7 +171,7 @@ def collect(
             SourceConfigurationRepository(session).sync(sources_config)
         settings = load_settings()
         logger = configure_logging(level=settings.log_level)
-        registry = greenhouse_registry()
+        registry = adapter_registry()
         outcomes = asyncio.run(
             _collect_selected(
                 selected_sources=selected_sources,
@@ -189,23 +198,29 @@ def collect(
 
 async def _collect_selected(
     *,
-    selected_sources: Iterable[GreenhouseSourceConfig],
+    selected_sources: Iterable[SourceConfig],
     registry: AdapterRegistry,
     session_factory: sessionmaker[Session],
     logger: Any,
     request_timeout_seconds: float,
 ) -> list[dict[str, object]]:
     outcomes: list[dict[str, object]] = []
-    service = GreenhouseIngestionService(
-        session_factory=session_factory,
-        logger=logger,
-        request_timeout_seconds=request_timeout_seconds,
-    )
     for source_config in selected_sources:
-        result = await service.collect(
-            source_config=source_config,
-            adapter=registry.build(source_config),
-        )
+        adapter = registry.build(source_config)
+        if isinstance(source_config, GreenhouseSourceConfig):
+            result = await GreenhouseIngestionService(
+                session_factory=session_factory,
+                logger=logger,
+                request_timeout_seconds=request_timeout_seconds,
+            ).collect(source_config=source_config, adapter=adapter)
+        elif isinstance(source_config, LeverSourceConfig):
+            result = await LeverIngestionService(
+                session_factory=session_factory,
+                logger=logger,
+                request_timeout_seconds=request_timeout_seconds,
+            ).collect(source_config=source_config, adapter=adapter)
+        else:  # Registry coverage is validated before selection, retained for type-safe isolation.
+            raise IngestionError(f"no ingestion composition for source kind: {source_config.kind}")
         outcomes.append(
             {
                 "source_key": source_config.key,

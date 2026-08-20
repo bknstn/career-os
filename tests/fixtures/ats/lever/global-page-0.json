@@ -1,0 +1,19 @@
+[
+  {
+    "id": "lever-001",
+    "text": "Platform Engineer",
+    "description": "<p>Build reliable systems.</p>",
+    "descriptionPlain": "Build reliable systems.",
+    "hostedUrl": "https://jobs.lever.co/example/lever-001",
+    "applyUrl": "https://jobs.lever.co/example/lever-001/apply",
+    "categories": {"department": "Engineering", "team": "Platform"},
+    "unknownFutureField": {"preserved": ["as", "evidence"]}
+  },
+  {
+    "id": "lever-002",
+    "text": "Product Designer",
+    "descriptionPlain": "Design useful products.",
+    "hostedUrl": "https://jobs.lever.co/example/lever-002",
+    "applyUrl": ""
+  }
+]

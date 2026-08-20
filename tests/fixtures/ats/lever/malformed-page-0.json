@@ -1,0 +1,10 @@
+[
+  {
+    "id": "valid-1",
+    "text": "Valid retained",
+    "description": "<p>Valid evidence.</p>",
+    "hostedUrl": "https://jobs.lever.co/example/valid-1"
+  },
+  {"id": "   ", "text": "Missing stable identity"},
+  {"id": "valid-1", "text": "Duplicate evidence"}
+]

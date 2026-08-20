@@ -1,0 +1,13 @@
+sources:
+  - key: example-greenhouse
+    kind: greenhouse
+    company_name: Example Inc.
+    board_token: example
+    enabled: true
+
+  - key: example-lever-eu
+    kind: lever
+    company_name: Example EU
+    site: example
+    region: eu
+    enabled: true

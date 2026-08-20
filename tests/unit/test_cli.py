@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -13,8 +14,14 @@ import pytest
 from sqlalchemy.exc import OperationalError
 from typer.testing import CliRunner
 
+from career_os import cli
 from career_os.cli import _job_payload, _run_payload, _selected_sources, app
-from career_os.config.sources import ConfigurationError, GreenhouseSourceConfig, SourcesConfig
+from career_os.config.sources import (
+    ConfigurationError,
+    GreenhouseSourceConfig,
+    LeverSourceConfig,
+    SourcesConfig,
+)
 
 
 def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> None:
@@ -24,6 +31,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
     monkeypatch.setattr("career_os.cli.create_database_engine", unexpected_io)
     monkeypatch.setattr("career_os.cli.load_settings", unexpected_io)
     monkeypatch.setattr("career_os.cli._greenhouse_adapter", unexpected_io)
+    monkeypatch.setattr("career_os.cli._lever_adapter", unexpected_io)
     runner = CliRunner()
 
     for arguments in (
@@ -40,7 +48,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         assert runner.invoke(app, arguments).exit_code == 0
 
 
-def test_sources_validate_accepts_greenhouse_config_without_database_io(
+def test_sources_validate_accepts_greenhouse_and_lever_config_without_database_io(
     monkeypatch, tmp_path: Path
 ) -> None:
     config = tmp_path / "sources.yaml"
@@ -51,6 +59,10 @@ sources:
     kind: greenhouse
     company_name: Example Inc.
     board_token: example
+  - key: example-lever
+    kind: lever
+    company_name: Example Lever
+    site: example
 """,
         encoding="utf-8",
     )
@@ -62,8 +74,8 @@ sources:
     result = CliRunner().invoke(app, ["sources", "validate", "--config", str(config)])
 
     assert result.exit_code == 0
-    assert '"registered_kinds": ["greenhouse"]' in result.output
-    assert '"sources": 1' in result.output
+    assert '"registered_kinds": ["greenhouse", "lever"]' in result.output
+    assert '"sources": 2' in result.output
 
 
 def test_sources_validate_rejects_configured_kinds_without_an_available_adapter(
@@ -74,9 +86,9 @@ def test_sources_validate_rejects_configured_kinds_without_an_available_adapter(
         """
 sources:
   - key: future-source
-    kind: lever
+    kind: ashby
     company_name: Future Inc.
-    site: future
+    board_name: future
 """,
         encoding="utf-8",
     )
@@ -84,7 +96,7 @@ sources:
     result = CliRunner().invoke(app, ["sources", "validate", "--config", str(config)])
 
     assert result.exit_code == 2
-    assert "no adapter factory registered for kind(s): lever" in result.output
+    assert "no adapter factory registered for kind(s): ashby" in result.output
 
 
 def test_database_errors_are_reported_with_a_nonzero_exit_without_a_traceback(monkeypatch) -> None:
@@ -102,9 +114,10 @@ def test_database_errors_are_reported_with_a_nonzero_exit_without_a_traceback(mo
 def test_source_selection_uses_enabled_sources_or_explicit_requested_keys() -> None:
     enabled = _source("enabled", enabled=True)
     disabled = _source("disabled", enabled=False)
-    config = SourcesConfig(sources=[enabled, disabled])
+    lever = _lever_source("lever", enabled=True)
+    config = SourcesConfig(sources=[enabled, disabled, lever])
 
-    assert _selected_sources(config, ()) == (enabled,)
+    assert _selected_sources(config, ()) == (enabled, lever)
     assert _selected_sources(config, ("disabled",)) == (disabled,)
     assert _selected_sources(config, ("disabled", "disabled", "enabled")) == (
         disabled,
@@ -120,6 +133,64 @@ def test_source_selection_rejects_unknown_or_empty_enabled_selection() -> None:
         _selected_sources(config, ())
     with pytest.raises(ConfigurationError, match="not configured"):
         _selected_sources(config, ("missing",))
+
+
+def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_results(
+    monkeypatch,
+) -> None:
+    greenhouse = _source("greenhouse", enabled=True)
+    lever = _lever_source("lever", enabled=True)
+    calls: list[tuple[str, str, str]] = []
+
+    def result_for(source_key: str, status: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            collection=SimpleNamespace(
+                run=SimpleNamespace(
+                    id=f"{source_key}-run",
+                    status=SimpleNamespace(value=status),
+                    incomplete_reason="fixture partial" if status == "partial" else None,
+                    error_summary=None,
+                )
+            ),
+            counts=SimpleNamespace(as_fields=lambda: {"items_fetched": 1}),
+            lifecycle=SimpleNamespace(action=SimpleNamespace(value="skipped_unsafe")),
+            collection_failed=status == "failed",
+        )
+
+    class FakeGreenhouseIngestionService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        async def collect(self, *, source_config: GreenhouseSourceConfig, **_kwargs: object):
+            calls.append(("greenhouse", source_config.key, "partial"))
+            return result_for(source_config.key, "partial")
+
+    class FakeLeverIngestionService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        async def collect(self, *, source_config: LeverSourceConfig, **_kwargs: object):
+            calls.append(("lever", source_config.key, "succeeded"))
+            return result_for(source_config.key, "succeeded")
+
+    monkeypatch.setattr("career_os.cli.GreenhouseIngestionService", FakeGreenhouseIngestionService)
+    monkeypatch.setattr("career_os.cli.LeverIngestionService", FakeLeverIngestionService)
+
+    outcomes = asyncio.run(
+        cli._collect_selected(
+            selected_sources=(greenhouse, lever),
+            registry=cli.adapter_registry(),
+            session_factory=object(),
+            logger=logging.getLogger(),
+            request_timeout_seconds=1.0,
+        )
+    )
+
+    assert calls == [("greenhouse", "greenhouse", "partial"), ("lever", "lever", "succeeded")]
+    assert [(outcome["source_key"], outcome["status"]) for outcome in outcomes] == [
+        ("greenhouse", "partial"),
+        ("lever", "succeeded"),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -303,5 +374,15 @@ def _source(key: str, *, enabled: bool) -> GreenhouseSourceConfig:
         kind="greenhouse",
         company_name=f"{key.title()} Inc.",
         board_token=f"{key}-board",
+        enabled=enabled,
+    )
+
+
+def _lever_source(key: str, *, enabled: bool) -> LeverSourceConfig:
+    return LeverSourceConfig(
+        key=key,
+        kind="lever",
+        company_name=f"{key.title()} Lever",
+        site=f"{key}-site",
         enabled=enabled,
     )

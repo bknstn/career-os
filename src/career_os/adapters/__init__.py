@@ -8,6 +8,14 @@ from career_os.adapters.greenhouse import (
     GreenhouseHttpResponse,
     GreenhouseTransportError,
 )
+from career_os.adapters.lever import (
+    LeverAdapter,
+    LeverAdapterError,
+    LeverHttpClient,
+    LeverHttpError,
+    LeverHttpResponse,
+    LeverTransportError,
+)
 from career_os.adapters.registry import (
     AdapterFactory,
     AdapterRegistration,
@@ -26,4 +34,10 @@ __all__ = [
     "GreenhouseHttpError",
     "GreenhouseHttpResponse",
     "GreenhouseTransportError",
+    "LeverAdapter",
+    "LeverAdapterError",
+    "LeverHttpClient",
+    "LeverHttpError",
+    "LeverHttpResponse",
+    "LeverTransportError",
 ]
