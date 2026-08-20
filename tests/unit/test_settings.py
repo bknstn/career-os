@@ -203,6 +203,27 @@ def test_settings_parse_environment_and_explicit_overrides(monkeypatch: pytest.M
     assert overridden_settings.request_timeout_seconds == 12.5
 
 
+def test_workable_feature_flag_defaults_false_parses_booleans_and_rejects_misspellings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert load_settings().enable_workable_public is False
+    monkeypatch.setenv("CAREER_OS_ENABLE_WORKABLE_PUBLIC", "true")
+    assert load_settings().enable_workable_public is True
+    monkeypatch.delenv("CAREER_OS_ENABLE_WORKABLE_PUBLIC")
+    monkeypatch.setenv("CAREER_OS_ENABLE_WORKABLE_PUBLI", "true")
+    with pytest.raises(ConfigurationError, match="ENABLE_WORKABLE_PUBLI"):
+        load_settings()
+
+
+@pytest.mark.parametrize(("value", "expected"), [("true", True), ("false", False)])
+def test_workable_feature_flag_parses_from_explicit_dotenv(
+    tmp_path: Path, value: str, expected: bool
+) -> None:
+    dotenv_path = tmp_path / ".env"
+    dotenv_path.write_text(f"CAREER_OS_ENABLE_WORKABLE_PUBLIC={value}\n", encoding="utf-8")
+    assert load_settings(env_file=dotenv_path).enable_workable_public is expected
+
+
 def test_settings_do_not_read_dotenv_unless_explicitly_requested(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

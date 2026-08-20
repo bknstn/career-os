@@ -26,15 +26,18 @@ if TYPE_CHECKING:
         GREENHOUSE_NORMALIZER_VERSION,
         LEVER_NORMALIZER_VERSION,
         NO_TAXONOMY_VERSION,
+        WORKABLE_PUBLIC_NORMALIZER_VERSION,
         AshbyIngestionService,
         GreenhouseIngestionService,
         IngestionError,
         IngestionResult,
         IngestionService,
         LeverIngestionService,
+        WorkablePublicIngestionService,
         ashby_candidate,
         greenhouse_candidate,
         lever_candidate,
+        workable_public_candidate,
     )
 
 __all__ = [
@@ -42,6 +45,7 @@ __all__ = [
     "GREENHOUSE_NORMALIZER_VERSION",
     "LEVER_NORMALIZER_VERSION",
     "NO_TAXONOMY_VERSION",
+    "WORKABLE_PUBLIC_NORMALIZER_VERSION",
     "AshbyIngestionService",
     "CollectionError",
     "CollectionFailedError",
@@ -61,9 +65,11 @@ __all__ = [
     "LifecycleMutationPort",
     "LifecycleResult",
     "LifecycleService",
+    "WorkablePublicIngestionService",
     "ashby_candidate",
     "greenhouse_candidate",
     "lever_candidate",
+    "workable_public_candidate",
 ]
 
 
@@ -74,15 +80,18 @@ def __getattr__(name: str) -> object:
         "GREENHOUSE_NORMALIZER_VERSION",
         "LEVER_NORMALIZER_VERSION",
         "NO_TAXONOMY_VERSION",
+        "WORKABLE_PUBLIC_NORMALIZER_VERSION",
         "AshbyIngestionService",
         "GreenhouseIngestionService",
         "LeverIngestionService",
+        "WorkablePublicIngestionService",
         "IngestionError",
         "IngestionResult",
         "IngestionService",
         "ashby_candidate",
         "greenhouse_candidate",
         "lever_candidate",
+        "workable_public_candidate",
     }:
         from career_os.application import ingestion
 

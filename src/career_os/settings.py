@@ -19,6 +19,7 @@ _APPLICATION_SETTING_ENVIRONMENT_VARIABLES = frozenset(
         "CAREER_OS_LOG_LEVEL",
         "CAREER_OS_REQUEST_TIMEOUT_SECONDS",
         "CAREER_OS_DATABASE_URL",
+        "CAREER_OS_ENABLE_WORKABLE_PUBLIC",
     }
 )
 _COMPOSE_ONLY_ENVIRONMENT_VARIABLES = frozenset(
@@ -48,6 +49,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     database_url: PostgresDsn | None = None
+    enable_workable_public: bool = False
 
 
 def load_settings(

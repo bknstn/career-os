@@ -1,4 +1,4 @@
-"""Thin Typer interface for configured Greenhouse, Lever, and Ashby boards."""
+"""Thin Typer interface for configured Greenhouse, Lever, Ashby, and opt-in Workable boards."""
 
 from __future__ import annotations
 
@@ -21,12 +21,14 @@ from career_os.adapters import (
     AshbyAdapter,
     GreenhouseAdapter,
     LeverAdapter,
+    WorkablePublicAdapter,
 )
 from career_os.application import (
     AshbyIngestionService,
     GreenhouseIngestionService,
     IngestionError,
     LeverIngestionService,
+    WorkablePublicIngestionService,
 )
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -35,6 +37,7 @@ from career_os.config.sources import (
     LeverSourceConfig,
     SourceConfig,
     SourcesConfig,
+    WorkablePublicSourceConfig,
     load_sources_config,
 )
 from career_os.db import (
@@ -51,7 +54,7 @@ from career_os.persistence import (
     SourceConfigurationRepository,
 )
 from career_os.persistence.repositories import JobInspection, RunInspection
-from career_os.settings import load_settings
+from career_os.settings import Settings, load_settings
 
 app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job evidence.")
 sources_app = typer.Typer(no_args_is_help=True, help="Validate configured public job boards.")
@@ -71,27 +74,34 @@ _STRICT_OPTION = typer.Option(
 )
 
 
-def adapter_registry() -> AdapterRegistry:
+def adapter_registry(*, enable_workable_public: bool = False) -> AdapterRegistry:
     """Return the explicit available adapter registration set without I/O."""
-    return AdapterRegistry(
-        (
+    registrations = [
+        AdapterRegistration.for_config(
+            kind="greenhouse",
+            config_type=GreenhouseSourceConfig,
+            factory=_greenhouse_adapter,
+        ),
+        AdapterRegistration.for_config(
+            kind="lever",
+            config_type=LeverSourceConfig,
+            factory=_lever_adapter,
+        ),
+        AdapterRegistration.for_config(
+            kind="ashby",
+            config_type=AshbySourceConfig,
+            factory=_ashby_adapter,
+        ),
+    ]
+    if enable_workable_public:
+        registrations.append(
             AdapterRegistration.for_config(
-                kind="greenhouse",
-                config_type=GreenhouseSourceConfig,
-                factory=_greenhouse_adapter,
-            ),
-            AdapterRegistration.for_config(
-                kind="lever",
-                config_type=LeverSourceConfig,
-                factory=_lever_adapter,
-            ),
-            AdapterRegistration.for_config(
-                kind="ashby",
-                config_type=AshbySourceConfig,
-                factory=_ashby_adapter,
-            ),
+                kind="workable_public",
+                config_type=WorkablePublicSourceConfig,
+                factory=_workable_public_adapter,
+            )
         )
-    )
+    return AdapterRegistry(registrations)
 
 
 def _greenhouse_adapter(source_config: GreenhouseSourceConfig) -> SourceAdapter:
@@ -106,14 +116,20 @@ def _ashby_adapter(source_config: AshbySourceConfig) -> SourceAdapter:
     return cast(SourceAdapter, AshbyAdapter(config=source_config))
 
 
-def _load_and_validate_sources(config: Path) -> SourcesConfig:
+def _workable_public_adapter(source_config: WorkablePublicSourceConfig) -> SourceAdapter:
+    return cast(SourceAdapter, WorkablePublicAdapter(config=source_config))
+
+
+def _load_and_validate_sources(
+    config: Path, *, enable_workable_public: bool = False
+) -> SourcesConfig:
     sources_config = load_sources_config(config)
-    adapter_registry().validate_sources(sources_config)
+    adapter_registry(enable_workable_public=enable_workable_public).validate_sources(sources_config)
     return sources_config
 
 
-def _database_session_factory() -> sessionmaker[Session]:
-    settings = load_settings()
+def _database_session_factory(settings: Settings) -> sessionmaker[Session]:
+    """Create a persistence factory from settings already loaded by a command."""
     return create_session_factory(create_database_engine(settings))
 
 
@@ -160,13 +176,20 @@ def sources_validate(
 ) -> None:
     """Validate source YAML and confirm that every kind has an available adapter."""
     try:
-        sources_config = _load_and_validate_sources(config)
+        settings = load_settings()
+        sources_config = _load_and_validate_sources(
+            config, enable_workable_public=settings.enable_workable_public
+        )
     except (ConfigurationError, AdapterRegistryError) as error:
         _emit_error(error, exit_code=2)
     _json_echo(
         {
             "config": str(config),
-            "registered_kinds": sorted(adapter_registry().registered_kinds),
+            "registered_kinds": sorted(
+                adapter_registry(
+                    enable_workable_public=settings.enable_workable_public
+                ).registered_kinds
+            ),
             "sources": len(sources_config.sources),
         }
     )
@@ -180,14 +203,16 @@ def collect(
 ) -> None:
     """Collect all enabled sources, or explicitly named sources, into PostgreSQL."""
     try:
-        sources_config = _load_and_validate_sources(config)
+        settings = load_settings()
+        sources_config = _load_and_validate_sources(
+            config, enable_workable_public=settings.enable_workable_public
+        )
         selected_sources = _selected_sources(sources_config, source)
-        session_factory = _database_session_factory()
+        session_factory = _database_session_factory(settings)
         with session_scope(session_factory) as session:
             SourceConfigurationRepository(session).sync(sources_config)
-        settings = load_settings()
         logger = configure_logging(level=settings.log_level)
-        registry = adapter_registry()
+        registry = adapter_registry(enable_workable_public=settings.enable_workable_public)
         outcomes = asyncio.run(
             _collect_selected(
                 selected_sources=selected_sources,
@@ -241,6 +266,12 @@ async def _collect_selected(
                 logger=logger,
                 request_timeout_seconds=request_timeout_seconds,
             ).collect(source_config=source_config, adapter=adapter)
+        elif isinstance(source_config, WorkablePublicSourceConfig):
+            result = await WorkablePublicIngestionService(
+                session_factory=session_factory,
+                logger=logger,
+                request_timeout_seconds=request_timeout_seconds,
+            ).collect(source_config=source_config, adapter=adapter)
         else:  # Registry coverage is validated before selection, retained for type-safe isolation.
             raise IngestionError(f"no ingestion composition for source kind: {source_config.kind}")
         outcomes.append(
@@ -264,7 +295,7 @@ def runs_list(
 ) -> None:
     """List persisted runs, newest first."""
     try:
-        session_factory = _database_session_factory()
+        session_factory = _database_session_factory(load_settings())
         with session_scope(session_factory) as session:
             runs = InspectionRepository(session).list_runs(failed_only=failed)
             payload = [_run_payload(run) for run in runs]
@@ -277,7 +308,7 @@ def runs_list(
 def runs_show(run_id: UUID) -> None:
     """Show one persisted run by UUID."""
     try:
-        session_factory = _database_session_factory()
+        session_factory = _database_session_factory(load_settings())
         with session_scope(session_factory) as session:
             run = InspectionRepository(session).get_run(run_id)
     except (DatabaseConfigurationError, PersistenceError, SQLAlchemyError) as error:
@@ -295,7 +326,7 @@ def jobs_list(
 ) -> None:
     """List canonical jobs with optional active and company filters."""
     try:
-        session_factory = _database_session_factory()
+        session_factory = _database_session_factory(load_settings())
         with session_scope(session_factory) as session:
             jobs = InspectionRepository(session).list_jobs(
                 active_only=active,

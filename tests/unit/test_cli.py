@@ -22,6 +22,7 @@ from career_os.config.sources import (
     GreenhouseSourceConfig,
     LeverSourceConfig,
     SourcesConfig,
+    WorkablePublicSourceConfig,
 )
 
 
@@ -33,6 +34,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
     monkeypatch.setattr("career_os.cli.load_settings", unexpected_io)
     monkeypatch.setattr("career_os.cli._greenhouse_adapter", unexpected_io)
     monkeypatch.setattr("career_os.cli._lever_adapter", unexpected_io)
+    monkeypatch.setattr("career_os.cli._workable_public_adapter", unexpected_io)
     runner = CliRunner()
 
     for arguments in (
@@ -104,11 +106,53 @@ sources:
     assert "no adapter factory registered for kind(s): workable_public" in result.output
 
 
+def test_workable_validation_is_feature_gated_before_database_or_adapter_io(
+    monkeypatch, tmp_path: Path
+) -> None:
+    config = tmp_path / "workable.yaml"
+    config.write_text(
+        "sources:\n  - key: work\n    kind: workable_public\n"
+        "    company_name: Work\n    account_subdomain: work\n"
+    )
+    monkeypatch.setattr(
+        "career_os.cli.create_database_engine",
+        lambda *_args: (_ for _ in ()).throw(AssertionError()),
+    )
+    monkeypatch.setattr(
+        "career_os.cli._workable_public_adapter",
+        lambda *_args: (_ for _ in ()).throw(AssertionError()),
+    )
+    result = CliRunner().invoke(app, ["sources", "validate", "--config", str(config)])
+    assert result.exit_code == 2 and "workable_public" in result.output
+
+
+def test_workable_feature_flag_on_validates_four_source_example_without_database(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CAREER_OS_ENABLE_WORKABLE_PUBLIC", "true")
+    monkeypatch.setattr(
+        "career_os.cli.create_database_engine",
+        lambda *_args: (_ for _ in ()).throw(AssertionError()),
+    )
+    result = CliRunner().invoke(
+        app,
+        [
+            "sources",
+            "validate",
+            "--config",
+            "config/sources.greenhouse-lever-ashby-workable.example.yaml",
+        ],
+    )
+    assert result.exit_code == 0 and '"workable_public"' in result.output
+
+
 def test_database_errors_are_reported_with_a_nonzero_exit_without_a_traceback(monkeypatch) -> None:
     def unavailable_database() -> object:
         raise OperationalError("SELECT 1", {}, RuntimeError("database offline"))
 
-    monkeypatch.setattr("career_os.cli._database_session_factory", unavailable_database)
+    monkeypatch.setattr(
+        "career_os.cli._database_session_factory", lambda _settings: unavailable_database()
+    )
     result = CliRunner().invoke(app, ["runs", "list"])
 
     assert result.exit_code == 1
@@ -146,6 +190,7 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
     greenhouse = _source("greenhouse", enabled=True)
     lever = _lever_source("lever", enabled=True)
     ashby = _ashby_source("ashby", enabled=True)
+    workable = _workable_source("workable", enabled=True)
     calls: list[tuple[str, str, str]] = []
 
     def result_for(source_key: str, status: str) -> SimpleNamespace:
@@ -187,14 +232,27 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
             calls.append(("ashby", source_config.key, "succeeded"))
             return result_for(source_config.key, "succeeded")
 
+    class FakeWorkablePublicIngestionService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        async def collect(
+            self, *, source_config: WorkablePublicSourceConfig, **_kwargs: object
+        ) -> SimpleNamespace:
+            calls.append(("workable_public", source_config.key, "failed"))
+            return result_for(source_config.key, "failed")
+
     monkeypatch.setattr("career_os.cli.GreenhouseIngestionService", FakeGreenhouseIngestionService)
     monkeypatch.setattr("career_os.cli.LeverIngestionService", FakeLeverIngestionService)
     monkeypatch.setattr("career_os.cli.AshbyIngestionService", FakeAshbyIngestionService)
+    monkeypatch.setattr(
+        "career_os.cli.WorkablePublicIngestionService", FakeWorkablePublicIngestionService
+    )
 
     outcomes = asyncio.run(
         cli._collect_selected(
-            selected_sources=(greenhouse, lever, ashby),
-            registry=cli.adapter_registry(),
+            selected_sources=(greenhouse, lever, ashby, workable),
+            registry=cli.adapter_registry(enable_workable_public=True),
             session_factory=object(),
             logger=logging.getLogger(),
             request_timeout_seconds=1.0,
@@ -205,11 +263,13 @@ def test_mixed_source_dispatch_uses_each_ingestion_composition_and_preserves_res
         ("greenhouse", "greenhouse", "partial"),
         ("lever", "lever", "succeeded"),
         ("ashby", "ashby", "succeeded"),
+        ("workable_public", "workable", "failed"),
     ]
     assert [(outcome["source_key"], outcome["status"]) for outcome in outcomes] == [
         ("greenhouse", "partial"),
         ("lever", "succeeded"),
         ("ashby", "succeeded"),
+        ("workable", "failed"),
     ]
 
 
@@ -242,6 +302,10 @@ def test_collect_exit_behavior_reports_all_source_statuses(
     expected_exit: int,
 ) -> None:
     source_config = _source("example", enabled=True)
+    loaded_settings: list[object] = []
+    settings = SimpleNamespace(
+        log_level="INFO", request_timeout_seconds=1.0, enable_workable_public=False
+    )
 
     @contextmanager
     def no_database_session(_session_factory: object):
@@ -259,17 +323,26 @@ def test_collect_exit_behavior_reports_all_source_statuses(
 
     monkeypatch.setattr(
         "career_os.cli._load_and_validate_sources",
-        lambda _path: SourcesConfig(sources=[source_config]),
+        lambda _path, **_kwargs: SourcesConfig(sources=[source_config]),
     )
-    monkeypatch.setattr("career_os.cli._database_session_factory", lambda: object())
+    monkeypatch.setattr(
+        "career_os.cli._database_session_factory",
+        lambda passed_settings: (
+            object()
+            if passed_settings is settings
+            else (_ for _ in ()).throw(AssertionError("collect must reuse loaded settings"))
+        ),
+    )
     monkeypatch.setattr("career_os.cli.session_scope", no_database_session)
     monkeypatch.setattr(
         "career_os.cli.SourceConfigurationRepository", FakeSourceConfigurationRepository
     )
-    monkeypatch.setattr(
-        "career_os.cli.load_settings",
-        lambda: SimpleNamespace(log_level="INFO", request_timeout_seconds=1.0),
-    )
+
+    def load_once() -> SimpleNamespace:
+        loaded_settings.append(settings)
+        return settings
+
+    monkeypatch.setattr("career_os.cli.load_settings", load_once)
     monkeypatch.setattr("career_os.cli.configure_logging", lambda **_kwargs: logging.getLogger())
     monkeypatch.setattr("career_os.cli._collect_selected", fake_collect_selected)
 
@@ -281,6 +354,7 @@ def test_collect_exit_behavior_reports_all_source_statuses(
     assert result.exit_code == expected_exit
     for outcome in outcomes:
         assert f'"status": "{outcome["status"]}"' in result.output
+    assert loaded_settings == [settings]
 
 
 def test_collect_output_includes_terminal_diagnostics(monkeypatch) -> None:
@@ -302,9 +376,9 @@ def test_collect_output_includes_terminal_diagnostics(monkeypatch) -> None:
 
     monkeypatch.setattr(
         "career_os.cli._load_and_validate_sources",
-        lambda _path: SourcesConfig(sources=[source_config]),
+        lambda _path, **_kwargs: SourcesConfig(sources=[source_config]),
     )
-    monkeypatch.setattr("career_os.cli._database_session_factory", lambda: object())
+    monkeypatch.setattr("career_os.cli._database_session_factory", lambda _settings: object())
     monkeypatch.setattr("career_os.cli.session_scope", no_database_session)
     monkeypatch.setattr(
         "career_os.cli.SourceConfigurationRepository",
@@ -312,7 +386,9 @@ def test_collect_output_includes_terminal_diagnostics(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "career_os.cli.load_settings",
-        lambda: SimpleNamespace(log_level="INFO", request_timeout_seconds=1.0),
+        lambda: SimpleNamespace(
+            log_level="INFO", request_timeout_seconds=1.0, enable_workable_public=False
+        ),
     )
     monkeypatch.setattr("career_os.cli.configure_logging", lambda **_kwargs: logging.getLogger())
     monkeypatch.setattr("career_os.cli._collect_selected", fake_collect_selected)
@@ -414,5 +490,15 @@ def _ashby_source(key: str, *, enabled: bool) -> AshbySourceConfig:
         kind="ashby",
         company_name=f"{key.title()} Ashby",
         board_name=f"{key}-board",
+        enabled=enabled,
+    )
+
+
+def _workable_source(key: str, *, enabled: bool) -> WorkablePublicSourceConfig:
+    return WorkablePublicSourceConfig(
+        key=key,
+        kind="workable_public",
+        company_name=f"{key.title()} Workable",
+        account_subdomain=f"{key}-account",
         enabled=enabled,
     )

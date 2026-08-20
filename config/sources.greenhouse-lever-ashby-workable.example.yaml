@@ -1,0 +1,17 @@
+sources:
+  - key: example-greenhouse
+    kind: greenhouse
+    company_name: Example Inc.
+    board_token: example
+  - key: example-lever
+    kind: lever
+    company_name: Example Lever
+    site: example
+  - key: example-ashby
+    kind: ashby
+    company_name: Example Ashby
+    board_name: example
+  - key: example-workable
+    kind: workable_public
+    company_name: Example Workable
+    account_subdomain: example

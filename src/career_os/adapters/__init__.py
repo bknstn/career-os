@@ -30,6 +30,14 @@ from career_os.adapters.registry import (
     AdapterRegistry,
     AdapterRegistryError,
 )
+from career_os.adapters.workable_public import (
+    WorkablePublicAdapter,
+    WorkablePublicAdapterError,
+    WorkablePublicHttpClient,
+    WorkablePublicHttpError,
+    WorkablePublicHttpResponse,
+    WorkablePublicTransportError,
+)
 
 __all__ = [
     "AdapterFactory",
@@ -54,4 +62,10 @@ __all__ = [
     "LeverHttpError",
     "LeverHttpResponse",
     "LeverTransportError",
+    "WorkablePublicAdapter",
+    "WorkablePublicAdapterError",
+    "WorkablePublicHttpClient",
+    "WorkablePublicHttpError",
+    "WorkablePublicHttpResponse",
+    "WorkablePublicTransportError",
 ]

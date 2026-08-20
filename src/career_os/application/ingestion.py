@@ -26,6 +26,7 @@ from career_os.config.sources import (
     GreenhouseSourceConfig,
     LeverSourceConfig,
     SourceConfig,
+    WorkablePublicSourceConfig,
 )
 from career_os.db import session_scope
 from career_os.domain import CanonicalJobCandidate, RawJobPosting, SourceAdapter
@@ -44,6 +45,7 @@ ConfigT = TypeVar("ConfigT", bound=SourceConfig, contravariant=True)
 GREENHOUSE_NORMALIZER_VERSION = "greenhouse-v1"
 LEVER_NORMALIZER_VERSION = "lever-v1"
 ASHBY_NORMALIZER_VERSION = "ashby-v1"
+WORKABLE_PUBLIC_NORMALIZER_VERSION = "workable-public-v1"
 NO_TAXONOMY_VERSION = "none-v1"
 
 
@@ -314,8 +316,59 @@ def ashby_candidate(
     )
 
 
+def workable_public_candidate(
+    source_config: WorkablePublicSourceConfig, posting: RawJobPosting
+) -> CanonicalJobCandidate:
+    if posting.source_kind != "workable_public" or posting.source_key != source_config.key:
+        raise IngestionError(
+            "raw posting identity does not match the configured Workable public source"
+        )
+    title = posting.payload.get("title")
+    description = posting.payload.get("description")
+    if title is None:
+        raise IngestionError("Workable public raw posting has no non-blank title")
+    if not isinstance(title, str):
+        raise IngestionError("Workable public raw posting title was not a string")
+    title = clean_text(title)
+    if not title:
+        raise IngestionError("Workable public raw posting has no non-blank title")
+    if description is None:
+        raise IngestionError("Workable public raw posting has no non-blank description content")
+    if not isinstance(description, str):
+        raise IngestionError("Workable public raw posting description was not a string")
+    description_text = html_to_text(description)
+    if not description_text:
+        raise IngestionError("Workable public raw posting has no non-blank description content")
+    return CanonicalJobCandidate(
+        source_key=source_config.key,
+        source_kind=source_config.kind,
+        external_id=posting.external_id,
+        company_name=source_config.company_name,
+        title_raw=title,
+        title_normalized=title,
+        description_html=None,
+        description_text=description_text,
+        department_raw=_optional_clean_text(posting.payload.get("department")),
+        team_raw=None,
+        source_url=posting.source_url,
+        apply_url=posting.apply_url,
+        observed_at=posting.fetched_at,
+        raw_payload=posting.payload,
+        normalizer_version=WORKABLE_PUBLIC_NORMALIZER_VERSION,
+        taxonomy_version=NO_TAXONOMY_VERSION,
+    )
+
+
 def _optional_text(value: object) -> str | None:
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _optional_clean_text(value: object) -> str | None:
+    """Return a non-blank normalized field while preserving absent/non-text values."""
+    if not isinstance(value, str):
+        return None
+    cleaned = clean_text(value)
+    return cleaned or None
 
 
 def _ashby_published_at(value: object) -> datetime | None:
@@ -520,6 +573,28 @@ class AshbyIngestionService:
 
     async def collect(
         self, *, source_config: AshbySourceConfig, adapter: SourceAdapter
+    ) -> IngestionResult:
+        return await IngestionService(
+            session_factory=self.session_factory,
+            logger=self.logger,
+            request_timeout_seconds=self.request_timeout_seconds,
+            normalizer_version=self.normalizer_version,
+            taxonomy_version=self.taxonomy_version,
+            candidate_factory=self.candidate_factory,
+        ).collect(source_config=source_config, adapter=adapter)
+
+
+@dataclass(slots=True)
+class WorkablePublicIngestionService:
+    session_factory: SessionFactory
+    logger: stdlib_logging.Logger
+    request_timeout_seconds: float
+    candidate_factory: CandidateFactory[WorkablePublicSourceConfig] = workable_public_candidate
+    normalizer_version: str = WORKABLE_PUBLIC_NORMALIZER_VERSION
+    taxonomy_version: str = NO_TAXONOMY_VERSION
+
+    async def collect(
+        self, *, source_config: WorkablePublicSourceConfig, adapter: SourceAdapter
     ) -> IngestionResult:
         return await IngestionService(
             session_factory=self.session_factory,
