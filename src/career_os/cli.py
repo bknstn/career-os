@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import Iterable
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, cast
 from uuid import UUID
 
@@ -31,6 +34,11 @@ from career_os.application import (
     WorkablePublicIngestionService,
 )
 from career_os.application.job_enrichment import JobEnrichmentService
+from career_os.application.market import MarketDataConsistencyError
+from career_os.application.profile_fit import ProfileComparisonConsistencyError
+from career_os.application.report import MarketReportService
+from career_os.config.markets import load_market_filters
+from career_os.config.profiles import load_profile
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -57,7 +65,9 @@ from career_os.persistence import (
     PersistenceError,
     SourceConfigurationRepository,
 )
+from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
+from career_os.reporting import render_markdown_report
 from career_os.settings import Settings, load_settings
 
 app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job evidence.")
@@ -65,10 +75,12 @@ sources_app = typer.Typer(no_args_is_help=True, help="Validate configured public
 runs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted collection runs.")
 jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical jobs.")
 taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
+market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed market reports.")
 app.add_typer(sources_app, name="sources")
 app.add_typer(runs_app, name="runs")
 app.add_typer(jobs_app, name="jobs")
 app.add_typer(taxonomy_app, name="taxonomy")
+app.add_typer(market_app, name="market")
 
 DEFAULT_SOURCES_CONFIG = Path("config/sources.yaml")
 DEFAULT_SKILL_TAXONOMY_CONFIG = Path("config/taxonomy/skills.v1.yaml")
@@ -89,6 +101,18 @@ _STRICT_OPTION = typer.Option(
     "--strict",
     help="Fail if any selected scan is partial or failed.",
 )
+
+
+class ReportFormat(StrEnum):
+    """Output formats supported by the Phase 4 report command."""
+
+    MARKDOWN = "markdown"
+
+
+_REPORT_MARKET_OPTION = typer.Option(..., "--market", exists=False, dir_okay=False)
+_REPORT_PROFILE_OPTION = typer.Option(..., "--profile", exists=False, dir_okay=False)
+_REPORT_FORMAT_OPTION = typer.Option(ReportFormat.MARKDOWN, "--format")
+_REPORT_OUTPUT_OPTION = typer.Option(..., "--output", exists=False, dir_okay=False)
 
 
 def adapter_registry(*, enable_workable_public: bool = False) -> AdapterRegistry:
@@ -301,6 +325,70 @@ def enrich(taxonomy: Path = _ENRICH_TAXONOMY_OPTION) -> None:
     )
     if result.failed_ids:
         raise typer.Exit(code=1)
+
+
+@market_app.command("report")
+def market_report(
+    market: Path = _REPORT_MARKET_OPTION,
+    profile: Path = _REPORT_PROFILE_OPTION,
+    output_format: ReportFormat = _REPORT_FORMAT_OPTION,
+    output: Path = _REPORT_OUTPUT_OPTION,
+    taxonomy: Path = _ENRICH_TAXONOMY_OPTION,
+) -> None:
+    """Write one reconciled market/profile report from local config files."""
+    try:
+        filters = load_market_filters(market)
+        skill_taxonomy = load_skill_taxonomy(taxonomy)
+        loaded_profile = load_profile(profile, taxonomy=skill_taxonomy)
+        session_factory = _database_session_factory(load_settings())
+        with session_factory() as session:
+            session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+            report = MarketReportService(
+                session=session,
+                taxonomy=skill_taxonomy,
+                normalizer_version=JOB_NORMALIZER_VERSION,
+            ).calculate(filters=filters, profile=loaded_profile)
+        if output_format is not ReportFormat.MARKDOWN:  # pragma: no cover - enum is exhaustive.
+            raise ConfigurationError(f"unsupported report format: {output_format}")
+        rendered = render_markdown_report(report)
+        _atomic_write_text(output, rendered)
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    except (
+        DatabaseConfigurationError,
+        MarketDataConsistencyError,
+        ProfileComparisonConsistencyError,
+        ReportEvidenceConsistencyError,
+        PersistenceError,
+        SQLAlchemyError,
+        OSError,
+        ValueError,
+    ) as error:
+        _emit_error(error, exit_code=1)
+
+
+def _atomic_write_text(path: Path, value: str) -> None:
+    """Atomically replace a report only after complete UTF-8 content is flushed."""
+    temporary_path: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(value)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_path, path)
+    except BaseException:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
 
 
 async def _collect_selected(

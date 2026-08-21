@@ -15,6 +15,7 @@ from sqlalchemy.exc import OperationalError
 from typer.testing import CliRunner
 
 from career_os import cli
+from career_os.application.market import MarketDataConsistencyError
 from career_os.cli import _job_payload, _run_payload, _selected_sources, app
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -47,6 +48,8 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["sources", "validate", "--help"],
         ["taxonomy", "--help"],
         ["taxonomy", "validate", "--help"],
+        ["market", "--help"],
+        ["market", "report", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -54,6 +57,137 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["jobs", "list", "--help"],
     ):
         assert runner.invoke(app, arguments).exit_code == 0
+
+
+def test_market_report_writes_only_complete_rendered_output(monkeypatch, tmp_path: Path) -> None:
+    output = tmp_path / "report.md"
+    filters = SimpleNamespace(name="market")
+    taxonomy = SimpleNamespace(version="1.0.0")
+    profile = SimpleNamespace(name="profile")
+    report = object()
+
+    class FakeSession:
+        def __enter__(self) -> FakeSession:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def connection(self, **_kwargs: object) -> object:
+            return object()
+
+    class FakeReportService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def calculate(self, **_kwargs: object) -> object:
+            return report
+
+    monkeypatch.setattr(cli, "load_market_filters", lambda _path: filters)
+    monkeypatch.setattr(cli, "load_skill_taxonomy", lambda _path: taxonomy)
+    monkeypatch.setattr(cli, "load_profile", lambda _path, **_kwargs: profile)
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: FakeSession)
+    monkeypatch.setattr(cli, "MarketReportService", FakeReportService)
+    monkeypatch.setattr(cli, "render_markdown_report", lambda value: "# complete\n")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "market",
+            "report",
+            "--market",
+            "market.yaml",
+            "--profile",
+            "profile.yaml",
+            "--format",
+            "markdown",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert output.read_text(encoding="utf-8") == "# complete\n"
+
+
+def test_market_report_failure_is_nonzero_and_preserves_existing_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    output = tmp_path / "report.md"
+    output.write_text("previous\n", encoding="utf-8")
+    monkeypatch.setattr(
+        cli,
+        "load_market_filters",
+        lambda _path: (_ for _ in ()).throw(ConfigurationError("invalid market")),
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "market",
+            "report",
+            "--market",
+            "bad.yaml",
+            "--profile",
+            "profile.yaml",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Error:" in result.output
+    assert output.read_text(encoding="utf-8") == "previous\n"
+
+
+def test_market_report_invariant_failure_does_not_replace_existing_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    output = tmp_path / "report.md"
+    output.write_text("previous\n", encoding="utf-8")
+
+    class FakeSession:
+        def __enter__(self) -> FakeSession:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def connection(self, **_kwargs: object) -> object:
+            return object()
+
+    class FailingReportService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def calculate(self, **_kwargs: object) -> object:
+            raise MarketDataConsistencyError("stale report evidence")
+
+    monkeypatch.setattr(cli, "load_market_filters", lambda _path: SimpleNamespace(name="market"))
+    monkeypatch.setattr(cli, "load_skill_taxonomy", lambda _path: SimpleNamespace(version="1.0.0"))
+    monkeypatch.setattr(
+        cli, "load_profile", lambda _path, **_kwargs: SimpleNamespace(name="profile")
+    )
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: FakeSession)
+    monkeypatch.setattr(cli, "MarketReportService", FailingReportService)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "market",
+            "report",
+            "--market",
+            "market.yaml",
+            "--profile",
+            "profile.yaml",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "stale report evidence" in result.output
+    assert output.read_text(encoding="utf-8") == "previous\n"
 
 
 def test_sources_validate_accepts_greenhouse_lever_and_ashby_config_without_database_io(

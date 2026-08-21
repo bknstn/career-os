@@ -11,6 +11,18 @@ from career_os.config.markets import MarketFilters, load_market_filters
 from career_os.config.sources import ConfigurationError
 from career_os.persistence.market_queries import build_market_job_ids_query
 
+EXAMPLE_PATH = Path("config/market.example.yaml")
+
+
+def test_checked_in_market_example_validates_against_current_schema() -> None:
+    filters = load_market_filters(EXAMPLE_PATH)
+
+    assert filters.name == "senior-backend-poland-eu"
+    assert filters.role_families == ("backend_engineering", "platform_engineering")
+    assert filters.country_codes == ("PL",)
+    assert filters.include_remote is True
+    assert filters.remote_scopes == ("poland", "eu", "europe")
+
 
 def test_market_file_normalizes_filters_and_forbids_unknown_keys(tmp_path: Path) -> None:
     path = tmp_path / "market.yaml"

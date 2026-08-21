@@ -1,0 +1,11 @@
+market:
+  name: senior-backend-poland-eu
+  title_include: [backend, platform]
+  title_exclude: [frontend, mobile, qa]
+  role_families: [backend_engineering, platform_engineering]
+  seniorities: [senior, lead, staff]
+  country_codes: [PL]
+  include_remote: true
+  remote_scopes: [Poland, EU, Europe]
+  company_names: []
+  active_only: true

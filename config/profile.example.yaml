@@ -1,0 +1,14 @@
+profile:
+  name: current-backend
+  target_role_families: [backend_engineering, platform_engineering]
+  seniority: senior
+  skills:
+    - id: python
+      level: strong
+      years: 7
+    - id: postgresql
+      level: strong
+    - id: kafka
+      level: working
+    - id: terraform
+      level: learning
