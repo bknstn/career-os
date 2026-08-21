@@ -1,0 +1,71 @@
+normalizer_version: job-normalization-v1
+cases:
+  - id: senior_data_remote_poland
+    input:
+      title: Senior Data Engineer
+      description: Remote work within Poland. Full-time role.
+      source_level: junior
+      source_employment_type: FullTime
+      source_workplace_type: Remote
+      locations:
+        - {raw: "Warsaw, Poland", is_primary: true}
+        - {raw: "Remote - Poland", is_primary: false}
+    expected:
+      normalizer_version: job-normalization-v1
+      title_normalized: Senior Data Engineer
+      role_family: {value: data_engineering, method: title_rule, evidence: "Data Engineer", confidence: "0.900"}
+      seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
+      employment_type: {value: full_time, method: structured_source, evidence: FullTime, confidence: "1.000"}
+      workplace_type: {value: remote, method: structured_source, evidence: Remote, confidence: "1.000"}
+      remote_scope: {value: Poland, method: text_parse, evidence: "Remote - Poland", confidence: "0.700"}
+      locations:
+        - {ordinal: 0, raw: "Warsaw, Poland", city: Warsaw, region: null, country_code: PL, is_primary: true, confidence: "0.800", method: text_parse}
+        - {ordinal: 1, raw: "Remote - Poland", city: null, region: null, country_code: PL, is_primary: false, confidence: "0.800", method: text_parse}
+      compensation: []
+  - id: senior_product_manager_is_not_people_manager
+    input:
+      title: Senior Product Manager
+      description: Five years of experience is helpful.
+      source_level: junior
+    expected:
+      normalizer_version: job-normalization-v1
+      title_normalized: Senior Product Manager
+      role_family: {value: product_management, method: title_rule, evidence: "Product Manager", confidence: "0.900"}
+      seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation: []
+  - id: conflicting_or_negated_workplace_is_unknown
+    input:
+      title: Platform Engineer
+      description: This is not hybrid. Remote work is possible, with onsite attendance when needed.
+      source_is_remote: false
+    expected:
+      normalizer_version: job-normalization-v1
+      title_normalized: Platform Engineer
+      role_family: {value: platform_engineering, method: title_rule, evidence: Platform, confidence: "0.900"}
+      seniority: {value: null, method: null, evidence: null, confidence: null}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation: []
+  - id: local_text_compensation_and_eu_scope
+    input:
+      title: Backend Engineer
+      description: Fully remote in the EU. Contract engagement.
+      compensation_text: "Base salary PLN 300,000 - 420,000 annually; bonus PLN 20,000 - 30,000 hourly."
+    expected:
+      normalizer_version: job-normalization-v1
+      title_normalized: Backend Engineer
+      role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
+      seniority: {value: null, method: null, evidence: null, confidence: null}
+      employment_type: {value: contract, method: description_rule, evidence: "Contract engagement", confidence: "0.700"}
+      workplace_type: {value: remote, method: description_rule, evidence: "Fully remote", confidence: "0.700"}
+      remote_scope: {value: EU, method: description_rule, evidence: "Fully remote in the EU", confidence: "0.700"}
+      locations: []
+      compensation:
+        - {component_type: base_salary, min_value: "300000", max_value: "420000", currency: PLN, interval: year, location_tier: null, raw_text: "Base salary PLN 300,000 - 420,000 annually", source_method: text_parse, confidence: "0.700"}
+        - {component_type: bonus, min_value: "20000", max_value: "30000", currency: PLN, interval: hour, location_tier: null, raw_text: "bonus PLN 20,000 - 30,000 hourly", source_method: text_parse, confidence: "0.700"}

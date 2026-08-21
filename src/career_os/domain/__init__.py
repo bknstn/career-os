@@ -8,6 +8,16 @@ from career_os.domain.canonical import (
     stable_json_dumps,
 )
 from career_os.domain.jobs import RawJobPosting
+from career_os.domain.normalization import (
+    JobNormalization,
+    JobNormalizationInput,
+    NormalizedCompensation,
+    NormalizedField,
+    NormalizedLocation,
+    RoleFamily,
+    SourceCompensationEvidence,
+    SourceLocationEvidence,
+)
 from career_os.domain.runs import RunCounts, ScanDiagnostics
 from career_os.domain.skills import SkillEvidence, SkillEvidenceMethod, SkillEvidenceSection
 from career_os.domain.sources import (
@@ -25,7 +35,13 @@ __all__ = [
     "CanonicalJobCandidate",
     "FetchContext",
     "FetchEvent",
+    "JobNormalization",
+    "JobNormalizationInput",
+    "NormalizedCompensation",
+    "NormalizedField",
+    "NormalizedLocation",
     "RawJobPosting",
+    "RoleFamily",
     "RunCounts",
     "ScanDiagnostics",
     "ScanFailedError",
@@ -35,6 +51,8 @@ __all__ = [
     "SkillEvidenceMethod",
     "SkillEvidenceSection",
     "SourceAdapter",
+    "SourceCompensationEvidence",
+    "SourceLocationEvidence",
     "content_hash",
     "stable_json_dumps",
 ]
