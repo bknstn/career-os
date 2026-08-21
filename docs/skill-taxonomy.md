@@ -28,6 +28,15 @@ network I/O:
 uv run career-os taxonomy validate
 ```
 
-Task 19 validates schemas, references, and corpus coverage only. It does not
-extract or match skills, enrich jobs, or persist taxonomy data; task 20 owns
-those behaviours and will execute the golden extraction expectations.
+Task 19 established the schemas, references, and corpus coverage. Task 20 now
+executes those expectations with deterministic literal alias matching. Context
+and negative regexes apply to the particular overlapping alias occurrence, so
+mixed positive and negative mentions in one section retain accurate evidence.
+The extractor stores exact matched text, canonical section, deterministic
+method/confidence, and taxonomy version.
+
+Single-job re-enrichment reads stored canonical title/description text without
+network access and transactionally replaces deterministic evidence while
+preserving future manual/LLM rows. Repeating identical enrichment performs no
+database mutation. Bulk stale/changed-job selection and the `enrich` CLI remain
+task 22 work.

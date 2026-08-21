@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final, cast
 from uuid import UUID
 
-from sqlalchemy import Select, select, update
+from sqlalchemy import Select, delete, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,16 +19,19 @@ from career_os.application.collect import CollectionRun, CollectionRunStatus
 from career_os.config.sources import SourceConfig, SourcesConfig
 from career_os.db import session_scope
 from career_os.domain.canonical import CANONICAL_CONTENT_FIELDS, CanonicalJobCandidate, JsonValue
+from career_os.domain.skills import SkillEvidence
 from career_os.persistence.models import (
     CollectionRun as CollectionRunModel,
 )
 from career_os.persistence.models import (
     JobPosting,
+    JobSkill,
     JobVersion,
     Source,
 )
 
 type SessionFactory = sessionmaker[Session]
+type EvidenceFact = tuple[str, str, str | None, str, Decimal, str]
 
 _PERSISTED_RUN_COUNT_FIELDS: Final = (
     "items_fetched",
@@ -75,6 +79,10 @@ class SourceConfigurationConflictError(PersistenceError):
     """A source key would rewrite an immutable persisted source identity."""
 
 
+class JobNotFoundError(PersistenceError):
+    """A requested canonical job no longer exists."""
+
+
 class JobUpsertAction(StrEnum):
     """The canonical-content outcome of a repository upsert."""
 
@@ -107,6 +115,22 @@ class JobUpsertResult:
                 raise ValueError("an updated job must report changed fields")
         else:
             raise ValueError(f"unsupported job upsert action: {self.action!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class SkillEvidenceReplaceResult:
+    """The durable outcome of replacing deterministic evidence for one job."""
+
+    job_id: UUID
+    taxonomy_version: str
+    evidence_count: int
+    replaced: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.taxonomy_version, str) or not self.taxonomy_version.strip():
+            raise ValueError("taxonomy_version must be non-blank")
+        if self.evidence_count < 0:
+            raise ValueError("evidence_count must be non-negative")
 
 
 @dataclass(slots=True)
@@ -289,6 +313,55 @@ def _changed_fields(job: JobPosting, candidate: CanonicalJobCandidate) -> tuple[
         field_name
         for field_name in CANONICAL_CONTENT_FIELDS
         if stored_content[field_name] != candidate_content[field_name]
+    )
+
+
+def _evidence_facts(
+    evidence: tuple[SkillEvidence, ...],
+) -> tuple[EvidenceFact, ...]:
+    return _sorted_evidence_facts(
+        (
+            item.skill_id,
+            item.matched_text,
+            item.section,
+            item.method,
+            item.confidence,
+            item.taxonomy_version,
+        )
+        for item in evidence
+    )
+
+
+def _stored_evidence_facts(
+    evidence: tuple[JobSkill, ...],
+) -> tuple[EvidenceFact, ...]:
+    return _sorted_evidence_facts(
+        (
+            item.skill_id,
+            item.matched_text,
+            item.section,
+            item.method,
+            item.confidence,
+            item.taxonomy_version,
+        )
+        for item in evidence
+    )
+
+
+def _sorted_evidence_facts(facts: Iterable[EvidenceFact]) -> tuple[EvidenceFact, ...]:
+    return tuple(
+        sorted(
+            facts,
+            key=lambda fact: (
+                fact[0],
+                fact[1],
+                fact[2] is not None,
+                fact[2] or "",
+                fact[3],
+                fact[4],
+                fact[5],
+            ),
+        )
     )
 
 
@@ -572,6 +645,93 @@ class CanonicalJobRepository:
                 raw_payload=_plain_json_object(candidate.raw_payload),
                 changed_fields=list(changed_fields),
             )
+        )
+
+
+@dataclass(slots=True)
+class JobSkillRepository:
+    """Replace one job's deterministic skill evidence in a caller transaction.
+
+    Manual and LLM rows are deliberately outside this repository's ownership:
+    re-enrichment may replace deterministic output from any taxonomy version,
+    but it must not erase evidence supplied by a later human-review workflow.
+    """
+
+    session: Session
+
+    def replace_deterministic_evidence(
+        self,
+        *,
+        job_id: UUID,
+        evidence: tuple[SkillEvidence, ...],
+        taxonomy_version: str,
+    ) -> SkillEvidenceReplaceResult:
+        """Atomically make deterministic evidence equal to ``evidence``.
+
+        Repeating a call with the same complete evidence set does no database
+        mutation.  A taxonomy change or any missing/stale deterministic row
+        replaces the whole managed set, so no stale aliases survive.
+        """
+        if not isinstance(taxonomy_version, str) or not taxonomy_version.strip():
+            raise ValueError("taxonomy_version must be non-blank")
+        if any(item.taxonomy_version != taxonomy_version for item in evidence):
+            raise ValueError("all evidence must use the replacement taxonomy_version")
+
+        job = self.session.scalar(
+            select(JobPosting).where(JobPosting.id == job_id).with_for_update()
+        )
+        if job is None:
+            raise JobNotFoundError(f"canonical job not found: {job_id}")
+        current = tuple(
+            self.session.scalars(
+                select(JobSkill)
+                .where(
+                    JobSkill.job_id == job_id,
+                    JobSkill.method.in_(("alias", "exact", "pattern")),
+                )
+                .with_for_update()
+            )
+        )
+        expected_facts = _evidence_facts(evidence)
+        current_facts = _stored_evidence_facts(current)
+        replacement_required = (
+            current_facts != expected_facts or job.taxonomy_version != taxonomy_version
+        )
+        if not replacement_required:
+            return SkillEvidenceReplaceResult(
+                job_id=job_id,
+                taxonomy_version=taxonomy_version,
+                evidence_count=len(evidence),
+                replaced=False,
+            )
+
+        self.session.execute(
+            delete(JobSkill).where(
+                JobSkill.job_id == job_id,
+                JobSkill.method.in_(("alias", "exact", "pattern")),
+            )
+        )
+        self.session.add_all(
+            [
+                JobSkill(
+                    job_id=job_id,
+                    skill_id=item.skill_id,
+                    matched_text=item.matched_text,
+                    section=item.section,
+                    method=item.method,
+                    confidence=item.confidence,
+                    taxonomy_version=item.taxonomy_version,
+                )
+                for item in evidence
+            ]
+        )
+        job.taxonomy_version = taxonomy_version
+        self.session.flush()
+        return SkillEvidenceReplaceResult(
+            job_id=job_id,
+            taxonomy_version=taxonomy_version,
+            evidence_count=len(evidence),
+            replaced=True,
         )
 
 

@@ -9,6 +9,7 @@ import pytest
 
 from career_os.domain import (
     CANONICAL_CONTENT_FIELDS,
+    CANONICAL_HASH_FIELDS,
     CanonicalJobCandidate,
     content_hash,
     stable_json_dumps,
@@ -135,16 +136,21 @@ def test_stable_serialization_rejects_runtime_specific_values(value: object) -> 
         stable_json_dumps(value)
 
 
-def test_content_hash_covers_only_the_explicit_canonical_content() -> None:
+def test_content_hash_covers_only_the_explicit_source_content() -> None:
     first = _candidate(raw_payload={"id": "job-123", "source_order": ["a", "b"]})
     same_content_new_observation = _candidate(
         observed_at=datetime(2026, 8, 19, 10, tzinfo=UTC),
         raw_payload={"source_order": ["a", "b"], "id": "job-123", "new_field": "retained"},
     )
     changed_content = _candidate(title_raw="Staff Platform Engineer")
+    different_taxonomy = _candidate(taxonomy_version="2.0.0")
 
     assert tuple(first.canonical_content()) == CANONICAL_CONTENT_FIELDS
+    assert tuple(first.canonical_hash_content()) == CANONICAL_HASH_FIELDS
     assert first.content_hash == same_content_new_observation.content_hash
     assert first.content_hash != changed_content.content_hash
+    assert first.canonical_content() != different_taxonomy.canonical_content()
+    assert first.content_hash == different_taxonomy.content_hash
+    assert first.canonical_hash_content() == different_taxonomy.canonical_hash_content()
     assert "raw_payload" not in first.canonical_content()
     assert "observed_at" not in first.canonical_content()

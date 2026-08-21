@@ -21,6 +21,7 @@ from career_os.application.lifecycle import (
 )
 
 if TYPE_CHECKING:
+    from career_os.application.enrichment import SkillEnrichmentService
     from career_os.application.ingestion import (
         ASHBY_NORMALIZER_VERSION,
         GREENHOUSE_NORMALIZER_VERSION,
@@ -65,6 +66,7 @@ __all__ = [
     "LifecycleMutationPort",
     "LifecycleResult",
     "LifecycleService",
+    "SkillEnrichmentService",
     "WorkablePublicIngestionService",
     "ashby_candidate",
     "greenhouse_candidate",
@@ -75,6 +77,10 @@ __all__ = [
 
 def __getattr__(name: str) -> object:
     """Load ingestion composition lazily to keep Alembic metadata importable."""
+    if name == "SkillEnrichmentService":
+        from career_os.application.enrichment import SkillEnrichmentService
+
+        return SkillEnrichmentService
     if name in {
         "ASHBY_NORMALIZER_VERSION",
         "GREENHOUSE_NORMALIZER_VERSION",

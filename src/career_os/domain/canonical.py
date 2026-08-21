@@ -32,6 +32,27 @@ CANONICAL_CONTENT_FIELDS: Final = (
     "normalizer_version",
     "taxonomy_version",
 )
+"""Complete canonical snapshot and changed-field contract, including enrichment state."""
+
+CANONICAL_HASH_FIELDS: Final = (
+    "company_name",
+    "title_raw",
+    "title_normalized",
+    "description_html",
+    "description_text",
+    "department_raw",
+    "team_raw",
+    "source_url",
+    "apply_url",
+    "published_at",
+    "normalizer_version",
+)
+"""Source-content fields that determine canonical job version identity.
+
+``taxonomy_version`` intentionally remains in the complete canonical snapshot
+and changed-field contract, but is post-ingestion enrichment state.  Its value
+must not create a source-content version or invalidate an existing hash.
+"""
 
 
 def _clean_required_text(value: str, *, field_name: str) -> str:
@@ -140,9 +161,13 @@ class CanonicalJobCandidate:
     """Validated normalized content for one source posting observation.
 
     ``raw_payload`` and ``observed_at`` retain evidence and lifecycle context,
-    but are intentionally excluded from :meth:`canonical_content` and its
-    content hash.  Source identity is likewise excluded because repository
-    upsert uses it as the immutable key rather than mutable job content.
+    but are intentionally excluded from canonical snapshot and source-content
+    hash inputs.  Source identity is likewise excluded because repository upsert
+    uses it as the immutable key rather than mutable job content.
+
+    ``taxonomy_version`` is retained in the full snapshot for reproducibility
+    and changed-field reporting, but it is post-ingestion enrichment state and
+    therefore excluded from the source-content hash input.
     """
 
     source_key: str
@@ -216,7 +241,7 @@ class CanonicalJobCandidate:
         object.__setattr__(self, "raw_payload", raw_payload)
 
     def canonical_content(self) -> dict[str, JsonValue]:
-        """Return exactly the mutable canonical fields included in the hash."""
+        """Return the complete mutable canonical snapshot used for version diffs."""
         return {
             "company_name": self.company_name,
             "title_raw": self.title_raw,
@@ -235,10 +260,15 @@ class CanonicalJobCandidate:
         }
 
     def canonical_content_json(self) -> str:
-        """Return stable JSON for the explicitly selected mutable content."""
+        """Return stable JSON for the complete mutable canonical snapshot."""
         return stable_json_dumps(self.canonical_content())
+
+    def canonical_hash_content(self) -> dict[str, JsonValue]:
+        """Return the explicit source-content input for :attr:`content_hash`."""
+        complete_content = self.canonical_content()
+        return {field_name: complete_content[field_name] for field_name in CANONICAL_HASH_FIELDS}
 
     @property
     def content_hash(self) -> str:
-        """Hash canonical mutable content, never observation/lifecycle metadata."""
-        return content_hash(self.canonical_content())
+        """Hash source content, never observation/lifecycle or enrichment metadata."""
+        return content_hash(self.canonical_hash_content())
