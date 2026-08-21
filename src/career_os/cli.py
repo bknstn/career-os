@@ -30,6 +30,7 @@ from career_os.application import (
     LeverIngestionService,
     WorkablePublicIngestionService,
 )
+from career_os.application.job_enrichment import JobEnrichmentService
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -49,6 +50,8 @@ from career_os.db import (
 )
 from career_os.domain import SourceAdapter
 from career_os.logging import configure_logging, safe_exception
+from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
+from career_os.normalization.skills import SkillExtractor
 from career_os.persistence import (
     InspectionRepository,
     PersistenceError,
@@ -76,6 +79,9 @@ _TAXONOMY_CONFIG_OPTION = typer.Option(
 )
 _GOLDEN_CORPUS_OPTION = typer.Option(
     DEFAULT_GOLDEN_EXTRACTION_CORPUS, "--golden", exists=False, dir_okay=False
+)
+_ENRICH_TAXONOMY_OPTION = typer.Option(
+    DEFAULT_SKILL_TAXONOMY_CONFIG, "--taxonomy", exists=False, dir_okay=False
 )
 _SOURCE_OPTION = typer.Option([], "--source", help="Collect only this configured source key.")
 _STRICT_OPTION = typer.Option(
@@ -266,6 +272,34 @@ def collect(
     if strict and unsafe:
         raise typer.Exit(code=1)
     if all_failed:
+        raise typer.Exit(code=1)
+
+
+@app.command("enrich")
+def enrich(taxonomy: Path = _ENRICH_TAXONOMY_OPTION) -> None:
+    """Enrich only stale stored jobs, without source fetches or network access."""
+    try:
+        skill_taxonomy = load_skill_taxonomy(taxonomy)
+        session_factory = _database_session_factory(load_settings())
+        result = JobEnrichmentService(
+            session_factory=session_factory,
+            extractor=SkillExtractor(skill_taxonomy),
+        ).enrich_stale()
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    except (DatabaseConfigurationError, PersistenceError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo(
+        {
+            "selected": result.selected,
+            "enriched": result.enriched,
+            "unchanged": result.unchanged,
+            "failed_ids": [str(job_id) for job_id in result.failed_ids],
+            "normalizer_version": JOB_NORMALIZER_VERSION,
+            "taxonomy_version": skill_taxonomy.version,
+        }
+    )
+    if result.failed_ids:
         raise typer.Exit(code=1)
 
 

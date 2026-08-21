@@ -42,6 +42,13 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
 
         inspector = inspect(engine)
         assert set(inspector.get_table_names()) >= CAREER_OS_TABLE_NAMES
+        enrichment_marker = next(
+            column
+            for column in inspector.get_columns("job_postings")
+            if column["name"] == "enrichment_normalizer_version"
+        )
+        assert enrichment_marker["nullable"] is False
+        assert enrichment_marker["default"] is not None
         assert _nonunique_index_names(inspector.get_indexes("job_postings")) == {
             "ix_job_postings_status",
             "ix_job_postings_last_seen_at",

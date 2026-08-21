@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -17,6 +18,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.application.enrichment import SkillEnrichmentService
+from career_os.application.job_enrichment import JobEnrichmentService
 from career_os.config.skills import load_skill_taxonomy
 from career_os.db import (
     create_database_engine,
@@ -31,7 +33,14 @@ from career_os.persistence.integration_safety import (
     assert_disposable_test_database,
     assert_initial_schema_is_absent,
 )
-from career_os.persistence.models import JobPosting, JobSkill, JobVersion, Source
+from career_os.persistence.models import (
+    JobCompensation,
+    JobLocation,
+    JobPosting,
+    JobSkill,
+    JobVersion,
+    Source,
+)
 from career_os.persistence.repositories import (
     CanonicalJobRepository,
     JobNotFoundError,
@@ -223,6 +232,7 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
     service.enrich_job(job_id=job_id)
     changed = _candidate(
         observed_at=datetime(2026, 8, 21, 11, tzinfo=UTC),
+        title_raw="Staff Data Engineer",
         description_text="Build Python services as a Go developer using PostgreSQL.",
     )
 
@@ -230,7 +240,12 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
         result = CanonicalJobRepository(session).upsert(changed)
 
         assert result.action is JobUpsertAction.UPDATED
-        assert result.changed_fields == ("description_text", "taxonomy_version")
+        assert result.changed_fields == (
+            "title_raw",
+            "title_normalized",
+            "description_text",
+            "taxonomy_version",
+        )
         job = session.get(JobPosting, job_id)
         assert job is not None
         assert job.taxonomy_version == "none-v1"
@@ -243,8 +258,337 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
         )
         assert len(versions) == 2
         assert versions[-1].content_hash == changed.content_hash
-        assert versions[-1].changed_fields == ["description_text", "taxonomy_version"]
+        assert versions[-1].changed_fields == [
+            "title_raw",
+            "title_normalized",
+            "description_text",
+            "taxonomy_version",
+        ]
         assert {row.taxonomy_version for row in session.scalars(select(JobSkill))} == {"1.0.0"}
+
+    reenriched = _job_service(session_factory).enrich_stale()
+    assert (reenriched.selected, reenriched.enriched, reenriched.failed_ids) == (1, 1, ())
+    assert _job_service(session_factory).enrich_stale().selected == 0
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
+            "job-normalization-v1",
+            "1.0.0",
+        )
+        assert (job.title_normalized, job.role_family, job.seniority) == (
+            "Staff Data Engineer",
+            "data_engineering",
+            "staff",
+        )
+        assert {
+            row.skill_id
+            for row in session.scalars(select(JobSkill).where(JobSkill.job_id == job_id))
+        } == {"go", "python", "postgresql"}
+
+
+def test_raw_only_reingestion_marks_job_enrichment_stale_without_source_version_churn(
+    session_factory: sessionmaker[Session],
+) -> None:
+    job_id = _seed_job(session_factory)
+    service = _job_service(session_factory)
+
+    first = service.enrich_stale()
+    second = service.enrich_stale()
+    assert (first.selected, first.enriched, first.failed_ids) == (1, 1, ())
+    assert (second.selected, second.enriched, second.unchanged, second.failed_ids) == (0, 0, 0, ())
+
+    reobservation = _candidate(
+        observed_at=datetime(2026, 8, 21, 11, tzinfo=UTC),
+        raw_payload={"id": "job-123", "location": {"name": "Warsaw, Poland"}},
+    )
+    with session_scope(session_factory) as session:
+        result = CanonicalJobRepository(session).upsert(reobservation)
+        job = session.get(JobPosting, job_id)
+        assert result.action is JobUpsertAction.UNCHANGED
+        assert job is not None
+        assert job.normalizer_version == "source-v1"
+        assert job.enrichment_normalizer_version == "none-v1"
+        assert job.taxonomy_version == "none-v1"
+
+    repaired = _job_service(session_factory).enrich_stale()
+    assert (repaired.selected, repaired.enriched, repaired.failed_ids) == (1, 1, ())
+    assert _job_service(session_factory).enrich_stale().selected == 0
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
+            "job-normalization-v1",
+            "1.0.0",
+        )
+        assert [
+            (row.raw, row.country_code)
+            for row in session.scalars(select(JobLocation).where(JobLocation.job_id == job_id))
+        ] == [("Warsaw, Poland", "PL")]
+
+
+def test_bulk_enrichment_persists_ashby_normalization_skills_and_markers_without_source_churn(
+    session_factory: sessionmaker[Session],
+) -> None:
+    job_id = _seed_ashby_job(session_factory)
+
+    first = _job_service(session_factory).enrich_stale()
+    second = _job_service(session_factory).enrich_stale()
+    assert (first.selected, first.enriched, first.failed_ids) == (1, 1, ())
+    assert (second.selected, second.enriched, second.unchanged, second.failed_ids) == (0, 0, 0, ())
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert (
+            job.normalizer_version,
+            job.enrichment_normalizer_version,
+            job.taxonomy_version,
+        ) == ("ashby-v1", "job-normalization-v1", "1.0.0")
+        assert (
+            job.role_family,
+            job.seniority,
+            job.employment_type,
+            job.workplace_type,
+            job.remote_scope,
+        ) == ("data_engineering", "senior", "full_time", "remote", "Poland")
+        assert [
+            (row.ordinal, row.raw, row.country_code)
+            for row in session.scalars(
+                select(JobLocation)
+                .where(JobLocation.job_id == job_id)
+                .order_by(JobLocation.ordinal)
+            )
+        ] == [(0, "Warsaw, Poland", "PL"), (1, "Remote - Poland", "PL")]
+        assert [
+            (
+                row.component_type,
+                row.min_value,
+                row.max_value,
+                row.currency,
+                row.interval,
+                row.location_tier,
+            )
+            for row in session.scalars(
+                select(JobCompensation)
+                .where(JobCompensation.job_id == job_id)
+                .order_by(JobCompensation.component_type)
+            )
+        ] == [
+            (
+                "base_salary",
+                Decimal("300000.00"),
+                Decimal("420000.00"),
+                "PLN",
+                "year",
+                "Senior Data Engineer",
+            ),
+            ("equity", Decimal("0.01"), Decimal("0.05"), None, "none", "Senior Data Engineer"),
+        ]
+        assert any(
+            row.skill_id == "python"
+            for row in session.scalars(select(JobSkill).where(JobSkill.job_id == job_id))
+        )
+
+
+def test_bulk_failure_isolation_keeps_malformed_job_stale_and_commits_peer(
+    session_factory: sessionmaker[Session],
+) -> None:
+    with session_scope(session_factory) as session:
+        source = Source(
+            key="batch", kind="greenhouse", company_name="Batch", config={}, enabled=True
+        )
+        session.add(source)
+        session.flush()
+        good = (
+            CanonicalJobRepository(session)
+            .upsert(_batch_candidate("good", {"location": {"name": "Warsaw, Poland"}}))
+            .job_id
+        )
+        bad = (
+            CanonicalJobRepository(session)
+            .upsert(_batch_candidate("bad", {"location": "malformed"}))
+            .job_id
+        )
+    result = _job_service(session_factory).enrich_stale()
+    assert result.selected == 2 and result.enriched == 1 and result.failed_ids == (bad,)
+    again = _job_service(session_factory).enrich_stale()
+    assert (again.selected, again.enriched, again.failed_ids) == (1, 0, (bad,))
+    with session_scope(session_factory) as session:
+        valid = session.get(JobPosting, good)
+        malformed = session.get(JobPosting, bad)
+        assert valid is not None and valid.enrichment_normalizer_version == "job-normalization-v1"
+        assert malformed is not None
+        assert (malformed.enrichment_normalizer_version, malformed.taxonomy_version) == (
+            "none-v1",
+            "none-v1",
+        )
+        assert list(session.scalars(select(JobLocation).where(JobLocation.job_id == bad))) == []
+        assert (
+            list(session.scalars(select(JobCompensation).where(JobCompensation.job_id == bad)))
+            == []
+        )
+        assert list(session.scalars(select(JobSkill).where(JobSkill.job_id == bad))) == []
+
+
+def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_rows(
+    session_factory: sessionmaker[Session],
+) -> None:
+    job_id = _seed_ashby_job(session_factory)
+    _job_service(session_factory).enrich_stale()
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert job.enrichment_normalizer_version == "job-normalization-v1"
+        location_keys = tuple(
+            (row.job_id, row.ordinal)
+            for row in session.scalars(
+                select(JobLocation)
+                .where(JobLocation.job_id == job_id)
+                .order_by(JobLocation.ordinal)
+            )
+        )
+        compensation_ids = {
+            row.id
+            for row in session.scalars(
+                select(JobCompensation).where(JobCompensation.job_id == job_id)
+            )
+        }
+        job.taxonomy_version = "0.9.0"
+        for row in session.scalars(
+            select(JobSkill).where(
+                JobSkill.job_id == job_id,
+                JobSkill.method.in_(("alias", "exact", "pattern")),
+            )
+        ):
+            row.taxonomy_version = "0.9.0"
+        session.add_all(
+            [
+                JobSkill(
+                    job_id=job_id,
+                    skill_id="manual",
+                    matched_text="manual",
+                    section="other",
+                    method="manual",
+                    confidence=Decimal("1"),
+                    taxonomy_version="0.9.0",
+                ),
+                JobSkill(
+                    job_id=job_id,
+                    skill_id="llm",
+                    matched_text="llm",
+                    section="other",
+                    method="llm",
+                    confidence=Decimal("1"),
+                    taxonomy_version="0.9.0",
+                ),
+            ]
+        )
+        session.flush()
+        preserved_ids = {
+            row.id
+            for row in session.scalars(
+                select(JobSkill).where(JobSkill.method.in_(("manual", "llm")))
+            )
+        }
+    result = _job_service(session_factory).enrich_stale()
+    assert (result.selected, result.enriched, result.failed_ids) == (1, 1, ())
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert job.enrichment_normalizer_version == "job-normalization-v1"
+        assert (
+            tuple(
+                (row.job_id, row.ordinal)
+                for row in session.scalars(
+                    select(JobLocation)
+                    .where(JobLocation.job_id == job_id)
+                    .order_by(JobLocation.ordinal)
+                )
+            )
+            == location_keys
+        )
+        assert {
+            row.id
+            for row in session.scalars(
+                select(JobCompensation).where(JobCompensation.job_id == job_id)
+            )
+        } == compensation_ids
+        assert {
+            row.id
+            for row in session.scalars(
+                select(JobSkill).where(JobSkill.method.in_(("manual", "llm")))
+            )
+        } == preserved_ids
+        assert {
+            row.taxonomy_version
+            for row in session.scalars(
+                select(JobSkill).where(JobSkill.method.in_(("alias", "exact", "pattern")))
+            )
+        } == {"1.0.0"}
+
+
+def test_extractor_failure_rolls_back_normalization_and_markers(
+    session_factory: sessionmaker[Session],
+) -> None:
+    job_id = _seed_ashby_job(session_factory)
+
+    class RaisingExtractor:
+        taxonomy_version = "1.0.0"
+
+        def extract(self, *, title: str, description: str) -> tuple[object, ...]:
+            raise RuntimeError("extract failed")
+
+    service = JobEnrichmentService(session_factory=session_factory, extractor=RaisingExtractor())  # type: ignore[arg-type]
+    with pytest.raises(RuntimeError, match="extract failed"):
+        service.enrich_job(job_id=job_id)
+    with session_scope(session_factory) as session:
+        job = session.get(JobPosting, job_id)
+        assert job is not None
+        assert (
+            job.role_family,
+            job.seniority,
+            job.enrichment_normalizer_version,
+            job.taxonomy_version,
+        ) == (None, None, "none-v1", "none-v1")
+        assert list(session.scalars(select(JobLocation).where(JobLocation.job_id == job_id))) == []
+        assert (
+            list(session.scalars(select(JobCompensation).where(JobCompensation.job_id == job_id)))
+            == []
+        )
+        assert list(session.scalars(select(JobSkill).where(JobSkill.job_id == job_id))) == []
+
+
+def _seed_ashby_job(session_factory: sessionmaker[Session]) -> UUID:
+    raw = json.loads(
+        (
+            Path(__file__).resolve().parents[1] / "fixtures" / "ats" / "ashby" / "populated.json"
+        ).read_text()
+    )["jobs"][0]
+    with session_scope(session_factory) as session:
+        source = Source(
+            key="ashby-example", kind="ashby", company_name="Example Inc.", config={}, enabled=True
+        )
+        session.add(source)
+        session.flush()
+        return (
+            CanonicalJobRepository(session)
+            .upsert(
+                CanonicalJobCandidate(
+                    source_key="ashby-example",
+                    source_kind="ashby",
+                    external_id="ashby-1",
+                    company_name="Example Inc.",
+                    title_raw="Senior Data Engineer",
+                    title_normalized="Senior Data Engineer",
+                    description_text="Build Python systems.",
+                    observed_at=datetime(2026, 8, 21, 10, tzinfo=UTC),
+                    raw_payload=raw,
+                    normalizer_version="ashby-v1",
+                    taxonomy_version="none-v1",
+                )
+            )
+            .job_id
+        )
 
 
 def _service(session_factory: sessionmaker[Session]) -> SkillEnrichmentService:
@@ -252,6 +596,30 @@ def _service(session_factory: sessionmaker[Session]) -> SkillEnrichmentService:
     return SkillEnrichmentService(
         session_factory=session_factory,
         extractor=SkillExtractor(load_skill_taxonomy(taxonomy_path)),
+    )
+
+
+def _job_service(session_factory: sessionmaker[Session]) -> JobEnrichmentService:
+    taxonomy_path = Path(__file__).resolve().parents[2] / "config" / "taxonomy" / "skills.v1.yaml"
+    return JobEnrichmentService(
+        session_factory=session_factory,
+        extractor=SkillExtractor(load_skill_taxonomy(taxonomy_path)),
+    )
+
+
+def _batch_candidate(external_id: str, raw_payload: dict[str, object]) -> CanonicalJobCandidate:
+    return CanonicalJobCandidate(
+        source_key="batch",
+        source_kind="greenhouse",
+        external_id=external_id,
+        company_name="Batch",
+        title_raw="Python Engineer",
+        title_normalized="Python Engineer",
+        description_text="Build Python systems.",
+        observed_at=datetime(2026, 8, 21, 10, tzinfo=UTC),
+        raw_payload=raw_payload,
+        normalizer_version="greenhouse-v1",
+        taxonomy_version="none-v1",
     )
 
 
@@ -287,6 +655,7 @@ def _candidate(
     title_raw: str = "Senior Python Engineer",
     description_text: str = "Build Python services as a Go developer.",
     taxonomy_version: str = "none-v1",
+    raw_payload: dict[str, object] | None = None,
 ) -> CanonicalJobCandidate:
     return CanonicalJobCandidate(
         source_key="example",
@@ -298,7 +667,7 @@ def _candidate(
         description_text=description_text,
         description_html=None,
         observed_at=observed_at,
-        raw_payload={"id": "job-123"},
+        raw_payload=raw_payload or {"id": "job-123"},
         normalizer_version="source-v1",
         taxonomy_version=taxonomy_version,
         source_url=None,

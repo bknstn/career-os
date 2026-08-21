@@ -40,6 +40,11 @@ if TYPE_CHECKING:
         lever_candidate,
         workable_public_candidate,
     )
+    from career_os.application.job_enrichment import (
+        BulkEnrichmentResult,
+        JobEnrichmentError,
+        JobEnrichmentService,
+    )
 
 __all__ = [
     "ASHBY_NORMALIZER_VERSION",
@@ -48,6 +53,7 @@ __all__ = [
     "NO_TAXONOMY_VERSION",
     "WORKABLE_PUBLIC_NORMALIZER_VERSION",
     "AshbyIngestionService",
+    "BulkEnrichmentResult",
     "CollectionError",
     "CollectionFailedError",
     "CollectionProtocolError",
@@ -61,6 +67,8 @@ __all__ = [
     "IngestionError",
     "IngestionResult",
     "IngestionService",
+    "JobEnrichmentError",
+    "JobEnrichmentService",
     "LeverIngestionService",
     "LifecycleAction",
     "LifecycleMutationPort",
@@ -81,6 +89,10 @@ def __getattr__(name: str) -> object:
         from career_os.application.enrichment import SkillEnrichmentService
 
         return SkillEnrichmentService
+    if name in {"BulkEnrichmentResult", "JobEnrichmentError", "JobEnrichmentService"}:
+        from career_os.application import job_enrichment
+
+        return getattr(job_enrichment, name)
     if name in {
         "ASHBY_NORMALIZER_VERSION",
         "GREENHOUSE_NORMALIZER_VERSION",

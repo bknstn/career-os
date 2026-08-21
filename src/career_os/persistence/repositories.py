@@ -20,6 +20,7 @@ from career_os.config.sources import SourceConfig, SourcesConfig
 from career_os.db import session_scope
 from career_os.domain.canonical import CANONICAL_CONTENT_FIELDS, CanonicalJobCandidate, JsonValue
 from career_os.domain.skills import SkillEvidence
+from career_os.domain.versions import NO_ENRICHMENT_NORMALIZER_VERSION
 from career_os.persistence.models import (
     CollectionRun as CollectionRunModel,
 )
@@ -541,7 +542,13 @@ class CanonicalJobRepository:
                 job.status = "active"
                 job.inactive_at = None
             job.last_seen_at = candidate.observed_at
-            job.raw_latest = _plain_json_object(candidate.raw_payload)
+            raw_latest = _plain_json_object(candidate.raw_payload)
+            if job.raw_latest != raw_latest:
+                # Structured source facts intentionally do not all participate in the
+                # canonical text hash, but may change offline enrichment output.
+                job.enrichment_normalizer_version = NO_ENRICHMENT_NORMALIZER_VERSION
+                job.taxonomy_version = candidate.taxonomy_version
+            job.raw_latest = raw_latest
             self.session.flush()
             return JobUpsertResult(
                 action=JobUpsertAction.UNCHANGED,
@@ -608,6 +615,7 @@ class CanonicalJobRepository:
             content_hash=candidate.content_hash,
             raw_latest=_plain_json_object(candidate.raw_payload),
             normalizer_version=candidate.normalizer_version,
+            enrichment_normalizer_version=NO_ENRICHMENT_NORMALIZER_VERSION,
             taxonomy_version=candidate.taxonomy_version,
         )
 
@@ -627,6 +635,7 @@ class CanonicalJobRepository:
         job.content_hash = candidate.content_hash
         job.raw_latest = _plain_json_object(candidate.raw_payload)
         job.normalizer_version = candidate.normalizer_version
+        job.enrichment_normalizer_version = NO_ENRICHMENT_NORMALIZER_VERSION
         job.taxonomy_version = candidate.taxonomy_version
 
     def _add_version(

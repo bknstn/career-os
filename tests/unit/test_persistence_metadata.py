@@ -129,3 +129,4 @@ def test_audit_and_server_defaults_are_present() -> None:
     assert source_columns.created_at.server_default is not None
     assert source_columns.updated_at.server_default is not None
     assert source_columns.enabled.server_default is not None
+    assert "enrichment_normalizer_version" in JobPosting.__table__.c

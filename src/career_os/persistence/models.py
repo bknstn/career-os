@@ -24,6 +24,8 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from career_os.domain.versions import NO_ENRICHMENT_NORMALIZER_VERSION
+
 
 def utcnow() -> datetime:
     """Return a timezone-aware timestamp for SQLAlchemy-managed updates."""
@@ -233,6 +235,12 @@ class JobPosting(AuditTimestampMixin, Base):
         nullable=False,
     )
     normalizer_version: Mapped[str] = mapped_column(String, nullable=False)
+    enrichment_normalizer_version: Mapped[str] = mapped_column(
+        String,
+        default=NO_ENRICHMENT_NORMALIZER_VERSION,
+        server_default=text("'none-v1'"),
+        nullable=False,
+    )
     taxonomy_version: Mapped[str] = mapped_column(String, nullable=False)
 
 

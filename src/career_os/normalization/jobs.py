@@ -256,15 +256,17 @@ def _locations(values: tuple[SourceLocationEvidence, ...]) -> tuple[NormalizedLo
 
 def _location(ordinal: int, value: SourceLocationEvidence) -> NormalizedLocation:
     if value.city is not None or value.region is not None or value.country_code is not None:
+        parsed_country = _parse_location(value.raw)[1]
+        parsed_country_only = value.country_code is None and parsed_country is not None
         return NormalizedLocation(
             ordinal,
             value.raw,
             value.city,
             value.region,
-            value.country_code,
+            value.country_code or parsed_country,
             value.is_primary,
-            Decimal("1.000"),
-            "structured_source",
+            Decimal("0.800") if parsed_country_only else Decimal("1.000"),
+            "text_parse" if parsed_country_only else "structured_source",
         )
     city, country = _parse_location(value.raw)
     confidence = Decimal("0.800") if country is not None else Decimal("0.400")

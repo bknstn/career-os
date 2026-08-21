@@ -24,6 +24,8 @@ from career_os.config.sources import (
     SourcesConfig,
     WorkablePublicSourceConfig,
 )
+from career_os.db import DatabaseConfigurationError
+from career_os.persistence import PersistenceError
 
 
 def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> None:
@@ -40,6 +42,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
     for arguments in (
         ["--help"],
         ["collect", "--help"],
+        ["enrich", "--help"],
         ["sources", "--help"],
         ["sources", "validate", "--help"],
         ["taxonomy", "--help"],
@@ -99,6 +102,76 @@ def test_taxonomy_validate_has_deterministic_offline_summary(monkeypatch) -> Non
     assert result.output == (
         '{"cases": 9, "categories": 14, "skills": 113, "taxonomy_version": "1.0.0"}\n'
     )
+
+
+def test_enrich_cli_emits_deterministic_success_and_partial_failure_json(monkeypatch) -> None:
+    taxonomy = SimpleNamespace(version="1.0.0")
+    first_id = uuid4()
+    second_id = uuid4()
+    results = iter(
+        (
+            SimpleNamespace(selected=2, enriched=2, unchanged=0, failed_ids=()),
+            SimpleNamespace(selected=2, enriched=1, unchanged=0, failed_ids=(first_id, second_id)),
+        )
+    )
+
+    class FakeService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def enrich_stale(self) -> object:
+            return next(results)
+
+    monkeypatch.setattr(cli, "load_skill_taxonomy", lambda _path: taxonomy)
+    monkeypatch.setattr(cli, "SkillExtractor", lambda _taxonomy: object())
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: object())
+    monkeypatch.setattr(cli, "JobEnrichmentService", FakeService)
+
+    runner = CliRunner()
+    success = runner.invoke(app, ["enrich"])
+    failure = runner.invoke(app, ["enrich"])
+
+    assert success.exit_code == 0
+    assert success.output == (
+        '{"enriched": 2, "failed_ids": [], "normalizer_version": "job-normalization-v1", '
+        '"selected": 2, "taxonomy_version": "1.0.0", "unchanged": 0}\n'
+    )
+    assert failure.exit_code == 1
+    assert failure.output == (
+        f'{{"enriched": 1, "failed_ids": ["{first_id}", "{second_id}"], '
+        '"normalizer_version": "job-normalization-v1", "selected": 2, '
+        '"taxonomy_version": "1.0.0", "unchanged": 0}\n'
+    )
+
+
+def test_enrich_cli_maps_taxonomy_and_database_errors_to_documented_exits(monkeypatch) -> None:
+    monkeypatch.setattr(
+        cli, "load_skill_taxonomy", lambda _path: (_ for _ in ()).throw(ConfigurationError("bad"))
+    )
+    invalid = CliRunner().invoke(app, ["enrich"])
+    assert invalid.exit_code == 2
+
+    monkeypatch.setattr(cli, "load_skill_taxonomy", lambda _path: SimpleNamespace(version="1.0.0"))
+    monkeypatch.setattr(
+        cli,
+        "_database_session_factory",
+        lambda _settings: (_ for _ in ()).throw(DatabaseConfigurationError("offline")),
+    )
+    database = CliRunner().invoke(app, ["enrich"])
+    assert database.exit_code == 1
+
+    class FailingService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def enrich_stale(self) -> object:
+            raise PersistenceError("enrichment failed")
+
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: object())
+    monkeypatch.setattr(cli, "SkillExtractor", lambda _taxonomy: object())
+    monkeypatch.setattr(cli, "JobEnrichmentService", FailingService)
+    service = CliRunner().invoke(app, ["enrich"])
+    assert service.exit_code == 1
 
 
 def test_taxonomy_validate_reports_sanitized_invalid_configuration(tmp_path: Path) -> None:
