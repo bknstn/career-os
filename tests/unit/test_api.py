@@ -1,0 +1,226 @@
+"""Offline API construction, validation, cursor, and OpenAPI tests."""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+from uuid import UUID
+
+from fastapi.testclient import TestClient
+from openapi_spec_validator import validate
+
+from career_os.api.app import ApiDependencies, create_app
+from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
+from career_os.api.schemas import JobFilters
+from career_os.config.skills import load_skill_taxonomy
+from career_os.config.sources import ConfigurationError
+from career_os.db import DatabaseConfigurationError
+from career_os.persistence.api_queries import JobCursorKey
+
+
+def test_app_construction_openapi_and_liveness_are_offline() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise AssertionError("offline operation initialized persistence")
+
+    app = create_app(
+        ApiDependencies(session_factory_provider=unavailable, taxonomy_provider=unavailable)
+    )
+    schema = app.openapi()
+    validate(schema)
+    client = TestClient(app)
+
+    assert client.get("/health/live").json() == {"status": "live"}
+    assert calls == 0
+    assert set(schema["paths"]) == {
+        "/health/live",
+        "/health/ready",
+        "/v1/sources",
+        "/v1/runs",
+        "/v1/runs/{run_id}",
+        "/v1/jobs",
+        "/v1/jobs/{job_id}",
+        "/v1/market-reports",
+    }
+    job_detail_schema = schema["components"]["schemas"]["JobDetailResponse"]
+    serialized = str(job_detail_schema)
+    assert "raw_latest" not in serialized
+    assert '"config"' not in serialized
+    assert "raw_text" not in serialized
+
+
+def test_readiness_is_sanitized_and_validation_has_stable_body() -> None:
+    def unavailable():
+        raise DatabaseConfigurationError("secret-user:secret-password@private-host")
+
+    app = create_app(
+        ApiDependencies(session_factory_provider=unavailable, taxonomy_provider=unavailable)
+    )
+    client = TestClient(app)
+
+    response = client.get("/health/ready")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "database unavailable"}
+    assert "secret" not in response.text
+
+    malformed = client.get("/v1/jobs/not-a-uuid")
+    assert malformed.status_code == 422
+    assert malformed.json() == {"detail": "request validation failed"}
+    invalid_filter = client.get("/v1/jobs", params={"country_code": "pol"})
+    assert invalid_filter.status_code == 422
+    assert invalid_filter.json() == {"detail": "request validation failed"}
+
+    def invalid_settings():
+        raise ConfigurationError("secret DSN or invalid environment")
+
+    invalid_client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=invalid_settings,
+                taxonomy_provider=invalid_settings,
+            )
+        )
+    )
+    for path in ("/health/ready", "/v1/sources"):
+        invalid_response = invalid_client.get(path)
+        assert invalid_response.status_code == 503
+        assert invalid_response.json() == {"detail": "database unavailable"}
+        assert "secret" not in invalid_response.text
+
+
+def test_job_cursor_is_versioned_filter_bound_and_stable_under_ties() -> None:
+    filters = JobFilters(status="active", company="Example")
+    key = JobCursorKey(
+        last_seen_at=datetime(2026, 8, 21, 12, tzinfo=UTC),
+        job_id=UUID(int=42),
+    )
+    cursor = encode_job_cursor(key, filters=filters)
+
+    assert decode_job_cursor(cursor, filters=filters) == key
+    assert cursor == encode_job_cursor(key, filters=filters)
+    for bad in (cursor[:-1] + ("A" if cursor[-1] != "A" else "B"), "not-base64!"):
+        try:
+            decode_job_cursor(bad, filters=filters)
+        except InvalidCursorError as error:
+            assert str(error) == "invalid or filter-incompatible cursor"
+        else:  # pragma: no cover - assertion branch
+            raise AssertionError("invalid cursor was accepted")
+    try:
+        decode_job_cursor(cursor, filters=JobFilters(status="inactive", company="Example"))
+    except InvalidCursorError:
+        pass
+    else:  # pragma: no cover - assertion branch
+        raise AssertionError("cursor was accepted with different filters")
+
+    for field, value in (("v", True), ("i", True), ("t", 12), ("f", None)):
+        envelope = _decoded_cursor(cursor)
+        envelope["b"][field] = value
+        canonical = json.dumps(envelope["b"], sort_keys=True, separators=(",", ":")).encode()
+        envelope["c"] = hashlib.sha256(canonical).hexdigest()
+        forged = (
+            base64.urlsafe_b64encode(
+                json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
+            )
+            .rstrip(b"=")
+            .decode()
+        )
+        try:
+            decode_job_cursor(forged, filters=filters)
+        except InvalidCursorError:
+            pass
+        else:  # pragma: no cover - assertion branch
+            raise AssertionError(f"cursor accepted invalid {field}")
+
+    try:
+        encode_job_cursor(
+            JobCursorKey(last_seen_at=datetime(2026, 8, 21, 12), job_id=UUID(int=1)),
+            filters=filters,
+        )
+    except ValueError as error:
+        assert str(error) == "cursor timestamp must be timezone-aware"
+    else:  # pragma: no cover - assertion branch
+        raise AssertionError("naive cursor timestamp was accepted")
+
+
+def test_invalid_cursor_maps_to_400_before_database_access() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise AssertionError("invalid cursor reached persistence")
+
+    client = TestClient(
+        create_app(
+            ApiDependencies(session_factory_provider=unavailable, taxonomy_provider=unavailable)
+        )
+    )
+    response = client.get("/v1/jobs", params={"cursor": "bad!"})
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "invalid or filter-incompatible cursor"}
+    assert calls == 0
+
+
+def test_report_distinguishes_server_taxonomy_failure_from_unknown_profile_skill() -> None:
+    database_calls = 0
+
+    def no_database():
+        nonlocal database_calls
+        database_calls += 1
+        raise AssertionError("invalid report reached persistence")
+
+    request = {
+        "market": {"name": "example"},
+        "profile": {
+            "name": "example",
+            "target_role_families": ["backend_engineering"],
+            "seniority": "senior",
+            "skills": [{"id": "imaginary_db", "level": "working"}],
+        },
+    }
+
+    def broken_taxonomy():
+        raise ConfigurationError("secret local taxonomy path")
+
+    broken_client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=no_database,
+                taxonomy_provider=broken_taxonomy,
+            )
+        )
+    )
+    broken = broken_client.post("/v1/market-reports", json=request)
+    assert broken.status_code == 503
+    assert broken.json() == {"detail": "taxonomy unavailable"}
+    assert "secret" not in broken.text
+
+    taxonomy = load_skill_taxonomy(
+        Path(__file__).resolve().parents[2] / "config/taxonomy/skills.v1.yaml"
+    )
+    unknown_client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=no_database,
+                taxonomy_provider=lambda: taxonomy,
+            )
+        )
+    )
+    unknown = unknown_client.post("/v1/market-reports", json=request)
+    assert unknown.status_code == 422
+    assert unknown.json()["detail"].endswith("unknown taxonomy IDs: imaginary_db")
+    assert database_calls == 0
+
+
+def _decoded_cursor(cursor: str) -> dict[str, object]:
+    padding = "=" * (-len(cursor) % 4)
+    value = json.loads(base64.urlsafe_b64decode(cursor + padding))
+    assert isinstance(value, dict)
+    return value
