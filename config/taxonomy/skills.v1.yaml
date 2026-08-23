@@ -1,4 +1,4 @@
-version: 1.0.1
+version: 1.0.2
 skills:
   - {id: python, label: Python, category: language, aliases: [Python]}
   - {id: java, label: Java, category: language, aliases: [Java]}
@@ -81,7 +81,7 @@ skills:
   - {id: fluxcd, label: Flux CD, category: cicd, aliases: [Flux CD, FluxCD]}
   - {id: prometheus, label: Prometheus, category: observability, aliases: [Prometheus]}
   - {id: grafana, label: Grafana, category: observability, aliases: [Grafana]}
-  - {id: datadog, label: Datadog, category: observability, aliases: [Datadog]}
+  - {id: datadog, label: Datadog, category: observability, aliases: [Datadog], negative_patterns: ["\\bfounders?\\s+from\\s+Datadog\\b"]}
   - {id: new_relic, label: New Relic, category: observability, aliases: [New Relic]}
   - {id: splunk, label: Splunk, category: observability, aliases: [Splunk]}
   - {id: opentelemetry, label: OpenTelemetry, category: observability, aliases: [OpenTelemetry, OTel]}
@@ -100,7 +100,7 @@ skills:
   - {id: selenium, label: Selenium, category: testing, aliases: [Selenium]}
   - {id: postman, label: Postman, category: testing, aliases: [Postman]}
   - {id: airflow, label: Apache Airflow, category: data, aliases: [Airflow, Apache Airflow]}
-  - {id: dbt, label: dbt, category: data, aliases: [dbt]}
+  - {id: dbt, label: dbt, category: data, aliases: [dbt], negative_patterns: ["\\bdbt\\s+Labs\\b"]}
   - {id: spark, label: Apache Spark, category: data, aliases: [Apache Spark]}
   - {id: flink, label: Apache Flink, category: data, aliases: [Flink, Apache Flink]}
   - {id: snowflake, label: Snowflake, category: data, aliases: [Snowflake Data Cloud]}

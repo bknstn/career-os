@@ -12,6 +12,7 @@ from career_os.config.sources import ConfigurationError
 from career_os.persistence.market_queries import build_market_job_ids_query
 
 EXAMPLE_PATH = Path("config/market.example.yaml")
+INITIAL_PATH = Path("config/market.initial.yaml")
 
 
 def test_checked_in_market_example_validates_against_current_schema() -> None:
@@ -22,6 +23,14 @@ def test_checked_in_market_example_validates_against_current_schema() -> None:
     assert filters.country_codes == ("PL",)
     assert filters.include_remote is True
     assert filters.remote_scopes == ("poland", "eu", "europe")
+
+
+def test_checked_in_initial_market_pins_the_real_company_sample() -> None:
+    filters = load_market_filters(INITIAL_PATH)
+
+    assert filters.name == "senior-backend-platform-poland-eu-initial-20"
+    assert len(filters.company_names) == 20
+    assert {"gitlab", "hostinger", "kestra"} <= set(filters.company_names)
 
 
 def test_market_file_normalizes_filters_and_forbids_unknown_keys(tmp_path: Path) -> None:

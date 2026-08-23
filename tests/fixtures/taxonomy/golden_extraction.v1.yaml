@@ -1,4 +1,4 @@
-taxonomy_version: 1.0.1
+taxonomy_version: 1.0.2
 cases:
   - id: backend_go_kafka_postgres
     title: Senior go developer
@@ -17,6 +17,14 @@ cases:
     description: Python experience helps the team go-to-market and go live safely.
     expected_skill_ids: [python]
     forbidden_skill_ids: [go]
+  - id: vendor_skills_in_technical_context
+    description: Use Datadog for monitoring and dbt for data transformations.
+    expected_skill_ids: [datadog, dbt]
+    forbidden_skill_ids: [grafana]
+  - id: vendor_company_pedigree_is_not_skill_evidence
+    description: The company is backed by founders from Datadog and dbt Labs.
+    expected_skill_ids: []
+    forbidden_skill_ids: [datadog, dbt]
   - id: data_r_language
     title: Data scientist (R language)
     sections:

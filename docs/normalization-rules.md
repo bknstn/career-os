@@ -1,6 +1,6 @@
 # Deterministic job normalization rules
 
-`job-normalization-v2` owns the pure, source-neutral rules in
+`job-normalization-v3` owns the pure, source-neutral rules in
 `career_os.normalization.jobs`. The version is emitted with every output; task
 22 owns selection, persistence, and bulk re-enrichment.
 
@@ -28,6 +28,10 @@ country fact. Structured remote workplace evidence may combine with an exact
 `Poland`, `EU`, or `Europe` source location; source strings such as
 `Remote, Poland` and `Poland (Remote)` are also accepted. A localized remote
 role in another country is not widened into Europe-wide eligibility.
+An ATS location that explicitly contains `Remote` also supplies conservative
+remote workplace evidence unless that same location says hybrid or onsite.
+Observed Greenhouse location names separated by semicolons are replayed as
+ordered independent locations, preserving the first value as primary.
 
 Structured workplace values win. `source_is_remote=false` prevents prose from
 claiming `remote` but does not manufacture `onsite`; affirmative `hybrid` still

@@ -135,6 +135,9 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
         )
         assert result.remote_scope.value == expected_scope
         assert result.remote_scope.method == "text_parse"
+        if "remote" in raw_location.casefold():
+            assert result.workplace_type.value == "remote"
+            assert result.workplace_type.method == "text_parse"
 
     localized_remote_outside_scope = normalize_job(
         JobNormalizationInput(
@@ -145,6 +148,20 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
         )
     )
     assert localized_remote_outside_scope.remote_scope.value is None
+
+    explicit_remote_location = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            locations=(SourceLocationEvidence(raw="Remote, Poland; Remote, United Kingdom"),),
+        )
+    )
+    assert _scalar(explicit_remote_location.workplace_type) == {
+        "value": "remote",
+        "method": "text_parse",
+        "evidence": "Remote",
+        "confidence": "0.800",
+    }
 
 
 @pytest.mark.parametrize(

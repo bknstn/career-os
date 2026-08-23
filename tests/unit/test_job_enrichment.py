@@ -146,6 +146,31 @@ def test_builder_fails_closed_for_malformed_stored_ashby_payload() -> None:
         )
 
 
+def test_builder_splits_observed_greenhouse_semicolon_locations() -> None:
+    result = build_normalization_input(
+        job=_job(
+            {
+                "location": {
+                    "name": "Remote, Poland; Remote, United Kingdom",
+                }
+            }
+        ),
+        source_kind="greenhouse",
+    )
+
+    assert [(item.raw, item.is_primary) for item in result.locations] == [
+        ("Remote, Poland", True),
+        ("Remote, United Kingdom", False),
+    ]
+    normalized = normalize_job(result)
+    assert [(item.raw, item.country_code) for item in normalized.locations] == [
+        ("Remote, Poland", "PL"),
+        ("Remote, United Kingdom", "GB"),
+    ]
+    assert normalized.workplace_type.value == "remote"
+    assert normalized.remote_scope.value == "Poland"
+
+
 def test_builder_maps_observed_ashby_commission_and_equity_cash_value() -> None:
     result = build_normalization_input(
         job=_job(

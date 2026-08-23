@@ -20,7 +20,7 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.text import clean_text
 
-JOB_NORMALIZER_VERSION: Final = "job-normalization-v2"
+JOB_NORMALIZER_VERSION: Final = "job-normalization-v3"
 
 _TITLE_SENIORITY: Final = (
     ("executive", re.compile(r"\b(?:chief|cto|vp|vice president)\b", re.I)),
@@ -208,7 +208,12 @@ def normalize_job(value: JobNormalizationInput) -> JobNormalization:
         seniority=_seniority(title, value.source_level, value.source_category, description),
         locations=_locations(value.locations),
         employment_type=_employment(value.source_employment_type, description),
-        workplace_type=_workplace(value.source_workplace_type, value.source_is_remote, description),
+        workplace_type=_workplace(
+            value.source_workplace_type,
+            value.source_is_remote,
+            value.locations,
+            description,
+        ),
         remote_scope=_remote_scope(
             value.locations,
             description,
@@ -348,7 +353,10 @@ def _has_conflicting_employment_tokens(description: str) -> bool:
 
 
 def _workplace(
-    source_value: str | None, is_remote: bool | None, description: str
+    source_value: str | None,
+    is_remote: bool | None,
+    locations: tuple[SourceLocationEvidence, ...],
+    description: str,
 ) -> NormalizedField:
     if source_value is not None:
         normalized = _WORKPLACE.get(_key(source_value))
@@ -361,6 +369,9 @@ def _workplace(
         return _field("hybrid", "description_rule", hybrid.group(0), Decimal("0.800"))
     if is_remote is False:
         return NormalizedField(None)
+    remote_location = _remote_workplace_location_match(locations)
+    if remote_location is not None:
+        return _field("remote", "text_parse", remote_location.group(0), Decimal("0.800"))
     remote = _affirmative_workplace_match(description, "remote")
     onsite = _affirmative_workplace_match(description, "onsite")
     if remote is not None and onsite is None:
@@ -368,6 +379,18 @@ def _workplace(
     if onsite is not None and remote is None:
         return _field("onsite", "description_rule", onsite.group(0), Decimal("0.700"))
     return NormalizedField(None)
+
+
+def _remote_workplace_location_match(
+    locations: tuple[SourceLocationEvidence, ...],
+) -> re.Match[str] | None:
+    for item in locations:
+        if re.search(r"\b(?:hybrid|on[ -]?site|in-office)\b", item.raw, re.I) is not None:
+            continue
+        match = re.search(r"\bremote\b", item.raw, re.I)
+        if match is not None:
+            return match
+    return None
 
 
 def _affirmative_workplace_match(description: str, kind: str) -> re.Match[str] | None:

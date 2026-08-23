@@ -154,7 +154,11 @@ def _greenhouse_input(job: JobPosting, raw: dict[str, object]) -> JobNormalizati
         location_object = _object(location, "greenhouse.location")
         name = _optional_text(location_object.get("name"), "greenhouse.location.name")
         if name is not None:
-            locations = (SourceLocationEvidence(raw=name, is_primary=True),)
+            parts = tuple(part.strip() for part in name.split(";") if part.strip())
+            locations = tuple(
+                SourceLocationEvidence(raw=part, is_primary=index == 0)
+                for index, part in enumerate(parts)
+            )
     return _base_input(job, locations=locations)
 
 

@@ -327,7 +327,7 @@ def _market(
         compensation_job_ids=(),
         collection_cutoff=datetime(2026, 8, 21, tzinfo=UTC),
         taxonomy_version=taxonomy_version,
-        normalizer_version="job-normalization-v2",
+        normalizer_version="job-normalization-v3",
         companies=(),
         skills=skills,
         seniorities=(),
