@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal, cast
@@ -12,7 +13,7 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
@@ -46,6 +47,10 @@ from career_os.api.schemas import (
     SourceResponse,
 )
 from career_os.application.market import MarketDataConsistencyError
+from career_os.application.operations import (
+    CollectionOperationalPolicy,
+    SourceOperationalStatus,
+)
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.report import MarketProfileReport, MarketReportService
 from career_os.config.profiles import validate_profile_taxonomy
@@ -66,6 +71,7 @@ from career_os.persistence.api_queries import (
     JobDetail,
     JobQueryFilters,
 )
+from career_os.persistence.operations import OperationalStatusRepository
 from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
 from career_os.settings import load_settings
@@ -73,6 +79,7 @@ from career_os.settings import load_settings
 SessionFactory = sessionmaker[Session]
 SessionFactoryProvider = Callable[[], SessionFactory]
 TaxonomyProvider = Callable[[], SkillTaxonomy]
+OperationalPolicyProvider = Callable[[], CollectionOperationalPolicy]
 _DEFAULT_TAXONOMY_PATH = Path(__file__).resolve().parents[3] / "config/taxonomy/skills.v1.yaml"
 
 
@@ -82,6 +89,7 @@ class ApiDependencies:
 
     session_factory_provider: SessionFactoryProvider
     taxonomy_provider: TaxonomyProvider
+    operational_policy_provider: OperationalPolicyProvider | None = None
 
 
 @lru_cache(maxsize=1)
@@ -91,6 +99,16 @@ def _default_session_factory_provider() -> SessionFactory:
 
 def _default_taxonomy_provider() -> SkillTaxonomy:
     return load_skill_taxonomy(_DEFAULT_TAXONOMY_PATH)
+
+
+def _default_operational_policy_provider() -> CollectionOperationalPolicy:
+    settings = load_settings()
+    return CollectionOperationalPolicy(
+        max_fetch_drop_ratio=settings.max_fetch_drop_ratio,
+        circuit_failure_threshold=settings.circuit_failure_threshold,
+        circuit_cooldown_seconds=settings.circuit_cooldown_seconds,
+        freshness_target_seconds=settings.freshness_target_seconds,
+    )
 
 
 @contextmanager
@@ -110,7 +128,9 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
     deps = dependencies or ApiDependencies(
         session_factory_provider=_default_session_factory_provider,
         taxonomy_provider=_default_taxonomy_provider,
+        operational_policy_provider=_default_operational_policy_provider,
     )
+    policy_provider = deps.operational_policy_provider or _default_operational_policy_provider
     app = FastAPI(
         title="Career OS read API",
         version="0.1.0",
@@ -142,6 +162,24 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
     @app.get("/health/live", response_model=LiveResponse, tags=["health"])
     def live() -> LiveResponse:
         return LiveResponse()
+
+    @app.get(
+        "/metrics",
+        response_class=PlainTextResponse,
+        responses={503: {"model": ErrorResponse}},
+        tags=["operations"],
+    )
+    def metrics() -> PlainTextResponse:
+        """Expose low-cardinality Prometheus text metrics from persisted source state."""
+        with _read_session(deps.session_factory_provider) as session:
+            statuses = OperationalStatusRepository(
+                session=session,
+                policy=policy_provider(),
+            ).list_source_statuses(now=datetime.now(UTC))
+        return PlainTextResponse(
+            _prometheus_metrics(statuses),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     @app.get(
         "/health/ready",
@@ -506,6 +544,49 @@ def _report_response(report: MarketProfileReport) -> MarketReportResponse:
             for skill_id, label in report.skill_labels
         ),
     )
+
+
+def _prometheus_metrics(statuses: tuple[SourceOperationalStatus, ...]) -> str:
+    """Render a deterministic Prometheus exposition without high-cardinality labels."""
+    fields = (
+        ("career_os_source_active_jobs", "active_jobs"),
+        ("career_os_source_stale", "stale"),
+        ("career_os_source_circuit_open", "circuit_open"),
+        ("career_os_source_consecutive_unsafe_runs", "consecutive_unsafe_runs"),
+        ("career_os_collection_latest_items_fetched", "latest_items_fetched"),
+        ("career_os_http_latest_requests", "latest_http_requests"),
+        ("career_os_http_latest_retries", "latest_retry_count"),
+        ("career_os_http_latest_rate_limit_events", "latest_rate_limit_events"),
+        ("career_os_collection_latest_failed_items", "latest_failed_items"),
+        ("career_os_collection_latest_normalization_errors", "latest_normalization_errors"),
+    )
+    lines: list[str] = []
+    for metric_name, field_name in fields:
+        lines.append(f"# TYPE {metric_name} gauge")
+        for status in statuses:
+            labels = (
+                f'source_key="{_prometheus_label(status.source_key)}",'
+                f'source_kind="{_prometheus_label(status.source_kind)}"'
+            )
+            value = getattr(status, field_name)
+            lines.append(f"{metric_name}{{{labels}}} {int(value)}")
+    lines.append("# TYPE career_os_source_last_success_age_seconds gauge")
+    for status in statuses:
+        if status.last_success_age_seconds is None:
+            continue
+        labels = (
+            f'source_key="{_prometheus_label(status.source_key)}",'
+            f'source_kind="{_prometheus_label(status.source_kind)}"'
+        )
+        lines.append(
+            "career_os_source_last_success_age_seconds"
+            f"{{{labels}}} {status.last_success_age_seconds:.3f}"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _prometheus_label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 
 
 app = create_app()

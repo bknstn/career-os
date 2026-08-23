@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging as stdlib_logging
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from html import escape
 from typing import Protocol, TypeVar
@@ -21,6 +21,7 @@ from career_os.application.collect import (
     CollectionService,
 )
 from career_os.application.lifecycle import LifecycleAction, LifecycleResult
+from career_os.application.operations import CollectionOperationalPolicy, utcnow
 from career_os.config.sources import (
     AshbySourceConfig,
     GreenhouseSourceConfig,
@@ -32,6 +33,10 @@ from career_os.db import session_scope
 from career_os.domain import CanonicalJobCandidate, RawJobPosting, SourceAdapter
 from career_os.domain.runs import RunCounts
 from career_os.normalization import clean_text, html_to_text
+from career_os.persistence.operations import (
+    PersistedScanOutcomeSafeguard,
+    SourceCollectionCoordinator,
+)
 from career_os.persistence.repositories import (
     CanonicalJobRepository,
     JobUpsertAction,
@@ -155,8 +160,21 @@ class IngestionService[ServiceConfigT: SourceConfig]:
     normalizer_version: str
     taxonomy_version: str
     candidate_factory: CandidateFactory[ServiceConfigT]
+    operational_policy: CollectionOperationalPolicy = field(
+        default_factory=CollectionOperationalPolicy
+    )
 
     async def collect(
+        self, *, source_config: ServiceConfigT, adapter: SourceAdapter
+    ) -> IngestionResult:
+        coordinator = SourceCollectionCoordinator(
+            session_factory=self.session_factory,
+            policy=self.operational_policy,
+        )
+        with coordinator.hold(source_config.key, now=utcnow()):
+            return await self._collect_locked(source_config=source_config, adapter=adapter)
+
+    async def _collect_locked(
         self, *, source_config: ServiceConfigT, adapter: SourceAdapter
     ) -> IngestionResult:
         run_store = SqlAlchemyCollectionRunStore(
@@ -174,6 +192,10 @@ class IngestionService[ServiceConfigT: SourceConfig]:
                 run_store=run_store,
                 source_config=source_config,
                 candidate_factory=self.candidate_factory,
+            ),
+            outcome_safeguard=PersistedScanOutcomeSafeguard(
+                session_factory=self.session_factory,
+                policy=self.operational_policy,
             ),
         )
         try:
@@ -522,6 +544,9 @@ class GreenhouseIngestionService:
     candidate_factory: CandidateFactory[GreenhouseSourceConfig] = greenhouse_candidate
     normalizer_version: str = GREENHOUSE_NORMALIZER_VERSION
     taxonomy_version: str = NO_TAXONOMY_VERSION
+    operational_policy: CollectionOperationalPolicy = field(
+        default_factory=CollectionOperationalPolicy
+    )
 
     async def collect(
         self, *, source_config: GreenhouseSourceConfig, adapter: SourceAdapter
@@ -533,6 +558,7 @@ class GreenhouseIngestionService:
             normalizer_version=self.normalizer_version,
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
+            operational_policy=self.operational_policy,
         ).collect(source_config=source_config, adapter=adapter)
 
 
@@ -546,6 +572,9 @@ class LeverIngestionService:
     candidate_factory: CandidateFactory[LeverSourceConfig] = lever_candidate
     normalizer_version: str = LEVER_NORMALIZER_VERSION
     taxonomy_version: str = NO_TAXONOMY_VERSION
+    operational_policy: CollectionOperationalPolicy = field(
+        default_factory=CollectionOperationalPolicy
+    )
 
     async def collect(
         self, *, source_config: LeverSourceConfig, adapter: SourceAdapter
@@ -557,6 +586,7 @@ class LeverIngestionService:
             normalizer_version=self.normalizer_version,
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
+            operational_policy=self.operational_policy,
         ).collect(source_config=source_config, adapter=adapter)
 
 
@@ -570,6 +600,9 @@ class AshbyIngestionService:
     candidate_factory: CandidateFactory[AshbySourceConfig] = ashby_candidate
     normalizer_version: str = ASHBY_NORMALIZER_VERSION
     taxonomy_version: str = NO_TAXONOMY_VERSION
+    operational_policy: CollectionOperationalPolicy = field(
+        default_factory=CollectionOperationalPolicy
+    )
 
     async def collect(
         self, *, source_config: AshbySourceConfig, adapter: SourceAdapter
@@ -581,6 +614,7 @@ class AshbyIngestionService:
             normalizer_version=self.normalizer_version,
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
+            operational_policy=self.operational_policy,
         ).collect(source_config=source_config, adapter=adapter)
 
 
@@ -592,6 +626,9 @@ class WorkablePublicIngestionService:
     candidate_factory: CandidateFactory[WorkablePublicSourceConfig] = workable_public_candidate
     normalizer_version: str = WORKABLE_PUBLIC_NORMALIZER_VERSION
     taxonomy_version: str = NO_TAXONOMY_VERSION
+    operational_policy: CollectionOperationalPolicy = field(
+        default_factory=CollectionOperationalPolicy
+    )
 
     async def collect(
         self, *, source_config: WorkablePublicSourceConfig, adapter: SourceAdapter
@@ -603,4 +640,5 @@ class WorkablePublicIngestionService:
             normalizer_version=self.normalizer_version,
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
+            operational_policy=self.operational_policy,
         ).collect(source_config=source_config, adapter=adapter)

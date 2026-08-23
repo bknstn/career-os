@@ -175,6 +175,30 @@ def test_empty_complete_scan_is_successful() -> None:
     assert result.run.counts.items_fetched == 0
 
 
+def test_operational_safeguard_downgrades_complete_scan_before_terminal_processing() -> None:
+    store = _InMemoryRunStore()
+
+    class SuspiciousDrop:
+        def incomplete_reason(self, *, source_key: str, items_fetched: int) -> str | None:
+            assert source_key == "example"
+            assert items_fetched == 1
+            return "operational safeguard: suspicious fetch drop"
+
+    service = _service(store)
+    service.outcome_safeguard = SuspiciousDrop()
+
+    result = _collect(
+        service,
+        _FakeAdapter(events=[_posting(), ScanOutcome(ScanStatus.COMPLETE)]),
+    )
+
+    assert result.run.status is CollectionRunStatus.PARTIAL
+    assert result.run.incomplete_reason == "operational safeguard: suspicious fetch drop"
+    assert result.outcome is not None
+    assert result.outcome.status is ScanStatus.PARTIAL
+    assert result.is_complete_success is False
+
+
 def test_partial_scan_returns_a_result_and_transitions_to_partial() -> None:
     store = _InMemoryRunStore()
     outcome = ScanOutcome(ScanStatus.PARTIAL, incomplete_reason="page timed out")

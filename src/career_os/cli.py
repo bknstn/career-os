@@ -6,7 +6,8 @@ import asyncio
 import json
 import os
 from collections.abc import Iterable
-from datetime import datetime
+from dataclasses import asdict
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -35,6 +36,10 @@ from career_os.application import (
 )
 from career_os.application.job_enrichment import JobEnrichmentService
 from career_os.application.market import MarketDataConsistencyError
+from career_os.application.operations import (
+    CollectionOperationalPolicy,
+    SourceCollectionUnavailableError,
+)
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.report import MarketReportService
 from career_os.config.markets import load_market_filters
@@ -65,6 +70,7 @@ from career_os.persistence import (
     PersistenceError,
     SourceConfigurationRepository,
 )
+from career_os.persistence.operations import OperationalStatusRepository
 from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
 from career_os.reporting import render_markdown_report
@@ -76,11 +82,13 @@ runs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted collection 
 jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical jobs.")
 taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
 market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed market reports.")
+operations_app = typer.Typer(no_args_is_help=True, help="Inspect collection health and metrics.")
 app.add_typer(sources_app, name="sources")
 app.add_typer(runs_app, name="runs")
 app.add_typer(jobs_app, name="jobs")
 app.add_typer(taxonomy_app, name="taxonomy")
 app.add_typer(market_app, name="market")
+app.add_typer(operations_app, name="operations")
 
 DEFAULT_SOURCES_CONFIG = Path("config/sources.yaml")
 DEFAULT_SKILL_TAXONOMY_CONFIG = Path("config/taxonomy/skills.v1.yaml")
@@ -172,6 +180,15 @@ def _load_and_validate_sources(
 def _database_session_factory(settings: Settings) -> sessionmaker[Session]:
     """Create a persistence factory from settings already loaded by a command."""
     return create_session_factory(create_database_engine(settings))
+
+
+def _operational_policy(settings: Settings) -> CollectionOperationalPolicy:
+    return CollectionOperationalPolicy(
+        max_fetch_drop_ratio=getattr(settings, "max_fetch_drop_ratio", 0.5),
+        circuit_failure_threshold=getattr(settings, "circuit_failure_threshold", 3),
+        circuit_cooldown_seconds=getattr(settings, "circuit_cooldown_seconds", 900),
+        freshness_target_seconds=getattr(settings, "freshness_target_seconds", 86_400),
+    )
 
 
 def _emit_error(error: BaseException, *, exit_code: int) -> None:
@@ -282,6 +299,7 @@ def collect(
                 session_factory=session_factory,
                 logger=logger,
                 request_timeout_seconds=settings.request_timeout_seconds,
+                operational_policy=_operational_policy(settings),
             )
         )
     except (ConfigurationError, AdapterRegistryError) as error:
@@ -398,36 +416,59 @@ async def _collect_selected(
     session_factory: sessionmaker[Session],
     logger: Any,
     request_timeout_seconds: float,
+    operational_policy: CollectionOperationalPolicy | None = None,
 ) -> list[dict[str, object]]:
+    policy = operational_policy or CollectionOperationalPolicy()
     outcomes: list[dict[str, object]] = []
     for source_config in selected_sources:
         adapter = registry.build(source_config)
-        if isinstance(source_config, GreenhouseSourceConfig):
-            result = await GreenhouseIngestionService(
-                session_factory=session_factory,
-                logger=logger,
-                request_timeout_seconds=request_timeout_seconds,
-            ).collect(source_config=source_config, adapter=adapter)
-        elif isinstance(source_config, LeverSourceConfig):
-            result = await LeverIngestionService(
-                session_factory=session_factory,
-                logger=logger,
-                request_timeout_seconds=request_timeout_seconds,
-            ).collect(source_config=source_config, adapter=adapter)
-        elif isinstance(source_config, AshbySourceConfig):
-            result = await AshbyIngestionService(
-                session_factory=session_factory,
-                logger=logger,
-                request_timeout_seconds=request_timeout_seconds,
-            ).collect(source_config=source_config, adapter=adapter)
-        elif isinstance(source_config, WorkablePublicSourceConfig):
-            result = await WorkablePublicIngestionService(
-                session_factory=session_factory,
-                logger=logger,
-                request_timeout_seconds=request_timeout_seconds,
-            ).collect(source_config=source_config, adapter=adapter)
-        else:  # Registry coverage is validated before selection, retained for type-safe isolation.
-            raise IngestionError(f"no ingestion composition for source kind: {source_config.kind}")
+        try:
+            if isinstance(source_config, GreenhouseSourceConfig):
+                result = await GreenhouseIngestionService(
+                    session_factory=session_factory,
+                    logger=logger,
+                    request_timeout_seconds=request_timeout_seconds,
+                    operational_policy=policy,
+                ).collect(source_config=source_config, adapter=adapter)
+            elif isinstance(source_config, LeverSourceConfig):
+                result = await LeverIngestionService(
+                    session_factory=session_factory,
+                    logger=logger,
+                    request_timeout_seconds=request_timeout_seconds,
+                    operational_policy=policy,
+                ).collect(source_config=source_config, adapter=adapter)
+            elif isinstance(source_config, AshbySourceConfig):
+                result = await AshbyIngestionService(
+                    session_factory=session_factory,
+                    logger=logger,
+                    request_timeout_seconds=request_timeout_seconds,
+                    operational_policy=policy,
+                ).collect(source_config=source_config, adapter=adapter)
+            elif isinstance(source_config, WorkablePublicSourceConfig):
+                result = await WorkablePublicIngestionService(
+                    session_factory=session_factory,
+                    logger=logger,
+                    request_timeout_seconds=request_timeout_seconds,
+                    operational_policy=policy,
+                ).collect(source_config=source_config, adapter=adapter)
+            else:  # Registry coverage is validated before selection.
+                raise IngestionError(
+                    f"no ingestion composition for source kind: {source_config.kind}"
+                )
+        except SourceCollectionUnavailableError as error:
+            outcomes.append(
+                {
+                    "source_key": source_config.key,
+                    "run_id": None,
+                    "status": "failed",
+                    "counts": {},
+                    "lifecycle": "not_started",
+                    "collection_failed": True,
+                    "incomplete_reason": None,
+                    "error_summary": str(error),
+                }
+            )
+            continue
         outcomes.append(
             {
                 "source_key": source_config.key,
@@ -441,6 +482,34 @@ async def _collect_selected(
             }
         )
     return outcomes
+
+
+@operations_app.command("status")
+def operations_status(
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit non-zero when any enabled source is stale or circuit-open.",
+    ),
+) -> None:
+    """Print collection freshness and low-cardinality HTTP metrics as JSON."""
+    try:
+        settings = load_settings()
+        session_factory = _database_session_factory(settings)
+        with session_scope(session_factory) as session:
+            statuses = OperationalStatusRepository(
+                session=session,
+                policy=_operational_policy(settings),
+            ).list_source_statuses(now=datetime.now(UTC))
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    except (DatabaseConfigurationError, PersistenceError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo([asdict(status) for status in statuses])
+    if strict and any(
+        status.enabled and (status.stale or status.circuit_open) for status in statuses
+    ):
+        raise typer.Exit(code=1)
 
 
 @runs_app.command("list")

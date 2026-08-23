@@ -101,6 +101,12 @@ def test_real_read_api_filters_cursor_detail_readiness_and_report_reconciliation
     sources = client.get("/v1/sources").json()
     assert [item["key"] for item in sources] == ["alpha", "beta"]
     assert all("config" not in item for item in sources)
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert 'career_os_http_latest_requests{source_key="alpha",source_kind="greenhouse"}' in (
+        metrics.text
+    )
+    assert "job_id" not in metrics.text and "url=" not in metrics.text
     assert client.get(f"/v1/runs/{run_id}").json()["counts"]["items_fetched"] == 3
     assert client.get(f"/v1/runs/{UUID(int=9999)}").status_code == 404
 

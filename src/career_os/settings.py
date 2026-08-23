@@ -20,6 +20,10 @@ _APPLICATION_SETTING_ENVIRONMENT_VARIABLES = frozenset(
         "CAREER_OS_REQUEST_TIMEOUT_SECONDS",
         "CAREER_OS_DATABASE_URL",
         "CAREER_OS_ENABLE_WORKABLE_PUBLIC",
+        "CAREER_OS_MAX_FETCH_DROP_RATIO",
+        "CAREER_OS_CIRCUIT_FAILURE_THRESHOLD",
+        "CAREER_OS_CIRCUIT_COOLDOWN_SECONDS",
+        "CAREER_OS_FRESHNESS_TARGET_SECONDS",
     }
 )
 _COMPOSE_ONLY_ENVIRONMENT_VARIABLES = frozenset(
@@ -50,6 +54,10 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     database_url: PostgresDsn | None = None
     enable_workable_public: bool = False
+    max_fetch_drop_ratio: float = Field(default=0.5, ge=0, lt=1)
+    circuit_failure_threshold: int = Field(default=3, ge=1, le=100)
+    circuit_cooldown_seconds: int = Field(default=900, ge=1, le=86_400)
+    freshness_target_seconds: int = Field(default=86_400, ge=1, le=31_536_000)
 
 
 def load_settings(

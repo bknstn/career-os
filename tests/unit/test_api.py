@@ -12,9 +12,10 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 from openapi_spec_validator import validate
 
-from career_os.api.app import ApiDependencies, create_app
+from career_os.api.app import ApiDependencies, _prometheus_metrics, create_app
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
 from career_os.api.schemas import JobFilters
+from career_os.application.operations import SourceOperationalStatus
 from career_os.config.skills import load_skill_taxonomy
 from career_os.config.sources import ConfigurationError
 from career_os.db import DatabaseConfigurationError
@@ -41,6 +42,7 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
     assert set(schema["paths"]) == {
         "/health/live",
         "/health/ready",
+        "/metrics",
         "/v1/sources",
         "/v1/runs",
         "/v1/runs/{run_id}",
@@ -53,6 +55,36 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
     assert "raw_latest" not in serialized
     assert '"config"' not in serialized
     assert "raw_text" not in serialized
+
+
+def test_prometheus_metrics_are_low_cardinality_and_escape_source_labels() -> None:
+    status = SourceOperationalStatus(
+        source_key='example"source',
+        source_kind="greenhouse",
+        enabled=True,
+        active_jobs=12,
+        latest_status="succeeded",
+        latest_finished_at=datetime(2026, 8, 23, 10, tzinfo=UTC),
+        last_success_at=datetime(2026, 8, 23, 10, tzinfo=UTC),
+        last_success_age_seconds=120.5,
+        stale=False,
+        consecutive_unsafe_runs=0,
+        circuit_open=False,
+        latest_items_fetched=12,
+        latest_http_requests=2,
+        latest_retry_count=1,
+        latest_rate_limit_events=0,
+        latest_failed_items=0,
+        latest_normalization_errors=0,
+    )
+
+    rendered = _prometheus_metrics((status,))
+
+    assert 'source_key="example\\"source"' in rendered
+    assert "career_os_http_latest_requests" in rendered
+    assert "career_os_source_last_success_age_seconds" in rendered
+    assert "job_id" not in rendered
+    assert "url=" not in rendered
 
 
 def test_readiness_is_sanitized_and_validation_has_stable_body() -> None:

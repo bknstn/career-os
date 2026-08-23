@@ -19,5 +19,7 @@ This endpoint is unversioned and supplies no total, pagination, or explicit
 completeness marker. A successful object with a structurally safe `jobs` list is
 therefore the current, weaker completion assumption. Schema errors, malformed
 jobs, and duplicate shortcodes fail closed and yield a partial scan. A
-structurally valid empty list can currently permit lifecycle inactivation;
-task 27 owns the operational zero-job/drop safeguard.
+structurally valid empty list is still the adapter's weaker completeness claim,
+but the operational safeguard downgrades it to a partial run when the latest
+successful scan was non-empty. Large count drops are guarded the same way, so
+neither case can inactivate unseen jobs without operator review.

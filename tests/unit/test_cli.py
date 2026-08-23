@@ -16,6 +16,7 @@ from typer.testing import CliRunner
 
 from career_os import cli
 from career_os.application.market import MarketDataConsistencyError
+from career_os.application.operations import SourceOperationalStatus
 from career_os.cli import _job_payload, _run_payload, _selected_sources, app
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -50,6 +51,8 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["taxonomy", "validate", "--help"],
         ["market", "--help"],
         ["market", "report", "--help"],
+        ["operations", "--help"],
+        ["operations", "status", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -57,6 +60,54 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["jobs", "list", "--help"],
     ):
         assert runner.invoke(app, arguments).exit_code == 0
+
+
+def test_operations_status_emits_json_and_strict_fails_for_stale_enabled_source(
+    monkeypatch,
+) -> None:
+    status = SourceOperationalStatus(
+        source_key="example",
+        source_kind="greenhouse",
+        enabled=True,
+        active_jobs=3,
+        latest_status="failed",
+        latest_finished_at=datetime(2026, 8, 23, 10, tzinfo=UTC),
+        last_success_at=datetime(2026, 8, 22, 10, tzinfo=UTC),
+        last_success_age_seconds=93_600.0,
+        stale=True,
+        consecutive_unsafe_runs=1,
+        circuit_open=False,
+        latest_items_fetched=0,
+        latest_http_requests=3,
+        latest_retry_count=2,
+        latest_rate_limit_events=1,
+        latest_failed_items=0,
+        latest_normalization_errors=0,
+    )
+
+    @contextmanager
+    def fake_scope(_factory: object):
+        yield object()
+
+    class FakeRepository:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def list_source_statuses(self, **_kwargs: object) -> tuple[SourceOperationalStatus, ...]:
+            return (status,)
+
+    monkeypatch.setattr(cli, "load_settings", lambda: SimpleNamespace())
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: object())
+    monkeypatch.setattr(cli, "session_scope", fake_scope)
+    monkeypatch.setattr(cli, "OperationalStatusRepository", FakeRepository)
+
+    normal = CliRunner().invoke(app, ["operations", "status"])
+    strict = CliRunner().invoke(app, ["operations", "status", "--strict"])
+
+    assert normal.exit_code == 0
+    assert '"source_key": "example"' in normal.output
+    assert '"latest_http_requests": 3' in normal.output
+    assert strict.exit_code == 1
 
 
 def test_market_report_writes_only_complete_rendered_output(monkeypatch, tmp_path: Path) -> None:

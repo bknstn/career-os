@@ -185,6 +185,10 @@ def test_rejects_a_missing_source_file(tmp_path: Path) -> None:
 def test_settings_parse_environment_and_explicit_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CAREER_OS_LOG_LEVEL", "DEBUG")
     monkeypatch.setenv("CAREER_OS_REQUEST_TIMEOUT_SECONDS", "12.5")
+    monkeypatch.setenv("CAREER_OS_MAX_FETCH_DROP_RATIO", "0.25")
+    monkeypatch.setenv("CAREER_OS_CIRCUIT_FAILURE_THRESHOLD", "4")
+    monkeypatch.setenv("CAREER_OS_CIRCUIT_COOLDOWN_SECONDS", "600")
+    monkeypatch.setenv("CAREER_OS_FRESHNESS_TARGET_SECONDS", "7200")
     monkeypatch.setenv(
         "CAREER_OS_DATABASE_URL",
         "postgresql+psycopg://career_os:dev-only@localhost:5432/career_os",
@@ -195,6 +199,10 @@ def test_settings_parse_environment_and_explicit_overrides(monkeypatch: pytest.M
 
     assert settings.log_level == "DEBUG"
     assert settings.request_timeout_seconds == 12.5
+    assert settings.max_fetch_drop_ratio == 0.25
+    assert settings.circuit_failure_threshold == 4
+    assert settings.circuit_cooldown_seconds == 600
+    assert settings.freshness_target_seconds == 7200
     assert (
         str(settings.database_url)
         == "postgresql+psycopg://career_os:dev-only@localhost:5432/career_os"

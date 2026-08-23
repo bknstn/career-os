@@ -24,6 +24,10 @@ from career_os.adapters.greenhouse import (
     GreenhouseTransportError,
 )
 from career_os.application import GreenhouseIngestionService, IngestionError
+from career_os.application.operations import (
+    CollectionOperationalPolicy,
+    SourceCollectionUnavailableError,
+)
 from career_os.config.sources import GreenhouseSourceConfig, LeverSourceConfig, SourcesConfig
 from career_os.db import (
     create_database_engine,
@@ -43,6 +47,11 @@ from career_os.persistence.integration_safety import (
     assert_initial_schema_is_absent,
 )
 from career_os.persistence.models import CollectionRun, JobPosting, JobVersion, Source
+from career_os.persistence.operations import (
+    OperationalStatusRepository,
+    PersistedScanOutcomeSafeguard,
+    SourceCollectionCoordinator,
+)
 from career_os.settings import load_settings
 
 pytestmark = pytest.mark.integration
@@ -107,6 +116,9 @@ def test_fixture_greenhouse_replay_is_idempotent_and_unsafe_scans_never_inactiva
     replay = asyncio.run(
         service.collect(source_config=source_config, adapter=_adapter("populated.json"))
     )
+    suspicious_empty = asyncio.run(
+        service.collect(source_config=source_config, adapter=_adapter("empty.json"))
+    )
     partial = asyncio.run(service.collect(source_config=source_config, adapter=_partial_adapter()))
     failed = asyncio.run(
         service.collect(
@@ -125,6 +137,9 @@ def test_fixture_greenhouse_replay_is_idempotent_and_unsafe_scans_never_inactiva
     assert first.counts.inserted == 2
     assert replay.collection.run.status.value == "succeeded"
     assert replay.counts.unchanged == 2
+    assert suspicious_empty.collection.run.status.value == "partial"
+    assert suspicious_empty.lifecycle.action.value == "skipped_unsafe"
+    assert "returned zero after 2" in (suspicious_empty.collection.run.incomplete_reason or "")
     assert partial.collection.run.status.value == "partial"
     assert partial.counts.http_requests == 1
     assert partial.collection.run.incomplete_reason is not None
@@ -140,13 +155,21 @@ def test_fixture_greenhouse_replay_is_idempotent_and_unsafe_scans_never_inactiva
         assert all(job.status == "active" for job in jobs.values())
         assert len(list(session.scalars(select(JobVersion)))) == 2
         runs = list(session.scalars(select(CollectionRun).order_by(CollectionRun.started_at)))
-        assert [run.status for run in runs] == ["succeeded", "succeeded", "partial", "failed"]
+        assert [run.status for run in runs] == [
+            "succeeded",
+            "succeeded",
+            "partial",
+            "partial",
+            "failed",
+        ]
         assert (runs[0].inserted, runs[1].unchanged) == (2, 2)
         assert runs[2].inactivated == 0
         assert runs[2].incomplete_reason is not None
-        assert runs[2].http_requests == 1
         assert runs[3].inactivated == 0
+        assert runs[3].incomplete_reason is not None
         assert runs[3].http_requests == 1
+        assert runs[4].inactivated == 0
+        assert runs[4].http_requests == 1
         assert all(job.team_raw is None and job.apply_url is None for job in jobs.values())
 
 
@@ -326,6 +349,92 @@ def test_inspection_repository_filters_runs_and_jobs(
         } == {"alpha-active", "alpha-inactive"}
 
 
+def test_operational_lock_circuit_drop_guard_and_freshness_metrics(
+    session_factory: sessionmaker[Session],
+) -> None:
+    source_config = _source_config("guarded", company_name="Guarded Inc.")
+    now = datetime(2026, 8, 23, 12, tzinfo=UTC)
+    with session_scope(session_factory) as session:
+        SourceConfigurationRepository(session).sync(SourcesConfig(sources=[source_config]))
+        source = session.scalar(select(Source).where(Source.key == "guarded"))
+        assert source is not None
+        session.add(
+            _run_model(
+                run_id=uuid4(),
+                source_id=source.id,
+                status="succeeded",
+                started_at=now - timedelta(hours=2),
+                items_fetched=10,
+            )
+        )
+        session.add(
+            _job_model(
+                source_id=source.id,
+                external_id="active",
+                company_name="Guarded Inc.",
+                status="active",
+                observed_at=now - timedelta(hours=2),
+            )
+        )
+
+    policy = CollectionOperationalPolicy(
+        max_fetch_drop_ratio=0.5,
+        circuit_failure_threshold=3,
+        circuit_cooldown_seconds=900,
+        freshness_target_seconds=3600,
+    )
+    coordinator = SourceCollectionCoordinator(session_factory, policy)
+    with (
+        coordinator.hold("guarded", now=now),
+        pytest.raises(SourceCollectionUnavailableError, match="already running"),
+        SourceCollectionCoordinator(session_factory, policy).hold("guarded", now=now),
+    ):
+        pass
+
+    safeguard = PersistedScanOutcomeSafeguard(session_factory, policy)
+    assert safeguard.incomplete_reason(source_key="guarded", items_fetched=5) is None
+    assert "dropped from 10 to 4" in (
+        safeguard.incomplete_reason(source_key="guarded", items_fetched=4) or ""
+    )
+    assert "returned zero after 10" in (
+        safeguard.incomplete_reason(source_key="guarded", items_fetched=0) or ""
+    )
+
+    with session_scope(session_factory) as session:
+        status = OperationalStatusRepository(session, policy).list_source_statuses(now=now)[0]
+    assert status.source_key == "guarded"
+    assert status.active_jobs == 1
+    assert status.latest_status == "succeeded"
+    assert status.last_success_age_seconds == 7140.0
+    assert status.stale is True
+    assert status.circuit_open is False
+    assert status.latest_items_fetched == 10
+
+    with session_scope(session_factory) as session:
+        source = session.scalar(select(Source).where(Source.key == "guarded"))
+        assert source is not None
+        for minutes in (4, 3, 2):
+            session.add(
+                _run_model(
+                    run_id=uuid4(),
+                    source_id=source.id,
+                    status="failed",
+                    started_at=now - timedelta(minutes=minutes),
+                )
+            )
+
+    with (
+        pytest.raises(SourceCollectionUnavailableError, match="circuit open"),
+        coordinator.hold("guarded", now=now),
+    ):
+        pass
+
+    with session_scope(session_factory) as session:
+        status = OperationalStatusRepository(session, policy).list_source_statuses(now=now)[0]
+    assert status.consecutive_unsafe_runs == 3
+    assert status.circuit_open is True
+
+
 def _source_config(
     key: str,
     *,
@@ -348,6 +457,7 @@ def _run_model(
     source_id: UUID,
     status: str,
     started_at: datetime,
+    items_fetched: int = 0,
 ) -> CollectionRun:
     return CollectionRun(
         id=run_id,
@@ -355,6 +465,7 @@ def _run_model(
         status=status,
         started_at=started_at,
         finished_at=started_at + timedelta(minutes=1),
+        items_fetched=items_fetched,
         normalizer_version="greenhouse-v1",
         taxonomy_version="none-v1",
         error_summary="fixture failed" if status == "failed" else None,

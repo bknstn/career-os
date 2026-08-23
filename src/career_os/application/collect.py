@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import NoReturn, Protocol
 
+from career_os.application.operations import ScanOutcomeSafeguard
 from career_os.domain import (
     FetchContext,
     FetchEvent,
@@ -275,6 +276,7 @@ class CollectionService:
     clock: UtcClock = utcnow
     timeout_seconds: float = 30.0
     terminal_run_processor: TerminalRunProcessor | None = None
+    outcome_safeguard: ScanOutcomeSafeguard | None = None
 
     async def collect(self, *, source_key: str, adapter: SourceAdapter) -> CollectionResult:
         """Collect one source, returning partial data but raising for failed scans."""
@@ -317,6 +319,23 @@ class CollectionService:
             if outcome is None:
                 raise CollectionProtocolError(
                     "adapter stream ended without a terminal scan outcome"
+                )
+
+            if (
+                outcome.status is ScanStatus.COMPLETE
+                and self.outcome_safeguard is not None
+                and (
+                    safeguard_reason := self.outcome_safeguard.incomplete_reason(
+                        source_key=run.source_key,
+                        items_fetched=len(postings),
+                    )
+                )
+                is not None
+            ):
+                outcome = ScanOutcome(
+                    status=ScanStatus.PARTIAL,
+                    incomplete_reason=safeguard_reason,
+                    diagnostics=outcome.diagnostics,
                 )
 
             status = (
