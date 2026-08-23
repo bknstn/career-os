@@ -69,5 +69,6 @@ warn_unreachable = true
 addopts = ["-ra", "--strict-config", "--strict-markers"]
 markers = [
     "integration: requires an explicitly enabled local PostgreSQL database",
+    "live: requires explicit opt-in and public network access",
 ]
 testpaths = ["tests"]
