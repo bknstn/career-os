@@ -133,7 +133,7 @@ def _report(
         compensation_job_ids=(),
         collection_cutoff=None if empty else datetime(2026, 8, 21, 12, tzinfo=UTC),
         taxonomy_version="1.0.0",
-        normalizer_version="job-normalization-v1",
+        normalizer_version="job-normalization-v2",
         companies=company_buckets,
         skills=skill_buckets,
         seniorities=() if empty else (MarketBucket("senior", matching, matching),),

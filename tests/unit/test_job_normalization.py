@@ -102,6 +102,13 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
             locations=(SourceLocationEvidence(raw="Remote - Poland", country_code="PL"),),
         )
     )
+    observed_location_variants = (
+        ("Remote, Poland", None, "Poland"),
+        ("Poland (Remote)", None, "Poland"),
+        ("Poland", "Remote", "Poland"),
+        ("Europe", "Remote", "Europe"),
+        ("EU", "Remote", "EU"),
+    )
 
     assert onsite.remote_scope.value is None
     assert ordinary_location.remote_scope.value is None
@@ -117,6 +124,27 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
         "evidence": "Remote - Poland",
         "confidence": "1.000",
     }
+    for raw_location, workplace, expected_scope in observed_location_variants:
+        result = normalize_job(
+            JobNormalizationInput(
+                title="Engineer",
+                description="",
+                locations=(SourceLocationEvidence(raw=raw_location),),
+                source_workplace_type=workplace,
+            )
+        )
+        assert result.remote_scope.value == expected_scope
+        assert result.remote_scope.method == "text_parse"
+
+    localized_remote_outside_scope = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            locations=(SourceLocationEvidence(raw="Germany"),),
+            source_workplace_type="Remote",
+        )
+    )
+    assert localized_remote_outside_scope.remote_scope.value is None
 
 
 @pytest.mark.parametrize(
@@ -219,6 +247,9 @@ def test_seniority_and_role_family_are_conservative() -> None:
     senior_product_manager = normalize_job(
         JobNormalizationInput(title="Senior Product Manager", description="")
     )
+    product_management_director = normalize_job(
+        JobNormalizationInput(title="Director, Product Management - Core Platforms", description="")
+    )
     mid_description = normalize_job(
         JobNormalizationInput(title="Engineer", description="A mid-level engineer role.")
     )
@@ -228,6 +259,21 @@ def test_seniority_and_role_family_are_conservative() -> None:
     contradictory = normalize_job(
         JobNormalizationInput(title="Backend and Frontend Engineer", description="")
     )
+    backend_platform = normalize_job(
+        JobNormalizationInput(title="Staff Backend Engineer, Events Platform", description="")
+    )
+    data_platform = normalize_job(
+        JobNormalizationInput(title="Senior Data Engineer - Revenue Data Platform", description="")
+    )
+    product_platform = normalize_job(
+        JobNormalizationInput(title="Product Manager, Cash Platform", description="")
+    )
+    plural_platform = normalize_job(
+        JobNormalizationInput(title="Software Engineer - Network Platforms", description="")
+    )
+    non_engineering_platforms = normalize_job(
+        JobNormalizationInput(title="Account Executive, Enterprise Platforms", description="")
+    )
     ordinary = normalize_job(JobNormalizationInput(title="Engineer", description=""))
 
     assert (product_manager.role_family.value, product_manager.seniority.value) == (
@@ -235,9 +281,15 @@ def test_seniority_and_role_family_are_conservative() -> None:
         None,
     )
     assert senior_product_manager.seniority.value == "senior"
+    assert product_management_director.role_family.value == "product_management"
     assert mid_description.seniority.value == "mid"
     assert explicit_fullstack.role_family.value == "fullstack_engineering"
     assert contradictory.role_family.value is None
+    assert backend_platform.role_family.value == "backend_engineering"
+    assert data_platform.role_family.value == "data_engineering"
+    assert product_platform.role_family.value == "product_management"
+    assert plural_platform.role_family.value == "platform_engineering"
+    assert non_engineering_platforms.role_family.value is None
     assert ordinary.role_family.value is None
 
 

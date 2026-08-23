@@ -146,6 +146,52 @@ def test_builder_fails_closed_for_malformed_stored_ashby_payload() -> None:
         )
 
 
+def test_builder_maps_observed_ashby_commission_and_equity_cash_value() -> None:
+    result = build_normalization_input(
+        job=_job(
+            {
+                "compensation": {
+                    "compensationTiers": [
+                        {
+                            "tierSummary": "United States",
+                            "components": [
+                                {
+                                    "compensationType": "Commission",
+                                    "summary": "$20K commission",
+                                    "currencyCode": "USD",
+                                    "minValue": 20000,
+                                    "maxValue": 20000,
+                                    "interval": "1 YEAR",
+                                },
+                                {
+                                    "compensationType": "EquityCashValue",
+                                    "summary": "$30K equity value",
+                                    "currencyCode": "USD",
+                                    "minValue": 30000,
+                                    "maxValue": 30000,
+                                    "interval": "1 YEAR",
+                                },
+                            ],
+                        }
+                    ]
+                }
+            }
+        ),
+        source_kind="ashby",
+    )
+
+    assert [item.component_type for item in result.structured_compensation] == [
+        "other",
+        "equity",
+    ]
+    normalized = normalize_job(result)
+    assert [item.component_type for item in normalized.compensation] == ["other", "equity"]
+    assert [item.raw_text for item in normalized.compensation] == [
+        "$20K commission",
+        "$30K equity value",
+    ]
+
+
 def test_builder_accepts_actual_lever_top_level_list_with_unknown_optional_facts() -> None:
     raw = json.loads(
         (

@@ -1,4 +1,4 @@
-taxonomy_version: 1.0.0
+taxonomy_version: 1.0.1
 cases:
   - id: backend_go_kafka_postgres
     title: Senior go developer
@@ -8,6 +8,14 @@ cases:
   - id: go_verb_is_not_language
     description: Go to market with product partners and go live next quarter.
     expected_skill_ids: []
+    forbidden_skill_ids: [go]
+  - id: go_real_market_requirement_contexts
+    description: Strong proficiency in Go. Experience with Go is a plus. Services are implemented in Go. We also use Go, Python, and Rust.
+    expected_skill_ids: [go, python, rust]
+    forbidden_skill_ids: [r]
+  - id: go_to_market_near_technical_language_is_not_go
+    description: Python experience helps the team go-to-market and go live safely.
+    expected_skill_ids: [python]
     forbidden_skill_ids: [go]
   - id: data_r_language
     title: Data scientist (R language)

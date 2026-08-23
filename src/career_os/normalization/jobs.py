@@ -20,7 +20,7 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.text import clean_text
 
-JOB_NORMALIZER_VERSION: Final = "job-normalization-v1"
+JOB_NORMALIZER_VERSION: Final = "job-normalization-v2"
 
 _TITLE_SENIORITY: Final = (
     ("executive", re.compile(r"\b(?:chief|cto|vp|vice president)\b", re.I)),
@@ -36,10 +36,18 @@ _TITLE_SENIORITY: Final = (
 )
 _ROLE_FAMILIES: Final = (
     ("engineering_management", re.compile(r"\b(?:engineering|software) manager\b", re.I)),
-    ("product_management", re.compile(r"\bproduct manager\b", re.I)),
+    ("product_management", re.compile(r"\bproduct manage(?:r|ment)\b", re.I)),
     ("data_engineering", re.compile(r"\bdata engineer(?:ing)?\b", re.I)),
     ("data_science", re.compile(r"\bdata scient(?:ist|ce)\b", re.I)),
-    ("platform_engineering", re.compile(r"\b(?:platform|site reliability|sre)\b", re.I)),
+    (
+        "platform_engineering",
+        re.compile(
+            r"\b(?:platform|site reliability|sre)\b"
+            r"|\b(?:software|systems?) engineer\b[^\n]*\bplatforms\b"
+            r"|\bplatforms\b[^\n]*\b(?:software|systems?) engineer\b",
+            re.I,
+        ),
+    ),
     ("devops_engineering", re.compile(r"\bdevops\b", re.I)),
     ("backend_engineering", re.compile(r"\b(?:backend|back-end|server-side)\b", re.I)),
     ("frontend_engineering", re.compile(r"\b(?:frontend|front-end)\b", re.I)),
@@ -220,6 +228,10 @@ def _role_family(title: str) -> NormalizedField:
     if explicit_fullstack is not None:
         role, match = explicit_fullstack
         return _field(role, "title_rule", match.group(0), Decimal("0.900"))
+    non_platform = [(role, match) for role, match in matched if role != "platform_engineering"]
+    if len(non_platform) == 1:
+        role, match = non_platform[0]
+        return _field(role, "title_rule", match.group(0), Decimal("0.900"))
     if len(matched) == 1:
         role, match = matched[0]
         return _field(role, "title_rule", match.group(0), Decimal("0.900"))
@@ -383,20 +395,44 @@ def _remote_scope(
         return NormalizedField(None)
     if source_is_remote is False or structured_workplace == "onsite":
         return NormalizedField(None)
+    structured_remote = structured_workplace == "remote" or source_is_remote is True
+    for item in locations:
+        for direct_scope, token in _REMOTE_SCOPE_TOKENS:
+            match = _remote_location_match(item.raw, token)
+            if match is not None:
+                structured_country_scope = (
+                    _scope_for_country(item.country_code) if item.country_code is not None else None
+                )
+                direct_method: NormalizationMethod = (
+                    "structured_source"
+                    if structured_country_scope == direct_scope
+                    else "text_parse"
+                )
+                confidence = (
+                    Decimal("1.000") if direct_method == "structured_source" else Decimal("0.700")
+                )
+                return _field(direct_scope, direct_method, match.group(0), confidence)
     for item in locations:
         parsed_country = item.country_code or _parse_location(item.raw)[1]
-        if parsed_country is None:
-            continue
-        scope = _scope_for_country(parsed_country)
-        if scope is None:
-            continue
-        match = _remote_location_match(item.raw, scope)
-        if match is not None:
-            method: NormalizationMethod = (
+        country_scope = _scope_for_country(parsed_country) if parsed_country is not None else None
+        if structured_remote and country_scope is not None:
+            country_method: NormalizationMethod = (
                 "structured_source" if item.country_code is not None else "text_parse"
             )
-            confidence = Decimal("1.000") if method == "structured_source" else Decimal("0.700")
-            return _field(scope, method, match.group(0), confidence)
+            confidence = (
+                Decimal("1.000") if country_method == "structured_source" else Decimal("0.700")
+            )
+            return _field(country_scope, country_method, item.raw, confidence)
+        if structured_remote:
+            for regional_scope, token in _REMOTE_SCOPE_TOKENS[1:]:
+                match = re.fullmatch(rf"\s*(?:the\s+)?{token}\s*", item.raw, re.I)
+                if match is not None:
+                    return _field(
+                        regional_scope,
+                        "text_parse",
+                        match.group(0).strip(),
+                        Decimal("0.700"),
+                    )
     for scope, token in _REMOTE_SCOPE_TOKENS:
         match = _remote_scope_description_match(description, token)
         if match is not None:
@@ -416,9 +452,13 @@ def _scope_for_country(country_code: str) -> str | None:
     return "Poland" if country_code == "PL" else None
 
 
-def _remote_location_match(raw: str, scope: str) -> re.Match[str] | None:
-    token = next(token for candidate, token in _REMOTE_SCOPE_TOKENS if candidate == scope)
-    return re.search(rf"\bremote\s*(?:[-\u2013,/]\s*|\s+){token}\b", raw, re.I)
+def _remote_location_match(raw: str, token: str) -> re.Match[str] | None:
+    return re.search(
+        rf"\bremote\s*(?:[-\u2013,/]\s*|\s+){token}\b"
+        rf"|\b{token}\s*(?:[-\u2013,/]\s*|\s+|\s*\(\s*)remote\b(?:\s*\))?",
+        raw,
+        re.I,
+    )
 
 
 def _remote_scope_description_match(description: str, token: str) -> re.Match[str] | None:

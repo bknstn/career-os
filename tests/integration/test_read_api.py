@@ -72,7 +72,7 @@ def test_real_read_api_filters_cursor_detail_readiness_and_report_reconciliation
                 finished_at=datetime(2026, 8, 21, 11, 1, tzinfo=UTC),
                 items_fetched=3,
                 normalizer_version="demo-source-v1",
-                taxonomy_version="1.0.0",
+                taxonomy_version="1.0.1",
             )
         )
         session.add(

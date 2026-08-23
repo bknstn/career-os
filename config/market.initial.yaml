@@ -1,0 +1,31 @@
+market:
+  name: senior-backend-platform-poland-eu-initial-20
+  title_include: [backend, platform]
+  title_exclude: [frontend, mobile, qa]
+  role_families: [backend_engineering, platform_engineering]
+  seniorities: [senior, lead, staff]
+  country_codes: [PL]
+  include_remote: true
+  remote_scopes: [Poland, EU, Europe]
+  company_names:
+    - Linro
+    - Percona
+    - Flip
+    - Secfix
+    - Hostinger
+    - Kestra
+    - Sardine
+    - PostHog
+    - incident.io
+    - Neon
+    - Supabase
+    - ClickHouse
+    - Temporal
+    - Stripe
+    - Cloudflare
+    - Datadog
+    - Grafana Labs
+    - GitLab
+    - MongoDB
+    - Cockroach Labs
+  active_only: true

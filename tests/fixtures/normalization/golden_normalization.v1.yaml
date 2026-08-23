@@ -1,4 +1,4 @@
-normalizer_version: job-normalization-v1
+normalizer_version: job-normalization-v2
 cases:
   - id: senior_data_remote_poland
     input:
@@ -11,7 +11,7 @@ cases:
         - {raw: "Warsaw, Poland", is_primary: true}
         - {raw: "Remote - Poland", is_primary: false}
     expected:
-      normalizer_version: job-normalization-v1
+      normalizer_version: job-normalization-v2
       title_normalized: Senior Data Engineer
       role_family: {value: data_engineering, method: title_rule, evidence: "Data Engineer", confidence: "0.900"}
       seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
@@ -28,7 +28,7 @@ cases:
       description: Five years of experience is helpful.
       source_level: junior
     expected:
-      normalizer_version: job-normalization-v1
+      normalizer_version: job-normalization-v2
       title_normalized: Senior Product Manager
       role_family: {value: product_management, method: title_rule, evidence: "Product Manager", confidence: "0.900"}
       seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
@@ -43,7 +43,7 @@ cases:
       description: This is not hybrid. Remote work is possible, with onsite attendance when needed.
       source_is_remote: false
     expected:
-      normalizer_version: job-normalization-v1
+      normalizer_version: job-normalization-v2
       title_normalized: Platform Engineer
       role_family: {value: platform_engineering, method: title_rule, evidence: Platform, confidence: "0.900"}
       seniority: {value: null, method: null, evidence: null, confidence: null}
@@ -58,7 +58,7 @@ cases:
       description: Fully remote in the EU. Contract engagement.
       compensation_text: "Base salary PLN 300,000 - 420,000 annually; bonus PLN 20,000 - 30,000 hourly."
     expected:
-      normalizer_version: job-normalization-v1
+      normalizer_version: job-normalization-v2
       title_normalized: Backend Engineer
       role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
       seniority: {value: null, method: null, evidence: null, confidence: null}

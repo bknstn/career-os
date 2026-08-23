@@ -1,0 +1,113 @@
+sources:
+  - key: linro-ashby
+    kind: ashby
+    company_name: Linro
+    board_name: linro
+    include_compensation: true
+
+  - key: percona-ashby
+    kind: ashby
+    company_name: Percona
+    board_name: percona
+    include_compensation: true
+
+  - key: flip-ashby
+    kind: ashby
+    company_name: Flip
+    board_name: flip
+    include_compensation: true
+
+  - key: secfix-ashby
+    kind: ashby
+    company_name: Secfix
+    board_name: secfix
+    include_compensation: true
+
+  - key: hostinger-ashby
+    kind: ashby
+    company_name: Hostinger
+    board_name: hostinger
+    include_compensation: true
+
+  - key: kestra-ashby
+    kind: ashby
+    company_name: Kestra
+    board_name: kestra
+    include_compensation: true
+
+  - key: sardine-ashby
+    kind: ashby
+    company_name: Sardine
+    board_name: sardine
+    include_compensation: true
+
+  - key: posthog-ashby
+    kind: ashby
+    company_name: PostHog
+    board_name: posthog
+    include_compensation: true
+
+  - key: incident-ashby
+    kind: ashby
+    company_name: incident.io
+    board_name: incident
+    include_compensation: true
+
+  - key: neon-ashby
+    kind: ashby
+    company_name: Neon
+    board_name: neon
+    include_compensation: true
+
+  - key: supabase-ashby
+    kind: ashby
+    company_name: Supabase
+    board_name: supabase
+    include_compensation: true
+
+  - key: clickhouse-ashby
+    kind: ashby
+    company_name: ClickHouse
+    board_name: clickhouse
+    include_compensation: true
+
+  - key: temporal-ashby
+    kind: ashby
+    company_name: Temporal
+    board_name: temporal
+    include_compensation: true
+
+  - key: stripe-greenhouse
+    kind: greenhouse
+    company_name: Stripe
+    board_token: stripe
+
+  - key: cloudflare-greenhouse
+    kind: greenhouse
+    company_name: Cloudflare
+    board_token: cloudflare
+
+  - key: datadog-greenhouse
+    kind: greenhouse
+    company_name: Datadog
+    board_token: datadog
+
+  - key: grafana-labs-greenhouse
+    kind: greenhouse
+    company_name: Grafana Labs
+    board_token: grafanalabs
+
+  - key: gitlab-greenhouse
+    kind: greenhouse
+    company_name: GitLab
+    board_token: gitlab
+
+  - key: mongodb-greenhouse
+    kind: greenhouse
+    company_name: MongoDB
+    board_token: mongodb
+
+  - key: cockroach-labs-greenhouse
+    kind: greenhouse
+    company_name: Cockroach Labs
+    board_token: cockroachlabs

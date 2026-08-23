@@ -285,7 +285,7 @@ def test_taxonomy_validate_has_deterministic_offline_summary(monkeypatch) -> Non
 
     assert result.exit_code == 0
     assert result.output == (
-        '{"cases": 9, "categories": 14, "skills": 113, "taxonomy_version": "1.0.0"}\n'
+        '{"cases": 11, "categories": 14, "skills": 113, "taxonomy_version": "1.0.1"}\n'
     )
 
 
@@ -318,13 +318,13 @@ def test_enrich_cli_emits_deterministic_success_and_partial_failure_json(monkeyp
 
     assert success.exit_code == 0
     assert success.output == (
-        '{"enriched": 2, "failed_ids": [], "normalizer_version": "job-normalization-v1", '
+        '{"enriched": 2, "failed_ids": [], "normalizer_version": "job-normalization-v2", '
         '"selected": 2, "taxonomy_version": "1.0.0", "unchanged": 0}\n'
     )
     assert failure.exit_code == 1
     assert failure.output == (
         f'{{"enriched": 1, "failed_ids": ["{first_id}", "{second_id}"], '
-        '"normalizer_version": "job-normalization-v1", "selected": 2, '
+        '"normalizer_version": "job-normalization-v2", "selected": 2, '
         '"taxonomy_version": "1.0.0", "unchanged": 0}\n'
     )
 

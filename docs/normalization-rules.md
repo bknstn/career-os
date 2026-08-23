@@ -1,6 +1,6 @@
 # Deterministic job normalization rules
 
-`job-normalization-v1` owns the pure, source-neutral rules in
+`job-normalization-v2` owns the pure, source-neutral rules in
 `career_os.normalization.jobs`. The version is emitted with every output; task
 22 owns selection, persistence, and bulk re-enrichment.
 
@@ -12,8 +12,10 @@ Seniority precedence is title, then source level/category, then a narrow strong
 description phrase. Years alone are never seniority evidence. `Product Manager`
 is a role family, not people-management evidence; `Engineering Manager` and
 `People Manager` are management seniority evidence. `full-stack` wins over a
-simultaneous backend/frontend marker; other contradictory role-family markers
-fail closed to unknown.
+simultaneous backend/frontend marker. A bare `platform` or `platforms` modifier
+yields to one explicit role family such as backend, data engineering, or
+product management; otherwise contradictory role-family markers fail closed to
+unknown.
 
 Locations retain every input value and ordinal. Parsing recognizes only a small
 country alias set (including `PL`) and never turns a country-only value into a
@@ -22,7 +24,10 @@ explicit local binding: e.g. `remote in EU`, `EU-only remote`, `work remotely
 from Poland`, or a `Remote - Poland` location. An office in Poland or Europe is
 not scope evidence. Parsing a raw location reports `text_parse`; it reports
 `structured_source` only when the source separately supplies the supporting
-country fact.
+country fact. Structured remote workplace evidence may combine with an exact
+`Poland`, `EU`, or `Europe` source location; source strings such as
+`Remote, Poland` and `Poland (Remote)` are also accepted. A localized remote
+role in another country is not widened into Europe-wide eligibility.
 
 Structured workplace values win. `source_is_remote=false` prevents prose from
 claiming `remote` but does not manufacture `onsite`; affirmative `hybrid` still
@@ -42,6 +47,9 @@ engagement. References to contractors, negated contract roles, and conflicting
 categories such as `full-time or contract` remain unknown.
 
 Structured compensation is kept as independent components and location tiers.
+Observed Ashby salary, bonus, percentage-equity, cash-value-equity, and
+commission components are replayed without combining them; commission uses the
+controlled `other` bucket because the MVP schema has no commission category.
 Text parsing requires a currency-marked range; component and interval are
 resolved per range from its local phrase, and `raw_text` preserves that local
 evidence span. It neither annualizes nor converts currencies, and does not

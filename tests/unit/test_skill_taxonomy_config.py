@@ -14,7 +14,7 @@ def test_checked_in_taxonomy_and_golden_corpus_are_valid() -> None:
     taxonomy = load_skill_taxonomy(_taxonomy_path())
     corpus = load_golden_extraction_corpus(_corpus_path(), taxonomy=taxonomy)
 
-    assert taxonomy.version == "1.0.0"
+    assert taxonomy.version == "1.0.1"
     assert 100 <= len(taxonomy.skills) <= 200
     assert len(taxonomy.categories) >= 10
     assert len(corpus.cases) >= 9
@@ -25,25 +25,25 @@ def test_checked_in_taxonomy_and_golden_corpus_are_valid() -> None:
     [
         ("version: 1\nskills: []\n", "version"),
         (
-            "version: 1.0.0\nskills:\n"
+            "version: 1.0.1\nskills:\n"
             "  - {id: java, label: Java, category: language, aliases: [Java]}\n"
             "  - {id: java, label: Other, category: language, aliases: [Other]}\n",
             "skill IDs",
         ),
         (
-            "version: 1.0.0\nskills:\n"
+            "version: 1.0.1\nskills:\n"
             "  - {id: java, label: Java, category: language, aliases: [Java]}\n"
             "  - {id: kotlin, label: Kotlin, category: language, aliases: [java]}\n",
             "aliases",
         ),
         (
-            "version: 1.0.0\nskills:\n"
+            "version: 1.0.1\nskills:\n"
             "  - {id: java, label: Java, category: language, aliases: [Java], "
             "negative_patterns: ['(']}\n",
             "invalid regex pattern",
         ),
         (
-            "version: 1.0.0\nskills:\n"
+            "version: 1.0.1\nskills:\n"
             "  - {id: go, label: Go, category: language, aliases: [Go], "
             "ambiguous_aliases: [Go]}\n",
             "ambiguous aliases",
@@ -64,7 +64,7 @@ def test_taxonomy_treats_aliases_as_literals_and_normalizes_unicode_for_duplicat
 ) -> None:
     literal = tmp_path / "literal.yaml"
     literal.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: cpp, label: C++, category: language, aliases: ['C++', '(']}\n",
         encoding="utf-8",
     )
@@ -72,7 +72,7 @@ def test_taxonomy_treats_aliases_as_literals_and_normalizes_unicode_for_duplicat
 
     compatibility_duplicate = tmp_path / "compatibility.yaml"
     compatibility_duplicate.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: java, label: Java, category: language, aliases: [Java]}\n"
         "  - {id: kotlin, label: Kotlin, category: language, aliases: ['\uff2aava']}\n",
         encoding="utf-8",
@@ -86,7 +86,7 @@ def test_taxonomy_owns_extensible_ambiguity_declarations_and_requires_exactly_on
 ) -> None:
     valid = tmp_path / "future-ambiguity.yaml"
     valid.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: java, label: Java, category: language, aliases: [Java], "
         "ambiguous_aliases: [Java]}\n"
         "ambiguous_alias_rules:\n"
@@ -97,7 +97,7 @@ def test_taxonomy_owns_extensible_ambiguity_declarations_and_requires_exactly_on
 
     duplicate = tmp_path / "duplicate.yaml"
     duplicate.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: go, label: Go, category: language, aliases: [Go], "
         "ambiguous_aliases: [Go, go]}\n",
         encoding="utf-8",
@@ -107,7 +107,7 @@ def test_taxonomy_owns_extensible_ambiguity_declarations_and_requires_exactly_on
 
     non_owned = tmp_path / "non-owned.yaml"
     non_owned.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: go, label: Go, category: language, aliases: [Go], "
         "ambiguous_aliases: [Java]}\n",
         encoding="utf-8",
@@ -117,7 +117,7 @@ def test_taxonomy_owns_extensible_ambiguity_declarations_and_requires_exactly_on
 
     duplicate_rule = tmp_path / "duplicate-rule.yaml"
     duplicate_rule.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: go, label: Go, category: language, aliases: [Go], "
         "ambiguous_aliases: [Go]}\n"
         "ambiguous_alias_rules:\n"
@@ -151,7 +151,7 @@ def test_taxonomy_rejects_invalid_ambiguous_rule_cross_references(
 ) -> None:
     path = tmp_path / "skills.yaml"
     path.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: go, label: Go, category: language, aliases: [Go], "
         "ambiguous_aliases: [Go]}\n"
         "  - {id: java, label: Java, category: language, aliases: [Java]}\n"
@@ -180,7 +180,7 @@ def test_taxonomy_rejects_blank_or_invalid_ambiguous_rule_context(
 ) -> None:
     path = tmp_path / "invalid-rule.yaml"
     path.write_text(
-        "version: 1.0.0\nskills:\n"
+        "version: 1.0.1\nskills:\n"
         "  - {id: go, label: Go, category: language, aliases: [Go], "
         "ambiguous_aliases: [Go]}\n"
         "ambiguous_alias_rules:\n" + rule,
@@ -198,7 +198,7 @@ def test_taxonomy_loader_reports_read_yaml_root_and_unknown_key_errors(tmp_path:
     with pytest.raises(ConfigurationError, match="Malformed YAML"):
         load_skill_taxonomy(malformed)
     unknown = tmp_path / "unknown.yaml"
-    unknown.write_text("version: 1.0.0\nskills: []\nunknown: true\n", encoding="utf-8")
+    unknown.write_text("version: 1.0.1\nskills: []\nunknown: true\n", encoding="utf-8")
     with pytest.raises(ConfigurationError, match="unknown"):
         load_skill_taxonomy(unknown)
     root = tmp_path / "root.yaml"
@@ -232,7 +232,7 @@ def test_taxonomy_rejects_nested_invalid_skill_values(
     tmp_path: Path, skill: str, message: str
 ) -> None:
     path = tmp_path / "invalid-skill.yaml"
-    path.write_text(f"version: 1.0.0\nskills:\n  - {skill}\n", encoding="utf-8")
+    path.write_text(f"version: 1.0.1\nskills:\n  - {skill}\n", encoding="utf-8")
     with pytest.raises(ConfigurationError, match=message):
         load_skill_taxonomy(path)
 
@@ -243,7 +243,7 @@ def test_golden_corpus_rejects_unknown_references_overlap_and_missing_ambiguity_
     taxonomy = load_skill_taxonomy(_taxonomy_path())
     bad_reference = tmp_path / "unknown.yaml"
     bad_reference.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: valid, expected_skill_ids: [missing], "
         "forbidden_skill_ids: [java]}\n",
         encoding="utf-8",
@@ -253,7 +253,7 @@ def test_golden_corpus_rejects_unknown_references_overlap_and_missing_ambiguity_
 
     overlap = tmp_path / "overlap.yaml"
     overlap.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: valid, expected_skill_ids: [java], "
         "forbidden_skill_ids: [java]}\n",
         encoding="utf-8",
@@ -263,7 +263,7 @@ def test_golden_corpus_rejects_unknown_references_overlap_and_missing_ambiguity_
 
     no_context = tmp_path / "no-context.yaml"
     no_context.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: Java, expected_skill_ids: [java], "
         "forbidden_skill_ids: [go]}\n",
         encoding="utf-8",
@@ -278,7 +278,7 @@ def test_golden_corpus_requires_matching_taxonomy_version_exact_ids_and_assertio
     taxonomy = load_skill_taxonomy(_taxonomy_path())
     mismatch = tmp_path / "mismatch.yaml"
     mismatch.write_text(
-        "taxonomy_version: 1.0.1\ncases:\n"
+        "taxonomy_version: 1.0.2\ncases:\n"
         "  - {id: one, description: Java, expected_skill_ids: [java]}\n",
         encoding="utf-8",
     )
@@ -287,7 +287,7 @@ def test_golden_corpus_requires_matching_taxonomy_version_exact_ids_and_assertio
 
     uppercase_reference = tmp_path / "uppercase.yaml"
     uppercase_reference.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: Java, expected_skill_ids: [JAVA]}\n",
         encoding="utf-8",
     )
@@ -296,7 +296,7 @@ def test_golden_corpus_requires_matching_taxonomy_version_exact_ids_and_assertio
 
     no_assertion = tmp_path / "no-assertion.yaml"
     no_assertion.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n  - {id: one, description: Java}\n",
+        "taxonomy_version: 1.0.1\ncases:\n  - {id: one, description: Java}\n",
         encoding="utf-8",
     )
     with pytest.raises(ConfigurationError, match="expected or forbidden"):
@@ -307,7 +307,7 @@ def test_golden_corpus_rejects_duplicate_assertions_and_invalid_sections(tmp_pat
     taxonomy = load_skill_taxonomy(_taxonomy_path())
     duplicate_expected = tmp_path / "duplicate-expected.yaml"
     duplicate_expected.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: Java, expected_skill_ids: [java, java]}\n",
         encoding="utf-8",
     )
@@ -316,7 +316,7 @@ def test_golden_corpus_rejects_duplicate_assertions_and_invalid_sections(tmp_pat
 
     blank_section = tmp_path / "blank-section.yaml"
     blank_section.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, sections: {' ': Java}, expected_skill_ids: [java]}\n",
         encoding="utf-8",
     )
@@ -325,7 +325,7 @@ def test_golden_corpus_rejects_duplicate_assertions_and_invalid_sections(tmp_pat
 
     duplicate_section = tmp_path / "duplicate-section.yaml"
     duplicate_section.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - id: one\n    sections:\n      requirements: Java\n      requirements: Kotlin\n"
         "    expected_skill_ids: [java]\n",
         encoding="utf-8",
@@ -373,7 +373,7 @@ def test_golden_corpus_rejects_read_yaml_root_unknown_key_and_duplicate_case_id(
     with pytest.raises(ConfigurationError, match="does not exist"):
         load_golden_extraction_corpus(tmp_path / "missing.yaml", taxonomy=taxonomy)
     malformed = tmp_path / "malformed.yaml"
-    malformed.write_text("taxonomy_version: 1.0.0\ncases: [", encoding="utf-8")
+    malformed.write_text("taxonomy_version: 1.0.1\ncases: [", encoding="utf-8")
     with pytest.raises(ConfigurationError, match="Malformed YAML"):
         load_golden_extraction_corpus(malformed, taxonomy=taxonomy)
     root = tmp_path / "root.yaml"
@@ -382,14 +382,14 @@ def test_golden_corpus_rejects_read_yaml_root_unknown_key_and_duplicate_case_id(
         load_golden_extraction_corpus(root, taxonomy=taxonomy)
     unknown = tmp_path / "unknown.yaml"
     unknown.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n  - {id: one, description: valid, unexpected: true}\n",
+        "taxonomy_version: 1.0.1\ncases:\n  - {id: one, description: valid, unexpected: true}\n",
         encoding="utf-8",
     )
     with pytest.raises(ConfigurationError, match="unexpected"):
         load_golden_extraction_corpus(unknown, taxonomy=taxonomy)
     duplicate = tmp_path / "duplicate.yaml"
     duplicate.write_text(
-        "taxonomy_version: 1.0.0\ncases:\n"
+        "taxonomy_version: 1.0.1\ncases:\n"
         "  - {id: one, description: Go developer, expected_skill_ids: [go]}\n"
         "  - {id: ONE, description: Go live, forbidden_skill_ids: [go]}\n",
         encoding="utf-8",

@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 1.0.1
 skills:
   - {id: python, label: Python, category: language, aliases: [Python]}
   - {id: java, label: Java, category: language, aliases: [Java]}
@@ -116,8 +116,13 @@ skills:
 ambiguous_alias_rules:
   - skill_id: go
     alias: Go
-    positive_context_patterns: ["\\bGo\\s+(developer|service|runtime|language|programming)\\b", "\\bGolang\\b"]
-    negative_patterns: ["\\bgo\\s+to\\b", "\\bgo\\s+live\\b"]
+    positive_context_patterns:
+      - "\\bGo\\s+(developer|service|runtime|language|programming|codebase)\\b"
+      - "\\b(experience|proficiency|familiarity|knowledge|programming|written|implemented|write|work|working)\\b[^\\n.;]{0,80}\\bGo\\b"
+      - "\\bGo\\b[^\\n.;]{0,80}\\b(based|services?|code|codebase|development|proficiency|experience)\\b"
+      - "\\bGo\\b\\s*(,|/|and/or|or)\\s*(Python|Rust|Java|Ruby|C\\+\\+|C#|TypeScript)\\b"
+      - "\\bGolang\\b"
+    negative_patterns: ["\\bgo\\s+to\\b", "\\bgo-to\\b", "\\bgo\\s+live\\b"]
   - skill_id: r
     alias: R
     positive_context_patterns: ["\\bR\\s+(language|programming|developer|statistics)\\b", "\\bRStudio\\b"]

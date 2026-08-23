@@ -87,15 +87,15 @@ def test_enrichment_stores_multiple_exact_evidence_rows_and_is_idempotent(
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.taxonomy_version == "1.0.0"
+        assert job.taxonomy_version == "1.0.1"
         evidence = list(session.scalars(select(JobSkill).where(JobSkill.job_id == job_id)))
         assert sorted(
             (row.skill_id, row.matched_text, row.section, row.method, row.taxonomy_version)
             for row in evidence
         ) == [
-            ("go", "Go", "other", "alias", "1.0.0"),
-            ("python", "Python", "other", "alias", "1.0.0"),
-            ("python", "Python", "title", "alias", "1.0.0"),
+            ("go", "Go", "other", "alias", "1.0.1"),
+            ("python", "Python", "other", "alias", "1.0.1"),
+            ("python", "Python", "title", "alias", "1.0.1"),
         ]
         title_evidence = next(
             row
@@ -153,11 +153,11 @@ def test_reenrichment_replaces_stale_deterministic_rows_and_preserves_manual_evi
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.taxonomy_version == "1.0.0"
+        assert job.taxonomy_version == "1.0.1"
         rows = list(session.scalars(select(JobSkill).where(JobSkill.job_id == job_id)))
         assert {(row.skill_id, row.method, row.taxonomy_version) for row in rows} == {
-            ("go", "alias", "1.0.0"),
-            ("python", "alias", "1.0.0"),
+            ("go", "alias", "1.0.1"),
+            ("python", "alias", "1.0.1"),
             ("python", "manual", "0.9.0"),
         }
 
@@ -217,7 +217,7 @@ def test_identical_source_reingestion_after_enrichment_keeps_current_taxonomy_ma
         assert result.action is JobUpsertAction.UNCHANGED
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.taxonomy_version == "1.0.0"
+        assert job.taxonomy_version == "1.0.1"
         evidence_rows = list(session.scalars(select(JobSkill).where(JobSkill.job_id == job_id)))
         version_rows = list(session.scalars(select(JobVersion).where(JobVersion.job_id == job_id)))
         assert len(evidence_rows) == 3
@@ -264,7 +264,7 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
             "description_text",
             "taxonomy_version",
         ]
-        assert {row.taxonomy_version for row in session.scalars(select(JobSkill))} == {"1.0.0"}
+        assert {row.taxonomy_version for row in session.scalars(select(JobSkill))} == {"1.0.1"}
 
     reenriched = _job_service(session_factory).enrich_stale()
     assert (reenriched.selected, reenriched.enriched, reenriched.failed_ids) == (1, 1, ())
@@ -273,8 +273,8 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
         job = session.get(JobPosting, job_id)
         assert job is not None
         assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
-            "job-normalization-v1",
-            "1.0.0",
+            "job-normalization-v2",
+            "1.0.1",
         )
         assert (job.title_normalized, job.role_family, job.seniority) == (
             "Staff Data Engineer",
@@ -318,8 +318,8 @@ def test_raw_only_reingestion_marks_job_enrichment_stale_without_source_version_
         job = session.get(JobPosting, job_id)
         assert job is not None
         assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
-            "job-normalization-v1",
-            "1.0.0",
+            "job-normalization-v2",
+            "1.0.1",
         )
         assert [
             (row.raw, row.country_code)
@@ -343,7 +343,7 @@ def test_bulk_enrichment_persists_ashby_normalization_skills_and_markers_without
             job.normalizer_version,
             job.enrichment_normalizer_version,
             job.taxonomy_version,
-        ) == ("ashby-v1", "job-normalization-v1", "1.0.0")
+        ) == ("ashby-v1", "job-normalization-v2", "1.0.1")
         assert (
             job.role_family,
             job.seniority,
@@ -416,7 +416,7 @@ def test_bulk_failure_isolation_keeps_malformed_job_stale_and_commits_peer(
     with session_scope(session_factory) as session:
         valid = session.get(JobPosting, good)
         malformed = session.get(JobPosting, bad)
-        assert valid is not None and valid.enrichment_normalizer_version == "job-normalization-v1"
+        assert valid is not None and valid.enrichment_normalizer_version == "job-normalization-v2"
         assert malformed is not None
         assert (malformed.enrichment_normalizer_version, malformed.taxonomy_version) == (
             "none-v1",
@@ -438,7 +438,7 @@ def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_row
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.enrichment_normalizer_version == "job-normalization-v1"
+        assert job.enrichment_normalizer_version == "job-normalization-v2"
         location_keys = tuple(
             (row.job_id, row.ordinal)
             for row in session.scalars(
@@ -495,7 +495,7 @@ def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_row
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.enrichment_normalizer_version == "job-normalization-v1"
+        assert job.enrichment_normalizer_version == "job-normalization-v2"
         assert (
             tuple(
                 (row.job_id, row.ordinal)
@@ -524,7 +524,7 @@ def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_row
             for row in session.scalars(
                 select(JobSkill).where(JobSkill.method.in_(("alias", "exact", "pattern")))
             )
-        } == {"1.0.0"}
+        } == {"1.0.1"}
 
 
 def test_extractor_failure_rolls_back_normalization_and_markers(
@@ -533,7 +533,7 @@ def test_extractor_failure_rolls_back_normalization_and_markers(
     job_id = _seed_ashby_job(session_factory)
 
     class RaisingExtractor:
-        taxonomy_version = "1.0.0"
+        taxonomy_version = "1.0.1"
 
         def extract(self, *, title: str, description: str) -> tuple[object, ...]:
             raise RuntimeError("extract failed")

@@ -29,6 +29,8 @@ _ASHBY_COMPONENT_TYPES: Final = {
     "Salary": "base_salary",
     "Bonus": "bonus",
     "EquityPercentage": "equity",
+    "EquityCashValue": "equity",
+    "Commission": "other",
 }
 _ASHBY_INTERVALS: Final = {
     "1 YEAR": "year",

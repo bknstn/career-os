@@ -35,7 +35,7 @@ from career_os.settings import load_settings
 
 pytestmark = pytest.mark.integration
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TAXONOMY_VERSION = "1.0.0"
+TAXONOMY_VERSION = "1.0.1"
 JOB_IDS = tuple(UUID(int=value) for value in range(101, 107))
 EXCLUDED_JOB_ID = UUID(int=107)
 
