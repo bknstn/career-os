@@ -79,6 +79,14 @@ def test_builder_replays_only_supported_source_facts(
     assert tuple(item.raw for item in result.locations) == expected["locations"]
     assert result.source_employment_type == expected["employment"]
     assert result.source_workplace_type == expected["workplace"]
+    expected_compensation_text = (
+        "Build Python systems."
+        if source_kind == "greenhouse"
+        else "PLN 300,000 - 420,000 annually"
+        if source_kind == "ashby"
+        else None
+    )
+    assert result.compensation_text == expected_compensation_text
     if source_kind == "ashby":
         assert [
             (
@@ -169,6 +177,22 @@ def test_builder_splits_observed_greenhouse_semicolon_locations() -> None:
     ]
     assert normalized.workplace_type.value == "remote"
     assert normalized.remote_scope.value == "Poland"
+
+
+def test_builder_replays_greenhouse_description_as_plain_compensation_evidence() -> None:
+    job = _job({"location": {"name": "Remote Poland"}})
+    job.description_text = (
+        "<p><strong>Base Pay Grade</strong> - N</p><p>308,000 zł - 428,000 zł</p>"
+    )
+
+    result = build_normalization_input(job=job, source_kind="greenhouse")
+    normalized = normalize_job(result)
+
+    assert result.compensation_text == "Base Pay Grade - N 308,000 zł - 428,000 zł"
+    assert [
+        (item.component_type, item.min_value, item.max_value, item.currency)
+        for item in normalized.compensation
+    ] == [("base_salary", Decimal("308000"), Decimal("428000"), "PLN")]
 
 
 def test_builder_maps_observed_ashby_commission_and_equity_cash_value() -> None:

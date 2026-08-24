@@ -1,4 +1,4 @@
-normalizer_version: job-normalization-v4
+normalizer_version: job-normalization-v5
 cases:
   - id: senior_data_remote_poland
     input:
@@ -11,7 +11,7 @@ cases:
         - {raw: "Warsaw, Poland", is_primary: true}
         - {raw: "Remote - Poland", is_primary: false}
     expected:
-      normalizer_version: job-normalization-v4
+      normalizer_version: job-normalization-v5
       title_normalized: Senior Data Engineer
       role_family: {value: data_engineering, method: title_rule, evidence: "Data Engineer", confidence: "0.900"}
       seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
@@ -28,7 +28,7 @@ cases:
       description: Five years of experience is helpful.
       source_level: junior
     expected:
-      normalizer_version: job-normalization-v4
+      normalizer_version: job-normalization-v5
       title_normalized: Senior Product Manager
       role_family: {value: product_management, method: title_rule, evidence: "Product Manager", confidence: "0.900"}
       seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
@@ -43,7 +43,7 @@ cases:
       description: This is not hybrid. Remote work is possible, with onsite attendance when needed.
       source_is_remote: false
     expected:
-      normalizer_version: job-normalization-v4
+      normalizer_version: job-normalization-v5
       title_normalized: Platform Engineer
       role_family: {value: platform_engineering, method: title_rule, evidence: "Platform Engineer", confidence: "0.900"}
       seniority: {value: null, method: null, evidence: null, confidence: null}
@@ -58,7 +58,7 @@ cases:
       description: Fully remote in the EU. Contract engagement.
       compensation_text: "Base salary PLN 300,000 - 420,000 annually; bonus PLN 20,000 - 30,000 hourly."
     expected:
-      normalizer_version: job-normalization-v4
+      normalizer_version: job-normalization-v5
       title_normalized: Backend Engineer
       role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
       seniority: {value: null, method: null, evidence: null, confidence: null}
@@ -69,3 +69,61 @@ cases:
       compensation:
         - {component_type: base_salary, min_value: "300000", max_value: "420000", currency: PLN, interval: year, location_tier: null, raw_text: "Base salary PLN 300,000 - 420,000 annually", source_method: text_parse, confidence: "0.700"}
         - {component_type: bonus, min_value: "20000", max_value: "30000", currency: PLN, interval: hour, location_tier: null, raw_text: "bonus PLN 20,000 - 30,000 hourly", source_method: text_parse, confidence: "0.700"}
+  - id: mixed_title_does_not_establish_senior
+    input:
+      title: Mid/Senior Backend Engineer
+      description: 2+ years required. Middle-to-Senior growth in 6-12 months.
+    expected:
+      normalizer_version: job-normalization-v5
+      title_normalized: Mid/Senior Backend Engineer
+      role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
+      seniority: {value: null, method: null, evidence: null, confidence: null}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation: []
+  - id: aspirational_senior_context_does_not_establish_level
+    input:
+      title: Backend Software Engineer
+      description: Make architecture decisions with guidance from senior engineers. Grow from mid-level to senior engineer.
+    expected:
+      normalizer_version: job-normalization-v5
+      title_normalized: Backend Software Engineer
+      role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
+      seniority: {value: null, method: null, evidence: null, confidence: null}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation: []
+  - id: explicit_description_role_still_establishes_senior
+    input:
+      title: Backend Engineer
+      description: This is a senior engineer role.
+    expected:
+      normalizer_version: job-normalization-v5
+      title_normalized: Backend Engineer
+      role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
+      seniority: {value: senior, method: description_rule, evidence: "senior engineer role", confidence: "0.700"}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation: []
+  - id: greenhouse_style_suffix_pln_base_pay
+    input:
+      title: Senior Backend Engineer
+      description: Remote Poland.
+      compensation_text: "Base Pay Grade - N 308,000 zł - 428,000 zł."
+    expected:
+      normalizer_version: job-normalization-v5
+      title_normalized: Senior Backend Engineer
+      role_family: {value: backend_engineering, method: title_rule, evidence: Backend, confidence: "0.900"}
+      seniority: {value: senior, method: title_rule, evidence: Senior, confidence: "1.000"}
+      employment_type: {value: null, method: null, evidence: null, confidence: null}
+      workplace_type: {value: null, method: null, evidence: null, confidence: null}
+      remote_scope: {value: null, method: null, evidence: null, confidence: null}
+      locations: []
+      compensation:
+        - {component_type: base_salary, min_value: "308000", max_value: "428000", currency: PLN, interval: null, location_tier: null, raw_text: "Base Pay Grade - N 308,000 zł - 428,000 zł", source_method: text_parse, confidence: "0.700"}

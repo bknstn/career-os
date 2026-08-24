@@ -93,8 +93,8 @@ def test_every_market_aggregate_reconciles_to_exact_postgresql_job_ids(
         "PL": tuple(sorted((ids["local"], ids["empty_description"])))
     }
     assert result.countries[0].denominator_job_ids == result.countries[0].job_ids
-    assert result.compensation_job_ids == tuple(sorted((ids["local"], ids["remote_eu"])))
-    assert result.compensation_coverage == Decimal("2") / Decimal("3")
+    assert result.compensation_job_ids == expected
+    assert result.compensation_coverage == Decimal("1")
 
     groups = {
         (item.component_type, item.currency, item.interval, item.location_tier): item
@@ -102,6 +102,7 @@ def test_every_market_aggregate_reconciles_to_exact_postgresql_job_ids(
     }
     assert set(groups) == {
         ("base_salary", "EUR", "year", "EU"),
+        ("base_salary", "PLN", "unknown", "Poland"),
         ("base_salary", "USD", "year", "Poland"),
     }
     usd = groups[("base_salary", "USD", "year", "Poland")]
@@ -323,6 +324,14 @@ def _seed_evidence(session: Session, ids: dict[str, UUID]) -> None:
             _comp(ids["local"], "110000", "150000", "USD", "Poland"),
             _comp(ids["local"], "90000", "120000", None, "Poland"),
             _comp(ids["remote_eu"], "80000", "100000", "EUR", "EU"),
+            _comp(
+                ids["empty_description"],
+                "308000",
+                "428000",
+                "PLN",
+                "Poland",
+                interval=None,
+            ),
         ]
     )
 
@@ -340,7 +349,13 @@ def _skill(job_id: UUID, skill_id: str, matched_text: str) -> JobSkill:
 
 
 def _comp(
-    job_id: UUID, minimum: str, maximum: str, currency: str | None, tier: str
+    job_id: UUID,
+    minimum: str,
+    maximum: str,
+    currency: str | None,
+    tier: str,
+    *,
+    interval: str | None = "year",
 ) -> JobCompensation:
     return JobCompensation(
         job_id=job_id,
@@ -348,7 +363,7 @@ def _comp(
         min_value=Decimal(minimum),
         max_value=Decimal(maximum),
         currency=currency,
-        interval="year",
+        interval=interval,
         location_tier=tier,
         raw_text=f"{minimum}-{maximum}",
         source_method="structured_source",

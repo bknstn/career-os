@@ -356,13 +356,13 @@ def test_enrich_cli_emits_deterministic_success_and_partial_failure_json(monkeyp
 
     assert success.exit_code == 0
     assert success.output == (
-        '{"enriched": 2, "failed_ids": [], "normalizer_version": "job-normalization-v4", '
+        '{"enriched": 2, "failed_ids": [], "normalizer_version": "job-normalization-v5", '
         '"selected": 2, "taxonomy_version": "1.0.0", "unchanged": 0}\n'
     )
     assert failure.exit_code == 1
     assert failure.output == (
         f'{{"enriched": 1, "failed_ids": ["{first_id}", "{second_id}"], '
-        '"normalizer_version": "job-normalization-v4", "selected": 2, '
+        '"normalizer_version": "job-normalization-v5", "selected": 2, '
         '"taxonomy_version": "1.0.0", "unchanged": 0}\n'
     )
 

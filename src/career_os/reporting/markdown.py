@@ -134,7 +134,8 @@ def render_markdown_report(report: MarketProfileReport) -> str:
         f"Coverage: **{_share(market.compensation_coverage, market.matching_job_count)}** "
         f"({len(market.compensation_job_ids)}/{market.matching_job_count} jobs). Evidence job IDs: "
         f"{_ids(market.compensation_job_ids)}. Amounts remain in original currency and interval; "
-        "components and location tiers are not combined, converted, or annualized."
+        "components and location tiers are not combined, converted, or annualized. Components "
+        "with unknown interval remain separate per job."
     )
     lines.append("")
     if market.compensation:
@@ -173,21 +174,21 @@ def render_markdown_report(report: MarketProfileReport) -> str:
         )
     else:
         lines.append("No reportable compensation groups; coverage is 0 jobs.")
-    lines.extend(["", "## Profile coverage and gaps", ""])
+    lines.extend(["", "## Profile mention coverage", ""])
     demanded_coverage = _optional_share(
         comparison.demanded_skill_coverage, comparison.demanded_skill_count
     )
     lines.append(
-        "Demanded-skill coverage: "
+        "Mention-vocabulary coverage: "
         f"**{demanded_coverage}** "
-        f"({comparison.covered_skill_count}/{comparison.demanded_skill_count} demanded skills). "
-        f"Demand evidence job IDs: {_ids(_union_ids(comparison.demanded_skills))}."
+        f"({comparison.covered_skill_count}/{comparison.demanded_skill_count} mentioned skills). "
+        f"Mention evidence job IDs: {_ids(_union_ids(comparison.demanded_skills))}."
     )
-    lines.extend(["", "### Covered demanded skills", ""])
+    lines.extend(["", "### Profile-covered mentions", ""])
     if comparison.covered_skills:
         lines.extend(_skill_bucket_table(comparison.covered_skills, labels))
     else:
-        lines.append("No covered demanded skills; evidence job IDs: none.")
+        lines.append("No profile-covered mentions; evidence job IDs: none.")
     lines.extend(["", "### Neutral profile skills", ""])
     if comparison.neutral_profile_skill_ids:
         lines.append(
@@ -195,11 +196,12 @@ def render_markdown_report(report: MarketProfileReport) -> str:
                 f"{_cell(labels[skill_id])} ({_code(skill_id)})"
                 for skill_id in comparison.neutral_profile_skill_ids
             )
-            + ". These profile skills have no current market-demand evidence and are not penalized."
+            + ". These profile skills have no current market-mention evidence and are not "
+            "penalized."
         )
     else:
         lines.append("None.")
-    lines.extend(["", "### Ranked gaps", ""])
+    lines.extend(["", "### Ranked uncovered mentions", ""])
     lines.append(
         "Inclusive thresholds: job count >= "
         f"{comparison.gap_thresholds.min_job_count}; job share >= "
@@ -226,7 +228,9 @@ def render_markdown_report(report: MarketProfileReport) -> str:
             )
         )
     else:
-        lines.append("No gaps meet the configured thresholds; evidence job IDs: none.")
+        lines.append(
+            "No uncovered mentions meet the configured thresholds; evidence job IDs: none."
+        )
     lines.extend(["", "## Representative jobs", ""])
     if comparison.representative_jobs:
         jobs = {item.job_id: item for item in report.jobs}
@@ -238,7 +242,7 @@ def render_markdown_report(report: MarketProfileReport) -> str:
                     "Skill coverage",
                     "Covered mentions",
                     "Mentioned",
-                    "Gap mentions",
+                    "Uncovered mentions",
                     "Evidence job ID",
                 ),
                 (

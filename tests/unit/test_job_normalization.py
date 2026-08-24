@@ -296,6 +296,21 @@ def test_seniority_and_role_family_are_conservative() -> None:
     mid_description = normalize_job(
         JobNormalizationInput(title="Engineer", description="A mid-level engineer role.")
     )
+    mixed_title = normalize_job(
+        JobNormalizationInput(
+            title="Mid/Senior Backend Engineer",
+            description="2+ years required. Middle-to-Senior growth in 6-12 months.",
+        )
+    )
+    aspirational_description = normalize_job(
+        JobNormalizationInput(
+            title="Backend Software Engineer",
+            description=(
+                "Make architecture decisions with guidance from senior engineers. "
+                "Grow from mid-level to senior engineer."
+            ),
+        )
+    )
     explicit_fullstack = normalize_job(
         JobNormalizationInput(title="Full-stack Backend Engineer", description="")
     )
@@ -326,6 +341,8 @@ def test_seniority_and_role_family_are_conservative() -> None:
     assert senior_product_manager.seniority.value == "senior"
     assert product_management_director.role_family.value == "product_management"
     assert mid_description.seniority.value == "mid"
+    assert mixed_title.seniority.value is None
+    assert aspirational_description.seniority.value is None
     assert explicit_fullstack.role_family.value == "fullstack_engineering"
     assert contradictory.role_family.value is None
     assert backend_platform.role_family.value == "backend_engineering"
@@ -465,42 +482,82 @@ def test_text_compensation_uses_occurrence_local_component_interval_and_evidence
             "source_method": "text_parse",
             "confidence": "0.700",
         },
-        {
-            "component_type": "other",
-            "min_value": "50",
-            "max_value": "60",
-            "currency": "USD",
-            "interval": None,
-            "location_tier": None,
-            "raw_text": "USD 50 - 60",
-            "source_method": "text_parse",
-            "confidence": "0.700",
-        },
     ]
 
 
-def test_text_compensation_rejects_ambiguous_dollar_symbol() -> None:
+def test_text_compensation_rejects_ambiguous_or_unscoped_ranges() -> None:
     ambiguous = normalize_job(
         JobNormalizationInput(title="Engineer", description="", compensation_text="$100k-$120k")
     )
-    explicit = normalize_job(
+    unscoped = normalize_job(
         JobNormalizationInput(title="Engineer", description="", compensation_text="USD 100k-120k")
+    )
+    explicit = normalize_job(
+        JobNormalizationInput(
+            title="Engineer", description="", compensation_text="Salary USD 100k-120k"
+        )
     )
 
     assert ambiguous.compensation == ()
+    assert unscoped.compensation == ()
     assert [_compensation(item) for item in explicit.compensation] == [
         {
-            "component_type": "other",
+            "component_type": "base_salary",
             "min_value": "100000",
             "max_value": "120000",
             "currency": "USD",
             "interval": None,
             "location_tier": None,
-            "raw_text": "USD 100k-120k",
+            "raw_text": "Salary USD 100k-120k",
             "source_method": "text_parse",
             "confidence": "0.700",
         }
     ]
+
+
+def test_text_compensation_accepts_suffix_currency_and_rejects_conflicts() -> None:
+    affirm = normalize_job(
+        JobNormalizationInput(
+            title="Senior Backend Engineer",
+            description="",
+            compensation_text=(
+                "Base Pay Grade - N 308,000 zł - 428,000 zł. Equity USD 32,000 - 48,000."
+            ),
+        )
+    )
+    conflict = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            compensation_text="Salary 100,000 PLN - 120,000 EUR per year.",
+        )
+    )
+
+    assert [_compensation(item) for item in affirm.compensation] == [
+        {
+            "component_type": "base_salary",
+            "min_value": "308000",
+            "max_value": "428000",
+            "currency": "PLN",
+            "interval": None,
+            "location_tier": None,
+            "raw_text": "Base Pay Grade - N 308,000 zł - 428,000 zł",
+            "source_method": "text_parse",
+            "confidence": "0.700",
+        },
+        {
+            "component_type": "equity",
+            "min_value": "32000",
+            "max_value": "48000",
+            "currency": "USD",
+            "interval": None,
+            "location_tier": None,
+            "raw_text": "Equity USD 32,000 - 48,000",
+            "source_method": "text_parse",
+            "confidence": "0.700",
+        },
+    ]
+    assert conflict.compensation == ()
 
 
 def test_ashby_structured_locations_and_tiered_components_are_preserved() -> None:

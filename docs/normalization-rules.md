@@ -1,6 +1,6 @@
 # Deterministic job normalization rules
 
-`job-normalization-v4` owns the pure, source-neutral rules in
+`job-normalization-v5` owns the pure, source-neutral rules in
 `career_os.normalization.jobs`. The version is emitted with every output; task
 22 owns selection, persistence, and bulk re-enrichment.
 
@@ -9,7 +9,11 @@ location, workplace, employment, and compensation evidence wins over text.
 Unknown scalar values are explicit (`NormalizedField(None)`), never guessed.
 
 Seniority precedence is title, then source level/category, then a narrow strong
-description phrase. Years alone are never seniority evidence. `Product Manager`
+description phrase. Multiple title levels such as `Mid/Senior` conflict and
+fail closed to unknown. Description evidence must bind the level to an explicit
+`engineer role` or `developer role`; references to senior teammates and
+aspirational growth do not establish the vacancy level. Years alone are never
+seniority evidence. `Product Manager`
 is a role family, not people-management evidence; `Engineering Manager` and
 `People Manager` are management seniority evidence. `full-stack` wins over a
 simultaneous backend/frontend marker. Platform and infrastructure classification
@@ -60,14 +64,18 @@ Structured compensation is kept as independent components and location tiers.
 Observed Ashby salary, bonus, percentage-equity, cash-value-equity, and
 commission components are replayed without combining them; commission uses the
 controlled `other` bucket because the MVP schema has no commission category.
-Text parsing requires a currency-marked range; component and interval are
-resolved per range from its local phrase, and `raw_text` preserves that local
-evidence span. It neither annualizes nor converts currencies, and does not
-infer equity from vague prose. The bare `$` symbol is rejected as locale
-ambiguous; `USD`, `EUR`, `PLN`, `GBP`, `€`, and `£` are accepted. A compensation
-record with no numeric amount, currency, or raw evidence is invalid. All Decimal
-amounts and confidences must be finite, so NaN and infinities cannot cross the
-domain boundary.
+Greenhouse descriptions are replayed as plain compensation evidence. Text
+parsing requires both a locally bound component marker and an unambiguous
+currency-marked range; currency may precede or follow an amount. Component and
+interval are resolved per range from its local phrase, and `raw_text` preserves
+that local evidence span. It neither annualizes nor converts currencies, and
+does not infer equity from vague prose. The bare `$` symbol is rejected as
+locale ambiguous; `USD`, `EUR`, `PLN`, `GBP`, `€`, `£`, and `zł` are accepted.
+Conflicting currencies fail closed. Numeric evidence with an unknown interval
+is retained, reported as unknown, and kept in one-job groups so incomparable
+amounts are not pooled. A compensation record with no numeric amount, currency,
+or raw evidence is invalid. All Decimal amounts and confidences must be finite,
+so NaN and infinities cannot cross the domain boundary.
 
 The checked-in YAML golden corpus uses a duplicate-key-rejecting loader and
 compares every output field, scalar provenance, location provenance, and

@@ -21,6 +21,7 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION, normalize_job
 from career_os.normalization.skills import SkillExtractor
+from career_os.normalization.text import html_to_text
 from career_os.persistence.models import JobCompensation, JobLocation, JobPosting, Source
 from career_os.persistence.repositories import JobNotFoundError, JobSkillRepository
 
@@ -159,7 +160,11 @@ def _greenhouse_input(job: JobPosting, raw: dict[str, object]) -> JobNormalizati
                 SourceLocationEvidence(raw=part, is_primary=index == 0)
                 for index, part in enumerate(parts)
             )
-    return _base_input(job, locations=locations)
+    return _base_input(
+        job,
+        locations=locations,
+        compensation_text=" ".join(html_to_text(job.description_text).split()),
+    )
 
 
 def _lever_input(job: JobPosting, raw: dict[str, object]) -> JobNormalizationInput:

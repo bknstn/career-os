@@ -138,25 +138,38 @@ class MarketAggregateService:
                 .where(
                     JobCompensation.job_id.in_(matching),
                     JobCompensation.currency.is_not(None),
-                    JobCompensation.interval.is_not(None),
                     (JobCompensation.min_value.is_not(None))
                     | (JobCompensation.max_value.is_not(None)),
                 )
                 .order_by(
                     JobCompensation.component_type,
                     JobCompensation.currency,
-                    JobCompensation.interval,
+                    JobCompensation.interval.nulls_first(),
                     JobCompensation.location_tier.nulls_first(),
                     JobCompensation.id,
                 )
             )
         )
-        grouped: dict[tuple[str, str, str, str | None], list[JobCompensation]] = defaultdict(list)
+        grouped: dict[tuple[str, str, str, str | None, UUID | None], list[JobCompensation]] = (
+            defaultdict(list)
+        )
         for row in rows:
-            assert row.currency is not None and row.interval is not None
-            grouped[(row.component_type, row.currency, row.interval, row.location_tier)].append(row)
+            assert row.currency is not None
+            interval = row.interval or "unknown"
+            grouped[
+                (
+                    row.component_type,
+                    row.currency,
+                    interval,
+                    row.location_tier,
+                    row.job_id if interval == "unknown" else None,
+                )
+            ].append(row)
         output: list[CompensationAggregate] = []
-        for key in sorted(grouped, key=lambda item: (item[0], item[1], item[2], item[3] or "")):
+        for key in sorted(
+            grouped,
+            key=lambda item: (item[0], item[1], item[2], item[3] or "", str(item[4] or "")),
+        ):
             group = grouped[key]
             minimums = [row.min_value for row in group if row.min_value is not None]
             maximums = [row.max_value for row in group if row.max_value is not None]

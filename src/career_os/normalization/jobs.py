@@ -20,7 +20,7 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.text import clean_text
 
-JOB_NORMALIZER_VERSION: Final = "job-normalization-v4"
+JOB_NORMALIZER_VERSION: Final = "job-normalization-v5"
 
 _TITLE_SENIORITY: Final = (
     ("executive", re.compile(r"\b(?:chief|cto|vp|vice president)\b", re.I)),
@@ -71,7 +71,8 @@ _SOURCE_SENIORITY: Final = {
     "executive": "executive",
 }
 _DESCRIPTION_SENIORITY: Final = re.compile(
-    r"\b(?:senior|staff|principal|junior|mid-level)\s+(?:level\s+)?(?:engineer|developer|role)\b",
+    r"\b(?P<level>senior|staff|principal|junior|mid-level)"
+    r"(?:-level|\s+level)?\s+(?:engineer|developer)\s+role\b",
     re.I,
 )
 _EMPLOYMENT: Final = {
@@ -153,14 +154,19 @@ _COUNTRIES: Final = {
     "germany": "DE",
     "de": "DE",
 }
+_CURRENCY_TOKEN: Final = r"USD|EUR|PLN|GBP|€|£|zł"
+_AMOUNT_TOKEN: Final = r"\d+(?:[,.]\d+)?(?:\s*\d{3})?[kKmM]?"
 _TEXT_RANGE: Final = re.compile(
-    r"(?P<currency>USD|EUR|PLN|GBP|€|£)\s*"
-    r"(?P<minimum>\d+(?:[,.]\d+)?(?:\s*\d{3})?[kKmM]?)\s*"
-    r"(?:-|\u2013|to)\s*(?:(?:USD|EUR|PLN|GBP|€|£)\s*)?"
-    r"(?P<maximum>\d+(?:[,.]\d+)?(?:\s*\d{3})?[kKmM]?)",
+    rf"(?:(?P<currency_before_min>{_CURRENCY_TOKEN})\s*)?"
+    rf"(?P<minimum>{_AMOUNT_TOKEN})\s*"
+    rf"(?P<currency_after_min>{_CURRENCY_TOKEN})?\s*"
+    r"(?:-|\u2013|to)\s*"
+    rf"(?:(?P<currency_before_max>{_CURRENCY_TOKEN})\s*)?"
+    rf"(?P<maximum>{_AMOUNT_TOKEN})\s*"
+    rf"(?P<currency_after_max>{_CURRENCY_TOKEN})?",
     re.I,
 )
-_COMPONENT_MARKER: Final = re.compile(r"\b(?:base\s+salary|salary|bonus|equity)\b", re.I)
+_COMPONENT_MARKER: Final = re.compile(r"\b(?:base\s+(?:salary|pay)|salary|bonus|equity)\b", re.I)
 _INTERVAL_MARKER: Final = re.compile(
     r"\b(?:annual(?:ly)?|per\s+year|year|monthly|per\s+month|month|hourly|per\s+hour|hour|daily|per\s+day|day)\b",
     re.I,
@@ -195,6 +201,7 @@ _CURRENCY: Final = {
     "EUR": "EUR",
     "PLN": "PLN",
     "GBP": "GBP",
+    "ZŁ": "PLN",
 }
 
 
@@ -247,24 +254,36 @@ def _role_family(title: str) -> NormalizedField:
 def _seniority(
     title: str, source_level: str | None, source_category: str | None, description: str
 ) -> NormalizedField:
-    for seniority, pattern in _TITLE_SENIORITY:
-        match = pattern.search(title)
-        if match is not None:
-            return _field(seniority, "title_rule", match.group(0), Decimal("1.000"))
+    title_matches = [
+        (seniority, match)
+        for seniority, pattern in _TITLE_SENIORITY
+        for match in (pattern.search(title),)
+        if match is not None
+    ]
+    if len(title_matches) > 1:
+        return NormalizedField(None)
+    if title_matches:
+        seniority, match = title_matches[0]
+        return _field(seniority, "title_rule", match.group(0), Decimal("1.000"))
     for source_value in (source_level, source_category):
         if source_value is None:
             continue
         normalized = _SOURCE_SENIORITY.get(_key(source_value))
         if normalized is not None:
             return _field(normalized, "source_level", source_value, Decimal("0.900"))
-    match = _DESCRIPTION_SENIORITY.search(description)
-    if match is not None:
-        first_token = match.group(0).split()[0].casefold().rstrip(".")
+    description_match = _DESCRIPTION_SENIORITY.search(description)
+    if description_match is not None:
+        first_token = description_match.group("level").casefold().rstrip(".")
         if first_token == "mid-level":
             first_token = "mid"
         normalized = _SOURCE_SENIORITY.get(first_token)
         if normalized is not None:
-            return _field(normalized, "description_rule", match.group(0), Decimal("0.700"))
+            return _field(
+                normalized,
+                "description_rule",
+                description_match.group(0),
+                Decimal("0.700"),
+            )
     return NormalizedField(None)
 
 
@@ -511,8 +530,10 @@ def _compensation(
         return tuple(_structured_compensation(item) for item in structured)
     if compensation_text is None:
         return ()
-    matches = tuple(_TEXT_RANGE.finditer(compensation_text))
-    return tuple(
+    matches = tuple(
+        match for match in _TEXT_RANGE.finditer(compensation_text) if _range_currency(match)
+    )
+    normalized = (
         _text_compensation(
             match,
             compensation_text,
@@ -521,6 +542,7 @@ def _compensation(
         )
         for index, match in enumerate(matches)
     )
+    return tuple(item for item in normalized if item is not None)
 
 
 def _structured_compensation(value: SourceCompensationEvidence) -> NormalizedCompensation:
@@ -553,7 +575,7 @@ def _text_compensation(
     full_text: str,
     previous_match: re.Match[str] | None,
     next_match: re.Match[str] | None,
-) -> NormalizedCompensation:
+) -> NormalizedCompensation | None:
     left = _local_left_boundary(full_text, match.start(), previous_match)
     right = _local_right_boundary(full_text, match.end(), next_match)
     before = full_text[left : match.start()]
@@ -561,7 +583,9 @@ def _text_compensation(
     before_component = _last_component_match(before)
     after_component = None if before_component is not None else _COMPONENT_MARKER.search(after)
     component_match = before_component or after_component
-    component = _component_from_marker(component_match.group(0)) if component_match else "other"
+    if component_match is None:
+        return None
+    component = _component_from_marker(component_match.group(0))
     after_interval = _INTERVAL_MARKER.search(after)
     before_interval = None if after_interval is not None else _last_interval_match(before)
     interval_match = after_interval or before_interval
@@ -580,7 +604,7 @@ def _text_compensation(
         cast(CompensationComponentType, component),
         _amount(match.group("minimum")),
         _amount(match.group("maximum")),
-        _CURRENCY[match.group("currency").upper()],
+        _range_currency(match),
         interval,
         None,
         full_text[min(evidence_starts) : max(evidence_ends)].strip(),
@@ -618,13 +642,27 @@ def _last_interval_match(value: str) -> re.Match[str] | None:
 
 def _component_from_marker(value: str) -> str:
     normalized = _key(value)
-    if normalized in {"salary", "base salary"}:
+    if normalized in {"salary", "base salary", "base pay"}:
         return "base_salary"
     if normalized == "bonus":
         return "bonus"
     if normalized == "equity":
         return "equity"
     return "other"
+
+
+def _range_currency(match: re.Match[str]) -> str | None:
+    observed = {
+        _CURRENCY[value.upper()]
+        for name in (
+            "currency_before_min",
+            "currency_after_min",
+            "currency_before_max",
+            "currency_after_max",
+        )
+        if (value := match.group(name)) is not None
+    }
+    return next(iter(observed)) if len(observed) == 1 else None
 
 
 def _amount(value: str) -> Decimal:

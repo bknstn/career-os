@@ -49,7 +49,10 @@ def test_empty_market_preserves_unknown_cutoff_and_undefined_denominators() -> N
     assert "Matching jobs: **0**. Evidence job IDs: none." in rendered
     assert "Compensation coverage: **undefined** (0/0 jobs)" in rendered
     assert "Skill shares are **undefined** because the denominator is 0" in rendered
-    assert "Demanded-skill coverage: **undefined** (0/0 demanded skills)" in rendered
+    assert "Mention-vocabulary coverage: **undefined** (0/0 mentioned skills)" in rendered
+    assert "### Ranked uncovered mentions" in rendered
+    assert "Demanded-skill" not in rendered
+    assert "Ranked gaps" not in rendered
     assert "No profile skills declared." in rendered
     assert "No matching jobs; evidence job IDs: none." in rendered
 
