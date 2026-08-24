@@ -43,8 +43,9 @@ def test_every_revised_source_board_has_a_complete_mappable_live_contract() -> N
         pytest.skip("set RUN_D2_PANEL_LIVE=1 to validate the revised public source panel")
     sources = load_sources_config(SOURCES_PATH)
     filters = load_market_filters(MARKET_PATH).model_copy(update={"company_names": ()})
+    enabled = tuple(source for source in sources.sources if source.enabled)
 
-    results = asyncio.run(_probe_all(tuple(sources.sources), filters))
+    results = asyncio.run(_probe_all(enabled, filters))
 
     for result in sorted(results, key=lambda item: str(item["source_key"])):
         print(json.dumps(result, sort_keys=True))

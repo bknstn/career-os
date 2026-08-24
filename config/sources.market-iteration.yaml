@@ -110,3 +110,118 @@ sources:
     kind: greenhouse
     company_name: Mesh
     board_token: mesh
+
+  # Explicitly retired after D1. Persistence intentionally preserves omitted
+  # sources, so disabled entries keep operational status aligned with this panel.
+  - key: linro-ashby
+    kind: ashby
+    company_name: Linro
+    board_name: linro
+    include_compensation: true
+    enabled: false
+
+  - key: percona-ashby
+    kind: ashby
+    company_name: Percona
+    board_name: percona
+    include_compensation: true
+    enabled: false
+
+  - key: flip-ashby
+    kind: ashby
+    company_name: Flip
+    board_name: flip
+    include_compensation: true
+    enabled: false
+
+  - key: secfix-ashby
+    kind: ashby
+    company_name: Secfix
+    board_name: secfix
+    include_compensation: true
+    enabled: false
+
+  - key: sardine-ashby
+    kind: ashby
+    company_name: Sardine
+    board_name: sardine
+    include_compensation: true
+    enabled: false
+
+  - key: posthog-ashby
+    kind: ashby
+    company_name: PostHog
+    board_name: posthog
+    include_compensation: true
+    enabled: false
+
+  - key: incident-ashby
+    kind: ashby
+    company_name: incident.io
+    board_name: incident
+    include_compensation: true
+    enabled: false
+
+  - key: neon-ashby
+    kind: ashby
+    company_name: Neon
+    board_name: neon
+    include_compensation: true
+    enabled: false
+
+  - key: supabase-ashby
+    kind: ashby
+    company_name: Supabase
+    board_name: supabase
+    include_compensation: true
+    enabled: false
+
+  - key: clickhouse-ashby
+    kind: ashby
+    company_name: ClickHouse
+    board_name: clickhouse
+    include_compensation: true
+    enabled: false
+
+  - key: temporal-ashby
+    kind: ashby
+    company_name: Temporal
+    board_name: temporal
+    include_compensation: true
+    enabled: false
+
+  - key: stripe-greenhouse
+    kind: greenhouse
+    company_name: Stripe
+    board_token: stripe
+    enabled: false
+
+  - key: cloudflare-greenhouse
+    kind: greenhouse
+    company_name: Cloudflare
+    board_token: cloudflare
+    enabled: false
+
+  - key: datadog-greenhouse
+    kind: greenhouse
+    company_name: Datadog
+    board_token: datadog
+    enabled: false
+
+  - key: grafana-labs-greenhouse
+    kind: greenhouse
+    company_name: Grafana Labs
+    board_token: grafanalabs
+    enabled: false
+
+  - key: mongodb-greenhouse
+    kind: greenhouse
+    company_name: MongoDB
+    board_token: mongodb
+    enabled: false
+
+  - key: cockroach-labs-greenhouse
+    kind: greenhouse
+    company_name: Cockroach Labs
+    board_token: cockroachlabs
+    enabled: false

@@ -10,21 +10,27 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 def test_market_iteration_panel_is_explicit_unique_and_adapter_supported() -> None:
     sources = load_sources_config(PROJECT_ROOT / "config/sources.market-iteration.yaml").sources
+    enabled = tuple(source for source in sources if source.enabled)
+    disabled = tuple(source for source in sources if not source.enabled)
 
-    assert len(sources) == 20
-    assert len({source.key for source in sources}) == 20
-    assert len({source.company_name.casefold() for source in sources}) == 20
-    assert {source.kind for source in sources} == {"ashby", "greenhouse"}
+    assert len(sources) == 37
+    assert len(enabled) == 20
+    assert len(disabled) == 17
+    assert len({source.key for source in sources}) == 37
+    assert len({source.company_name.casefold() for source in sources}) == 37
+    assert {source.kind for source in enabled} == {"ashby", "greenhouse"}
 
 
 def test_market_iteration_panel_retains_only_productive_d1_boards() -> None:
     initial = load_sources_config(PROJECT_ROOT / "config/sources.initial-market.yaml")
     revised = load_sources_config(PROJECT_ROOT / "config/sources.market-iteration.yaml")
     initial_keys = {source.key for source in initial.sources}
-    revised_keys = {source.key for source in revised.sources}
+    enabled_keys = {source.key for source in revised.sources if source.enabled}
+    disabled_keys = {source.key for source in revised.sources if not source.enabled}
 
     retained = {"gitlab-greenhouse", "hostinger-ashby", "kestra-ashby"}
-    assert initial_keys & revised_keys == retained
+    assert initial_keys & enabled_keys == retained
+    assert disabled_keys == initial_keys - retained
 
 
 def test_market_iteration_filter_tracks_the_revised_companies_and_calibrated_titles() -> None:
@@ -35,5 +41,5 @@ def test_market_iteration_filter_tracks_the_revised_companies_and_calibrated_tit
     assert market.title_include == ("backend", "back-end", "platform", "infrastructure")
     assert market.seniorities == ("senior", "lead", "staff", "principal")
     assert set(market.company_names) == {
-        source.company_name.casefold() for source in sources.sources
+        source.company_name.casefold() for source in sources.sources if source.enabled
     }
