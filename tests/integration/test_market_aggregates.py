@@ -16,6 +16,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from career_os.application.eligibility_funnel import EligibilityFunnelService
 from career_os.application.market import MarketAggregateService, MarketDataConsistencyError
 from career_os.config.markets import MarketFilters
 from career_os.db import (
@@ -77,7 +78,6 @@ def test_every_market_aggregate_reconciles_to_exact_postgresql_job_ids(
         result = MarketAggregateService(
             session, taxonomy_version=TAXONOMY_VERSION, normalizer_version=JOB_NORMALIZER_VERSION
         ).calculate(filters)
-
     expected = tuple(sorted((ids["local"], ids["remote_eu"], ids["empty_description"])))
     described = tuple(sorted((ids["local"], ids["remote_eu"])))
     assert result.matching_job_ids == expected
@@ -128,6 +128,50 @@ def test_every_market_aggregate_reconciles_to_exact_postgresql_job_ids(
             taxonomy_version=TAXONOMY_VERSION,
             normalizer_version=JOB_NORMALIZER_VERSION,
         ).calculate(filters)
+
+
+def test_eligibility_funnel_reconciles_stages_groups_and_first_failures(
+    session_factory: sessionmaker[Session],
+) -> None:
+    ids = _seed_market(session_factory)
+    filters = MarketFilters(
+        name="backend-pl-eu",
+        title_include=("backend", "platform"),
+        title_exclude=("frontend",),
+        role_families=("backend_engineering", "platform_engineering"),
+        seniorities=("senior", "staff"),
+        country_codes=("PL",),
+        include_remote=True,
+        remote_scopes=("Poland", "EU"),
+    )
+
+    with session_scope(session_factory) as session:
+        audit = EligibilityFunnelService(session).calculate(filters)
+
+    assert {stage.key: len(stage.job_ids) for stage in audit.stages} == {
+        "cohort": 7,
+        "active": 6,
+        "title_included": 6,
+        "title_accepted": 5,
+        "role_family": 5,
+        "seniority": 5,
+        "geography_evidence": 4,
+        "country_eligible": 3,
+        "company_accepted": 3,
+        "final_match": 3,
+    }
+    assert audit.matching_job_ids == tuple(
+        sorted((ids["local"], ids["remote_eu"], ids["empty_description"]))
+    )
+    assert {item.reason: item.job_ids for item in audit.exclusions} == {
+        "inactive": (ids["inactive"],),
+        "title_excluded": (ids["frontend"],),
+        "no_target_country_or_remote_evidence": (ids["germany"],),
+        "remote_scope_not_accepted": (ids["remote_global"],),
+    }
+    assert sum(dict(group.counts)["cohort"] for group in audit.groups) == 7
+    assert sum(dict(group.counts)["final_match"] for group in audit.groups) == 3
+    assert audit.title_include_only_exclusion_job_ids == ()
 
 
 def _seed_market(session_factory: sessionmaker[Session]) -> dict[str, UUID]:

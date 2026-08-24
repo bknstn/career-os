@@ -50,6 +50,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["taxonomy", "--help"],
         ["taxonomy", "validate", "--help"],
         ["market", "--help"],
+        ["market", "audit", "--help"],
         ["market", "report", "--help"],
         ["operations", "--help"],
         ["operations", "status", "--help"],
@@ -159,6 +160,43 @@ def test_market_report_writes_only_complete_rendered_output(monkeypatch, tmp_pat
 
     assert result.exit_code == 0
     assert output.read_text(encoding="utf-8") == "# complete\n"
+
+
+def test_market_audit_writes_only_reconciled_rendered_output(monkeypatch, tmp_path: Path) -> None:
+    output = tmp_path / "audit.md"
+    filters = SimpleNamespace(name="market")
+    audit = object()
+
+    class FakeSession:
+        def __enter__(self) -> FakeSession:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def connection(self, **_kwargs: object) -> object:
+            return object()
+
+    class FakeAuditService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def calculate(self, _filters: object) -> object:
+            return audit
+
+    monkeypatch.setattr(cli, "load_market_filters", lambda _path: filters)
+    monkeypatch.setattr(cli, "load_settings", lambda: SimpleNamespace())
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: FakeSession)
+    monkeypatch.setattr(cli, "EligibilityFunnelService", FakeAuditService)
+    monkeypatch.setattr(cli, "render_eligibility_funnel", lambda value: "# audit complete\n")
+
+    result = CliRunner().invoke(
+        app,
+        ["market", "audit", "--market", "market.yaml", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0
+    assert output.read_text(encoding="utf-8") == "# audit complete\n"
 
 
 def test_market_report_failure_is_nonzero_and_preserves_existing_output(

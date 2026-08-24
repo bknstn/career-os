@@ -34,6 +34,10 @@ from career_os.application import (
     LeverIngestionService,
     WorkablePublicIngestionService,
 )
+from career_os.application.eligibility_funnel import (
+    EligibilityFunnelConsistencyError,
+    EligibilityFunnelService,
+)
 from career_os.application.job_enrichment import JobEnrichmentService
 from career_os.application.market import MarketDataConsistencyError
 from career_os.application.operations import (
@@ -73,7 +77,7 @@ from career_os.persistence import (
 from career_os.persistence.operations import OperationalStatusRepository
 from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
-from career_os.reporting import render_markdown_report
+from career_os.reporting import render_eligibility_funnel, render_markdown_report
 from career_os.settings import Settings, load_settings
 
 app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job evidence.")
@@ -377,6 +381,32 @@ def market_report(
         MarketDataConsistencyError,
         ProfileComparisonConsistencyError,
         ReportEvidenceConsistencyError,
+        PersistenceError,
+        SQLAlchemyError,
+        OSError,
+        ValueError,
+    ) as error:
+        _emit_error(error, exit_code=1)
+
+
+@market_app.command("audit")
+def market_audit(
+    market: Path = _REPORT_MARKET_OPTION,
+    output: Path = _REPORT_OUTPUT_OPTION,
+) -> None:
+    """Write one reconciled eligibility-funnel audit from current stored jobs."""
+    try:
+        filters = load_market_filters(market)
+        session_factory = _database_session_factory(load_settings())
+        with session_factory() as session:
+            session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+            audit = EligibilityFunnelService(session=session).calculate(filters)
+        _atomic_write_text(output, render_eligibility_funnel(audit))
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    except (
+        DatabaseConfigurationError,
+        EligibilityFunnelConsistencyError,
         PersistenceError,
         SQLAlchemyError,
         OSError,
