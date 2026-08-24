@@ -1,0 +1,112 @@
+sources:
+  # Retained from D1: each produced at least one final eligible job.
+  - key: gitlab-greenhouse
+    kind: greenhouse
+    company_name: GitLab
+    board_token: gitlab
+
+  - key: hostinger-ashby
+    kind: ashby
+    company_name: Hostinger
+    board_name: hostinger
+    include_compensation: true
+
+  - key: kestra-ashby
+    kind: ashby
+    company_name: Kestra
+    board_name: kestra
+    include_compensation: true
+
+  # Poland-focused additions with current backend/platform evidence.
+  - key: affirm-greenhouse
+    kind: greenhouse
+    company_name: Affirm
+    board_token: affirm
+
+  - key: apollo-io-greenhouse
+    kind: greenhouse
+    company_name: Apollo.io
+    board_token: apolloio
+
+  - key: first-connect-insurance-greenhouse
+    kind: greenhouse
+    company_name: First Connect Insurance
+    board_token: firstconnectinsurance
+
+  - key: tripadvisor-greenhouse
+    kind: greenhouse
+    company_name: Tripadvisor
+    board_token: tripadvisor
+
+  - key: vonage-greenhouse
+    kind: greenhouse
+    company_name: Vonage
+    board_token: vonage
+
+  - key: xebia-cee-greenhouse
+    kind: greenhouse
+    company_name: Xebia CEE
+    board_token: xebiacee
+
+  - key: zowie-ashby
+    kind: ashby
+    company_name: Zowie
+    board_name: zowie
+    include_compensation: true
+
+  - key: solidgate-ashby
+    kind: ashby
+    company_name: Solidgate
+    board_name: solidgate
+    include_compensation: true
+
+  - key: skelar-ashby
+    kind: ashby
+    company_name: SKELAR
+    board_name: SKELAR
+    include_compensation: true
+
+  - key: zeely-ashby
+    kind: ashby
+    company_name: Zeely
+    board_name: zeely
+    include_compensation: true
+
+  - key: n8n-ashby
+    kind: ashby
+    company_name: n8n
+    board_name: n8n
+    include_compensation: true
+
+  - key: aerovect-ashby
+    kind: ashby
+    company_name: AeroVect
+    board_name: aerovect
+    include_compensation: true
+
+  - key: synthesia-ashby
+    kind: ashby
+    company_name: Synthesia
+    board_name: synthesia
+    include_compensation: true
+
+  # Europe-remote additions with current senior backend/platform evidence.
+  - key: kalepa-greenhouse
+    kind: greenhouse
+    company_name: Kalepa
+    board_token: kalepa
+
+  - key: saas-group-greenhouse
+    kind: greenhouse
+    company_name: saas.group
+    board_token: saasgroup
+
+  - key: se-ranking-greenhouse
+    kind: greenhouse
+    company_name: SE Ranking
+    board_token: seranking
+
+  - key: mesh-greenhouse
+    kind: greenhouse
+    company_name: Mesh
+    board_token: mesh
