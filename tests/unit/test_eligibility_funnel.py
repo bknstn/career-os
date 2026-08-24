@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +14,7 @@ from career_os.application.eligibility_funnel import (
     EligibilityFunnelConsistencyError,
     EligibilityFunnelService,
 )
-from career_os.config.markets import MarketFilters
+from career_os.config.markets import MarketFilters, load_market_filters
 from career_os.persistence.models import JobPosting
 from career_os.reporting.eligibility_funnel import render_eligibility_funnel
 
@@ -108,6 +109,56 @@ def test_funnel_fails_closed_when_stages_diverge_from_market_query() -> None:
 
     with pytest.raises(EligibilityFunnelConsistencyError, match="does not reconcile"):
         EligibilityFunnelService(session).calculate(filters)  # type: ignore[arg-type]
+
+
+def test_calibrated_market_accepts_supported_variants_and_preserves_precision() -> None:
+    jobs = tuple(
+        (job, "alpha", "ashby")
+        for job in (
+            _job(1, title="Senior Software Engineer, Back-end", role="backend_engineering"),
+            _job(
+                2,
+                title="Staff Software Engineer, Infrastructure (Cloud)",
+                role="platform_engineering",
+                seniority="staff",
+            ),
+            _job(
+                3,
+                title="Staff Software Engineer, Mobile (App Infrastructure)",
+                role="platform_engineering",
+                seniority="staff",
+            ),
+            _job(
+                4,
+                title="Senior Product Manager, Core Infrastructure",
+                role="product_management",
+            ),
+            _job(
+                5,
+                title="Principal ML Platform Engineer",
+                role="platform_engineering",
+                seniority="principal",
+                workplace="remote",
+                scope="Europe",
+            ),
+        )
+    )
+    session = _FakeSession(
+        jobs,
+        ((UUID(int=1), "PL"), (UUID(int=2), "PL"), (UUID(int=3), "PL")),
+        expected=(UUID(int=1), UUID(int=2), UUID(int=5)),
+    )
+    filters = load_market_filters(Path("config/market.market-iteration.yaml")).model_copy(
+        update={"company_names": ("alpha",)}
+    )
+
+    audit = EligibilityFunnelService(session).calculate(filters)  # type: ignore[arg-type]
+
+    assert audit.matching_job_ids == (UUID(int=1), UUID(int=2), UUID(int=5))
+    assert {item.reason: item.job_ids for item in audit.exclusions} == {
+        "title_excluded": (UUID(int=3),),
+        "role_family_not_accepted": (UUID(int=4),),
+    }
 
 
 def _job(

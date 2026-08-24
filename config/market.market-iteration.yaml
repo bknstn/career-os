@@ -1,0 +1,31 @@
+market:
+  name: senior-backend-platform-poland-eu-market-iteration-v2
+  title_include: [backend, back-end, platform, infrastructure]
+  title_exclude: [frontend, mobile, qa]
+  role_families: [backend_engineering, platform_engineering]
+  seniorities: [senior, lead, staff, principal]
+  country_codes: [PL]
+  include_remote: true
+  remote_scopes: [Poland, EU, Europe]
+  company_names:
+    - GitLab
+    - Hostinger
+    - Kestra
+    - Affirm
+    - Apollo.io
+    - First Connect Insurance
+    - Tripadvisor
+    - Vonage
+    - Xebia CEE
+    - Zowie
+    - Solidgate
+    - SKELAR
+    - Zeely
+    - n8n
+    - AeroVect
+    - Synthesia
+    - Kalepa
+    - saas.group
+    - SE Ranking
+    - Mesh
+  active_only: true

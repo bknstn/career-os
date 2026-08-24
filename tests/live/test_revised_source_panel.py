@@ -35,7 +35,7 @@ from career_os.normalization.jobs import normalize_job
 pytestmark = pytest.mark.live
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCES_PATH = PROJECT_ROOT / "config/sources.market-iteration.yaml"
-MARKET_PATH = PROJECT_ROOT / "config/market.initial.yaml"
+MARKET_PATH = PROJECT_ROOT / "config/market.market-iteration.yaml"
 
 
 def test_every_revised_source_board_has_a_complete_mappable_live_contract() -> None:

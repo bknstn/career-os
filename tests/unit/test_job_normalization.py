@@ -108,6 +108,7 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
         ("Poland", "Remote", "Poland"),
         ("Europe", "Remote", "Europe"),
         ("EU", "Remote", "EU"),
+        ("Europe (Full Remote)", None, "Europe"),
     )
 
     assert onsite.remote_scope.value is None
@@ -148,6 +149,31 @@ def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> N
         )
     )
     assert localized_remote_outside_scope.remote_scope.value is None
+
+    unbound_europe = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            locations=(SourceLocationEvidence(raw="Europe"),),
+        )
+    )
+    hybrid_europe = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            locations=(SourceLocationEvidence(raw="Europe (Hybrid)"),),
+        )
+    )
+    usa_remote = normalize_job(
+        JobNormalizationInput(
+            title="Engineer",
+            description="",
+            locations=(SourceLocationEvidence(raw="USA (Remote)"),),
+        )
+    )
+    assert unbound_europe.remote_scope.value is None
+    assert hybrid_europe.remote_scope.value is None
+    assert usa_remote.remote_scope.value is None
 
     explicit_remote_location = normalize_job(
         JobNormalizationInput(
@@ -308,6 +334,30 @@ def test_seniority_and_role_family_are_conservative() -> None:
     assert plural_platform.role_family.value == "platform_engineering"
     assert non_engineering_platforms.role_family.value is None
     assert ordinary.role_family.value is None
+
+
+def test_platform_and_infrastructure_roles_require_engineering_context() -> None:
+    positive_titles = (
+        "Staff Software Engineer, Infrastructure (Cloud)",
+        "Senior Infrastructure Engineer",
+        "Platform Developer",
+        "Software Engineer - Network Platforms",
+    )
+    for title in positive_titles:
+        result = normalize_job(JobNormalizationInput(title=title, description=""))
+        assert result.role_family.value == "platform_engineering"
+
+    guarded_titles = {
+        "Treasury Partner Lead - Platform": None,
+        "IT Service Desk Lead - Platform": None,
+        "Staff Infrastructure Security Engineer": None,
+        "Senior Product Manager, Core Infrastructure": "product_management",
+        "Senior DevOps Engineer (Infrastructure)": "devops_engineering",
+        "Staff Software Engineer, Mobile (App Infrastructure)": "platform_engineering",
+    }
+    for title, expected_role in guarded_titles.items():
+        result = normalize_job(JobNormalizationInput(title=title, description=""))
+        assert result.role_family.value == expected_role
 
 
 def test_location_parsing_preserves_order_and_does_not_turn_country_into_city() -> None:

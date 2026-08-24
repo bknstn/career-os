@@ -20,7 +20,7 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.text import clean_text
 
-JOB_NORMALIZER_VERSION: Final = "job-normalization-v3"
+JOB_NORMALIZER_VERSION: Final = "job-normalization-v4"
 
 _TITLE_SENIORITY: Final = (
     ("executive", re.compile(r"\b(?:chief|cto|vp|vice president)\b", re.I)),
@@ -42,9 +42,10 @@ _ROLE_FAMILIES: Final = (
     (
         "platform_engineering",
         re.compile(
-            r"\b(?:platform|site reliability|sre)\b"
-            r"|\b(?:software|systems?) engineer\b[^\n]*\bplatforms\b"
-            r"|\bplatforms\b[^\n]*\b(?:software|systems?) engineer\b",
+            r"\b(?:platform engineer(?:ing)?|platform developer|site reliability|sre)\b"
+            r"|\b(?:software|systems?) engineer\b[^\n]*\b(?:platforms?|infrastructure)\b"
+            r"|\b(?:platforms?|infrastructure)\b[^\n]*\b(?:software|systems?) engineer\b"
+            r"|\binfrastructure engineer(?:ing)?\b",
             re.I,
         ),
     ),
@@ -478,7 +479,7 @@ def _scope_for_country(country_code: str) -> str | None:
 def _remote_location_match(raw: str, token: str) -> re.Match[str] | None:
     return re.search(
         rf"\bremote\s*(?:[-\u2013,/]\s*|\s+){token}\b"
-        rf"|\b{token}\s*(?:[-\u2013,/]\s*|\s+|\s*\(\s*)remote\b(?:\s*\))?",
+        rf"|\b{token}\s*(?:[-\u2013,/]\s*|\s+|\s*\(\s*)(?:full(?:y)?\s+)?remote\b(?:\s*\))?",
         raw,
         re.I,
     )

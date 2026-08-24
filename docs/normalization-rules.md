@@ -1,6 +1,6 @@
 # Deterministic job normalization rules
 
-`job-normalization-v3` owns the pure, source-neutral rules in
+`job-normalization-v4` owns the pure, source-neutral rules in
 `career_os.normalization.jobs`. The version is emitted with every output; task
 22 owns selection, persistence, and bulk re-enrichment.
 
@@ -12,10 +12,13 @@ Seniority precedence is title, then source level/category, then a narrow strong
 description phrase. Years alone are never seniority evidence. `Product Manager`
 is a role family, not people-management evidence; `Engineering Manager` and
 `People Manager` are management seniority evidence. `full-stack` wins over a
-simultaneous backend/frontend marker. A bare `platform` or `platforms` modifier
-yields to one explicit role family such as backend, data engineering, or
-product management; otherwise contradictory role-family markers fail closed to
-unknown.
+simultaneous backend/frontend marker. Platform and infrastructure classification
+requires engineering context such as `Platform Engineer`, `Software Engineer -
+Network Platforms`, or `Software Engineer, Infrastructure`; a bare team label
+such as `Treasury Partner Lead - Platform` is not an engineering role. An
+explicit non-platform family such as backend, data engineering, product
+management, or DevOps wins over a simultaneous platform/infrastructure marker.
+Otherwise contradictory role-family markers fail closed to unknown.
 
 Locations retain every input value and ordinal. Parsing recognizes only a small
 country alias set (including `PL`) and never turns a country-only value into a
@@ -26,8 +29,11 @@ not scope evidence. Parsing a raw location reports `text_parse`; it reports
 `structured_source` only when the source separately supplies the supporting
 country fact. Structured remote workplace evidence may combine with an exact
 `Poland`, `EU`, or `Europe` source location; source strings such as
-`Remote, Poland` and `Poland (Remote)` are also accepted. A localized remote
-role in another country is not widened into Europe-wide eligibility.
+`Remote, Poland` and `Poland (Remote)` are also accepted. The observed
+parenthesized form `Europe (Full Remote)` is accepted, while unbound `Europe`,
+`Europe (Hybrid)`, and `USA (Remote)` do not produce an eligible Europe scope.
+A localized remote role in another country is not widened into Europe-wide
+eligibility.
 An ATS location that explicitly contains `Remote` also supplies conservative
 remote workplace evidence unless that same location says hybrid or onsite.
 Observed Greenhouse location names separated by semicolons are replayed as

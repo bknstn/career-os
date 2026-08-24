@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from career_os.config.markets import load_market_filters
 from career_os.config.sources import load_sources_config
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,3 +25,15 @@ def test_market_iteration_panel_retains_only_productive_d1_boards() -> None:
 
     retained = {"gitlab-greenhouse", "hostinger-ashby", "kestra-ashby"}
     assert initial_keys & revised_keys == retained
+
+
+def test_market_iteration_filter_tracks_the_revised_companies_and_calibrated_titles() -> None:
+    sources = load_sources_config(PROJECT_ROOT / "config/sources.market-iteration.yaml")
+    market = load_market_filters(PROJECT_ROOT / "config/market.market-iteration.yaml")
+
+    assert market.name == "senior-backend-platform-poland-eu-market-iteration-v2"
+    assert market.title_include == ("backend", "back-end", "platform", "infrastructure")
+    assert market.seniorities == ("senior", "lead", "staff", "principal")
+    assert set(market.company_names) == {
+        source.company_name.casefold() for source in sources.sources
+    }
