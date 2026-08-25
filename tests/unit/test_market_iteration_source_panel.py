@@ -1,4 +1,4 @@
-"""Offline invariants for the reviewed D2 source panel."""
+"""Offline invariants for the reviewed D8 source panel."""
 
 from pathlib import Path
 
@@ -13,11 +13,11 @@ def test_market_iteration_panel_is_explicit_unique_and_adapter_supported() -> No
     enabled = tuple(source for source in sources if source.enabled)
     disabled = tuple(source for source in sources if not source.enabled)
 
-    assert len(sources) == 37
+    assert len(sources) == 42
     assert len(enabled) == 20
-    assert len(disabled) == 17
-    assert len({source.key for source in sources}) == 37
-    assert len({source.company_name.casefold() for source in sources}) == 37
+    assert len(disabled) == 22
+    assert len({source.key for source in sources}) == 42
+    assert len({source.company_name.casefold() for source in sources}) == 42
     assert {source.kind for source in enabled} == {"ashby", "greenhouse"}
 
 
@@ -30,7 +30,28 @@ def test_market_iteration_panel_retains_only_productive_d1_boards() -> None:
 
     retained = {"gitlab-greenhouse", "hostinger-ashby", "kestra-ashby"}
     assert initial_keys & enabled_keys == retained
-    assert disabled_keys == initial_keys - retained
+    assert disabled_keys & initial_keys == initial_keys - retained
+
+
+def test_market_iteration_panel_applies_only_the_five_predeclared_d8_replacements() -> None:
+    sources = load_sources_config(PROJECT_ROOT / "config/sources.market-iteration.yaml")
+    enabled_keys = {source.key for source in sources.sources if source.enabled}
+    disabled_keys = {source.key for source in sources.sources if not source.enabled}
+
+    assert {
+        "p2p-org-ashby",
+        "checkly-ashby",
+        "chattermill-ashby",
+        "hauler-hero-ashby",
+        "wundergraph-ashby",
+    } <= enabled_keys
+    assert {
+        "apollo-io-greenhouse",
+        "tripadvisor-greenhouse",
+        "vonage-greenhouse",
+        "zowie-ashby",
+        "skelar-ashby",
+    } <= disabled_keys
 
 
 def test_market_iteration_filter_tracks_the_revised_companies_and_calibrated_titles() -> None:

@@ -1,4 +1,4 @@
-"""Opt-in D2 live validation for every revised source-panel board."""
+"""Opt-in live validation for every revised source-panel board."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ async def _probe(source: SourceConfig, filters: MarketFilters) -> dict[str, obje
             event
             async for event in adapter.fetch(
                 FetchContext(
-                    run_id=f"d2-panel-{source.key}",
+                    run_id=f"market-panel-{source.key}",
                     fetched_at=datetime.now(UTC),
                     timeout_seconds=30,
                 )

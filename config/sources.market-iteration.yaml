@@ -23,35 +23,39 @@ sources:
     company_name: Affirm
     board_token: affirm
 
-  - key: apollo-io-greenhouse
-    kind: greenhouse
-    company_name: Apollo.io
-    board_token: apolloio
+  # D8 replacements: predeclared Europe/Poland senior backend/platform boards.
+  - key: p2p-org-ashby
+    kind: ashby
+    company_name: P2P.org
+    board_name: p2p.org
+    include_compensation: true
 
   - key: first-connect-insurance-greenhouse
     kind: greenhouse
     company_name: First Connect Insurance
     board_token: firstconnectinsurance
 
-  - key: tripadvisor-greenhouse
-    kind: greenhouse
-    company_name: Tripadvisor
-    board_token: tripadvisor
+  - key: checkly-ashby
+    kind: ashby
+    company_name: Checkly
+    board_name: checkly
+    include_compensation: true
 
-  - key: vonage-greenhouse
-    kind: greenhouse
-    company_name: Vonage
-    board_token: vonage
+  - key: chattermill-ashby
+    kind: ashby
+    company_name: Chattermill
+    board_name: chattermill
+    include_compensation: true
 
   - key: xebia-cee-greenhouse
     kind: greenhouse
     company_name: Xebia CEE
     board_token: xebiacee
 
-  - key: zowie-ashby
+  - key: hauler-hero-ashby
     kind: ashby
-    company_name: Zowie
-    board_name: zowie
+    company_name: Hauler Hero
+    board_name: hauler-hero
     include_compensation: true
 
   - key: solidgate-ashby
@@ -60,10 +64,10 @@ sources:
     board_name: solidgate
     include_compensation: true
 
-  - key: skelar-ashby
+  - key: wundergraph-ashby
     kind: ashby
-    company_name: SKELAR
-    board_name: SKELAR
+    company_name: WunderGraph
+    board_name: wundergraph
     include_compensation: true
 
   - key: zeely-ashby
@@ -110,6 +114,39 @@ sources:
     kind: greenhouse
     company_name: Mesh
     board_token: mesh
+
+  # Explicitly retired during D8 after producing zero reviewed D7 matches.
+  - key: apollo-io-greenhouse
+    kind: greenhouse
+    company_name: Apollo.io
+    board_token: apolloio
+    enabled: false
+
+  - key: tripadvisor-greenhouse
+    kind: greenhouse
+    company_name: Tripadvisor
+    board_token: tripadvisor
+    enabled: false
+
+  - key: vonage-greenhouse
+    kind: greenhouse
+    company_name: Vonage
+    board_token: vonage
+    enabled: false
+
+  - key: zowie-ashby
+    kind: ashby
+    company_name: Zowie
+    board_name: zowie
+    include_compensation: true
+    enabled: false
+
+  - key: skelar-ashby
+    kind: ashby
+    company_name: SKELAR
+    board_name: SKELAR
+    include_compensation: true
+    enabled: false
 
   # Explicitly retired after D1. Persistence intentionally preserves omitted
   # sources, so disabled entries keep operational status aligned with this panel.
