@@ -1,0 +1,563 @@
+{
+  "contract_version": "h1.hybrid-result.v1",
+  "scope": {
+    "kind": "configured_source_panel",
+    "name": "senior-backend-poland-eu",
+    "target_universe": null
+  },
+  "filters": {
+    "name": "senior-backend-poland-eu",
+    "title_include": ["backend", "platform"],
+    "title_exclude": ["frontend"],
+    "role_families": ["backend_engineering", "platform_engineering"],
+    "seniorities": ["senior", "staff"],
+    "country_codes": ["PL"],
+    "include_remote": true,
+    "remote_scopes": ["eu"],
+    "company_names": [],
+    "active_only": true
+  },
+  "profile": {
+    "name": "current-backend",
+    "target_role_families": ["backend_engineering"],
+    "seniority": "senior",
+    "skills": [
+      {"id": "kafka", "level": "working", "years": null},
+      {"id": "python", "level": "strong", "years": "7"}
+    ]
+  },
+  "quality": {
+    "state": "evidence_limited",
+    "claim_policy": {
+      "opportunities": "available",
+      "panel_observations": "qualified",
+      "broad_market_claims": "disabled",
+      "skill_semantics": "mentions_only",
+      "fit_probability": "not_provided"
+    },
+    "gates": [
+      {
+        "gate_id": "reviewed_eligible_jobs",
+        "status": "failed",
+        "operator": ">=",
+        "threshold": 20,
+        "observed": 3,
+        "unit": "reviewed_jobs",
+        "evidence_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "evidence_company_names": ["Affirm", "Beta Cloud"]
+      },
+      {
+        "gate_id": "represented_companies",
+        "status": "failed",
+        "operator": ">=",
+        "threshold": 5,
+        "observed": 2,
+        "unit": "companies",
+        "evidence_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "evidence_company_names": ["Affirm", "Beta Cloud"]
+      },
+      {
+        "gate_id": "max_company_concentration",
+        "status": "failed",
+        "operator": "<=",
+        "threshold": 0.4,
+        "observed": 0.6666666667,
+        "unit": "share",
+        "evidence_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "evidence_company_names": ["Affirm"]
+      },
+      {
+        "gate_id": "demonstrated_eligibility_false_positives",
+        "status": "passed",
+        "operator": "==",
+        "threshold": 0,
+        "observed": 0,
+        "unit": "false_positive_jobs",
+        "evidence_job_ids": [],
+        "evidence_company_names": []
+      },
+      {
+        "gate_id": "skill_semantics",
+        "status": "passed",
+        "operator": "==",
+        "threshold": "mentions_only",
+        "observed": "mentions_only",
+        "unit": "semantics",
+        "evidence_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "evidence_company_names": ["Affirm", "Beta Cloud"]
+      },
+      {
+        "gate_id": "compensation_reconciled",
+        "status": "passed",
+        "operator": "==",
+        "threshold": "reconciled",
+        "observed": "reconciled",
+        "unit": "evidence",
+        "evidence_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "evidence_company_names": ["Affirm", "Beta Cloud"]
+      }
+    ],
+    "failed_gates": [
+      "reviewed_eligible_jobs",
+      "represented_companies",
+      "max_company_concentration"
+    ],
+    "evaluation_provenance": {
+      "reviewed_eligible_jobs": {
+        "basis": "manual_review",
+        "provenance": {
+          "kind": "review_artifact",
+          "ref": "tests/fixtures/contracts/h1_evidence_limited_review_artifact.json",
+          "reviewed_job_ids": [
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000003"
+          ]
+        }
+      },
+      "represented_companies": {
+        "basis": "computed",
+        "provenance": {
+          "kind": "result_derived",
+          "ref": "opportunities.items",
+          "reviewed_job_ids": []
+        }
+      },
+      "max_company_concentration": {
+        "basis": "computed",
+        "provenance": {
+          "kind": "result_derived",
+          "ref": "observations.sample.companies",
+          "reviewed_job_ids": []
+        }
+      },
+      "demonstrated_eligibility_false_positives": {
+        "basis": "manual_review",
+        "provenance": {
+          "kind": "review_artifact",
+          "ref": "tests/fixtures/contracts/h1_evidence_limited_review_artifact.json",
+          "reviewed_job_ids": [
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000003"
+          ]
+        }
+      },
+      "skill_semantics": {
+        "basis": "contract_invariant",
+        "provenance": {
+          "kind": "contract_rule",
+          "ref": "quality.claim_policy.skill_semantics",
+          "reviewed_job_ids": []
+        }
+      },
+      "compensation_reconciled": {
+        "basis": "contract_invariant",
+        "provenance": {
+          "kind": "contract_rule",
+          "ref": "per_job.compensation",
+          "reviewed_job_ids": []
+        }
+      }
+    },
+    "observed_values": {
+      "matching_job_count": 3,
+      "company_count": 2,
+      "reviewed_eligible_job_count": 3,
+      "represented_company_count": 2,
+      "demonstrated_eligibility_false_positive_count": 0,
+      "skill_semantics": "mentions_only",
+      "compensation_reconciled": true,
+      "max_company_concentration": 0.6666666667,
+      "source_coverage": 1.0,
+      "compensation_coverage": 0.6666666667,
+      "collection_cutoff": "2026-08-29T08:10:00Z"
+    }
+  },
+  "opportunities": {
+    "job_ids": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000003"
+    ],
+    "count": 3,
+    "company_count": 2,
+    "items": [
+      {
+        "job_id": "00000000-0000-0000-0000-000000000001",
+        "company_name": "Affirm",
+        "title": "Senior Backend Engineer",
+        "source": {
+          "key": "affirm",
+          "kind": "greenhouse",
+          "url": "https://jobs.example.test/affirm/1"
+        },
+        "freshness": {
+          "first_seen_at": "2026-08-29T08:00:00Z",
+          "last_seen_at": "2026-08-29T08:00:00Z"
+        },
+        "locations": [
+          {
+            "ordinal": 0,
+            "city": null,
+            "region": null,
+            "country_code": "PL",
+            "is_primary": true,
+            "confidence": 1.0
+          }
+        ],
+        "remote_scope": "EU",
+        "skill_mentions": [
+          {
+            "id": "00000000-0000-0000-0000-000000000201",
+            "skill_id": "python",
+            "matched_text": "Python",
+            "section": "requirements",
+            "method": "exact",
+            "confidence": 1.0,
+            "taxonomy_version": "1.0.2"
+          }
+        ],
+        "compensation": [
+          {
+            "component_id": "00000000-0000-0000-0000-000000000101",
+            "component_type": "base_salary",
+            "min_value": 300000,
+            "max_value": 420000,
+            "currency": "PLN",
+            "interval": "year",
+            "location_tier": "Poland",
+            "source_method": "structured_source"
+          }
+        ],
+        "status": "active",
+        "role_family": "backend_engineering",
+        "seniority": "senior",
+        "workplace_type": "remote"
+      },
+      {
+        "job_id": "00000000-0000-0000-0000-000000000002",
+        "company_name": "Affirm",
+        "title": "Staff Platform Engineer",
+        "source": {
+          "key": "affirm",
+          "kind": "greenhouse",
+          "url": "https://jobs.example.test/affirm/2"
+        },
+        "freshness": {
+          "first_seen_at": "2026-08-29T08:01:00Z",
+          "last_seen_at": "2026-08-29T08:05:00Z"
+        },
+        "locations": [
+          {
+            "ordinal": 0,
+            "city": null,
+            "region": null,
+            "country_code": "PL",
+            "is_primary": true,
+            "confidence": 1.0
+          }
+        ],
+        "remote_scope": "EU",
+        "skill_mentions": [
+          {
+            "id": "00000000-0000-0000-0000-000000000202",
+            "skill_id": "python",
+            "matched_text": "Python",
+            "section": "responsibilities",
+            "method": "alias",
+            "confidence": 0.99,
+            "taxonomy_version": "1.0.2"
+          }
+        ],
+        "compensation": [],
+        "status": "active",
+        "role_family": "platform_engineering",
+        "seniority": "staff",
+        "workplace_type": "remote"
+      },
+      {
+        "job_id": "00000000-0000-0000-0000-000000000003",
+        "company_name": "Beta Cloud",
+        "title": "Senior Backend Engineer",
+        "source": {
+          "key": "beta-cloud",
+          "kind": "lever",
+          "url": "https://jobs.example.test/beta-cloud/1"
+        },
+        "freshness": {
+          "first_seen_at": "2026-08-29T08:02:00Z",
+          "last_seen_at": "2026-08-29T08:10:00Z"
+        },
+        "locations": [
+          {
+            "ordinal": 0,
+            "city": null,
+            "region": null,
+            "country_code": "PL",
+            "is_primary": true,
+            "confidence": 1.0
+          }
+        ],
+        "remote_scope": null,
+        "skill_mentions": [],
+        "compensation": [
+          {
+            "component_id": "00000000-0000-0000-0000-000000000103",
+            "component_type": "base_salary",
+            "min_value": 250000,
+            "max_value": 350000,
+            "currency": "PLN",
+            "interval": "unknown",
+            "location_tier": "Europe",
+            "source_method": "text_parse"
+          }
+        ],
+        "status": "active",
+        "role_family": "backend_engineering",
+        "seniority": "senior",
+        "workplace_type": "hybrid"
+      }
+    ]
+  },
+  "observations": {
+    "scope": "configured_source_panel",
+    "sample": {
+      "job_ids": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000003"
+      ],
+      "job_count": 3,
+      "company_names": ["Affirm", "Beta Cloud"],
+      "company_count": 2,
+      "max_company_concentration": {
+        "company_name": "Affirm",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 2,
+        "job_share": 0.6666666667
+      },
+      "source_coverage": {
+        "configured_source_count": 2,
+        "configured_source_keys": ["affirm", "beta-cloud"],
+        "matching_source_count": 2,
+        "matching_source_keys": ["affirm", "beta-cloud"],
+        "source_share": 1.0,
+        "job_ids_by_source": [
+          {
+            "source_key": "affirm",
+            "job_ids": [
+              "00000000-0000-0000-0000-000000000001",
+              "00000000-0000-0000-0000-000000000002"
+            ]
+          },
+          {
+            "source_key": "beta-cloud",
+            "job_ids": ["00000000-0000-0000-0000-000000000003"]
+          }
+        ]
+      },
+      "collection_cutoff": "2026-08-29T08:10:00Z",
+      "skill_denominator_job_ids": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000003"
+      ],
+      "compensation_job_ids": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000003"
+      ]
+    },
+    "companies": [
+      {
+        "value": "Affirm",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 2,
+        "job_share": 0.6666666667
+      },
+      {
+        "value": "Beta Cloud",
+        "job_ids": ["00000000-0000-0000-0000-000000000003"],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 1,
+        "job_share": 0.3333333333
+      }
+    ],
+    "skills": [
+      {
+        "skill_id": "python",
+        "label": "Python",
+        "semantics": "mention",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "job_count": 2,
+        "job_share": 0.6666666667,
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "company_names": ["Affirm"],
+        "company_count": 1,
+        "company_share": 0.5,
+        "denominator_company_names": ["Affirm", "Beta Cloud"]
+      }
+    ],
+    "seniorities": [
+      {
+        "value": "senior",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 2,
+        "job_share": 0.6666666667
+      },
+      {
+        "value": "staff",
+        "job_ids": ["00000000-0000-0000-0000-000000000002"],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 1,
+        "job_share": 0.3333333333
+      }
+    ],
+    "workplace_types": [
+      {
+        "value": "hybrid",
+        "job_ids": ["00000000-0000-0000-0000-000000000003"],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 1,
+        "job_share": 0.3333333333
+      },
+      {
+        "value": "remote",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 2,
+        "job_share": 0.6666666667
+      }
+    ],
+    "countries": [
+      {
+        "value": "PL",
+        "job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "job_count": 3,
+        "job_share": 1.0
+      }
+    ],
+    "compensation": [
+      {
+        "component_type": "base_salary",
+        "currency": "PLN",
+        "interval": "year",
+        "location_tier": "Poland",
+        "component_ids": ["00000000-0000-0000-0000-000000000101"],
+        "job_ids": ["00000000-0000-0000-0000-000000000001"],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "component_count": 1,
+        "job_count": 1,
+        "job_share": 0.3333333333,
+        "min_value": 300000,
+        "max_value": 420000
+      },
+      {
+        "component_type": "base_salary",
+        "currency": "PLN",
+        "interval": "unknown",
+        "location_tier": "Europe",
+        "component_ids": ["00000000-0000-0000-0000-000000000103"],
+        "job_ids": ["00000000-0000-0000-0000-000000000003"],
+        "denominator_job_ids": [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002",
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "component_count": 1,
+        "job_count": 1,
+        "job_share": 0.3333333333,
+        "min_value": 250000,
+        "max_value": 350000
+      }
+    ],
+    "profile_mentions": {
+      "semantics": "mention_only",
+      "profile_skill_ids": ["kafka", "python"],
+      "covered_skill_ids": ["python"],
+      "neutral_skill_ids": ["kafka"],
+      "uncovered_mentions": []
+    }
+  }
+}

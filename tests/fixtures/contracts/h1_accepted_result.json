@@ -1,0 +1,168 @@
+{
+  "contract_version": "h1.hybrid-result.v1",
+  "scope": {"kind": "configured_source_panel", "name": "five-company-panel", "target_universe": null},
+  "filters": {"name": "five-company-panel", "title_include": [], "title_exclude": [], "role_families": [], "seniorities": [], "country_codes": [], "include_remote": false, "remote_scopes": [], "company_names": [], "active_only": true},
+  "profile": {"name": "empty-profile", "target_role_families": ["backend_engineering"], "seniority": "senior", "skills": []},
+  "quality": {
+    "state": "accepted",
+    "claim_policy": {"opportunities": "available", "panel_observations": "panel_bounded", "broad_market_claims": "disabled", "skill_semantics": "mentions_only", "fit_probability": "not_provided"},
+    "gates": [
+      {"gate_id": "reviewed_eligible_jobs", "status": "passed", "operator": ">=", "threshold": 20, "observed": 20, "unit": "reviewed_jobs", "evidence_job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"], "evidence_company_names": ["Alpha", "Beta", "Delta", "Epsilon", "Gamma"]},
+      {"gate_id": "represented_companies", "status": "passed", "operator": ">=", "threshold": 5, "observed": 5, "unit": "companies", "evidence_job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"], "evidence_company_names": ["Alpha", "Beta", "Delta", "Epsilon", "Gamma"]},
+      {"gate_id": "max_company_concentration", "status": "passed", "operator": "<=", "threshold": 0.4, "observed": 0.2, "unit": "share", "evidence_job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014"], "evidence_company_names": ["Alpha"]},
+      {"gate_id": "demonstrated_eligibility_false_positives", "status": "passed", "operator": "==", "threshold": 0, "observed": 0, "unit": "false_positive_jobs", "evidence_job_ids": [], "evidence_company_names": []},
+      {"gate_id": "skill_semantics", "status": "passed", "operator": "==", "threshold": "mentions_only", "observed": "mentions_only", "unit": "semantics", "evidence_job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"], "evidence_company_names": ["Alpha", "Beta", "Delta", "Epsilon", "Gamma"]},
+      {"gate_id": "compensation_reconciled", "status": "passed", "operator": "==", "threshold": "reconciled", "observed": "reconciled", "unit": "evidence", "evidence_job_ids": [], "evidence_company_names": []}
+    ],
+    "failed_gates": [],
+    "evaluation_provenance": {
+      "reviewed_eligible_jobs": {
+        "basis": "manual_review",
+        "provenance": {
+          "kind": "review_artifact",
+          "ref": "tests/fixtures/contracts/h1_accepted_review_artifact.json",
+          "reviewed_job_ids": [
+            "00000000-0000-0000-0000-000000000011",
+            "00000000-0000-0000-0000-000000000012",
+            "00000000-0000-0000-0000-000000000013",
+            "00000000-0000-0000-0000-000000000014",
+            "00000000-0000-0000-0000-000000000015",
+            "00000000-0000-0000-0000-000000000016",
+            "00000000-0000-0000-0000-000000000017",
+            "00000000-0000-0000-0000-000000000018",
+            "00000000-0000-0000-0000-000000000019",
+            "00000000-0000-0000-0000-000000000020",
+            "00000000-0000-0000-0000-000000000021",
+            "00000000-0000-0000-0000-000000000022",
+            "00000000-0000-0000-0000-000000000023",
+            "00000000-0000-0000-0000-000000000024",
+            "00000000-0000-0000-0000-000000000025",
+            "00000000-0000-0000-0000-000000000026",
+            "00000000-0000-0000-0000-000000000027",
+            "00000000-0000-0000-0000-000000000028",
+            "00000000-0000-0000-0000-000000000029",
+            "00000000-0000-0000-0000-000000000030"
+          ]
+        }
+      },
+      "represented_companies": {
+        "basis": "computed",
+        "provenance": {
+          "kind": "result_derived",
+          "ref": "opportunities.items",
+          "reviewed_job_ids": []
+        }
+      },
+      "max_company_concentration": {
+        "basis": "computed",
+        "provenance": {
+          "kind": "result_derived",
+          "ref": "observations.sample.companies",
+          "reviewed_job_ids": []
+        }
+      },
+      "demonstrated_eligibility_false_positives": {
+        "basis": "manual_review",
+        "provenance": {
+          "kind": "review_artifact",
+          "ref": "tests/fixtures/contracts/h1_accepted_review_artifact.json",
+          "reviewed_job_ids": [
+            "00000000-0000-0000-0000-000000000011",
+            "00000000-0000-0000-0000-000000000012",
+            "00000000-0000-0000-0000-000000000013",
+            "00000000-0000-0000-0000-000000000014",
+            "00000000-0000-0000-0000-000000000015",
+            "00000000-0000-0000-0000-000000000016",
+            "00000000-0000-0000-0000-000000000017",
+            "00000000-0000-0000-0000-000000000018",
+            "00000000-0000-0000-0000-000000000019",
+            "00000000-0000-0000-0000-000000000020",
+            "00000000-0000-0000-0000-000000000021",
+            "00000000-0000-0000-0000-000000000022",
+            "00000000-0000-0000-0000-000000000023",
+            "00000000-0000-0000-0000-000000000024",
+            "00000000-0000-0000-0000-000000000025",
+            "00000000-0000-0000-0000-000000000026",
+            "00000000-0000-0000-0000-000000000027",
+            "00000000-0000-0000-0000-000000000028",
+            "00000000-0000-0000-0000-000000000029",
+            "00000000-0000-0000-0000-000000000030"
+          ]
+        }
+      },
+      "skill_semantics": {
+        "basis": "contract_invariant",
+        "provenance": {
+          "kind": "contract_rule",
+          "ref": "quality.claim_policy.skill_semantics",
+          "reviewed_job_ids": []
+        }
+      },
+      "compensation_reconciled": {
+        "basis": "contract_invariant",
+        "provenance": {
+          "kind": "contract_rule",
+          "ref": "per_job.compensation",
+          "reviewed_job_ids": []
+        }
+      }
+    },
+    "observed_values": {"matching_job_count": 20, "company_count": 5, "reviewed_eligible_job_count": 20, "represented_company_count": 5, "demonstrated_eligibility_false_positive_count": 0, "skill_semantics": "mentions_only", "compensation_reconciled": true, "max_company_concentration": 0.2, "source_coverage": 1.0, "compensation_coverage": 0.0, "collection_cutoff": "2026-08-29T08:19:00Z"}
+  },
+  "opportunities": {
+    "job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"],
+    "count": 20,
+    "company_count": 5,
+    "items": [
+      {"job_id": "00000000-0000-0000-0000-000000000011", "company_name": "Alpha", "title": "Senior Backend Engineer", "source": {"key": "alpha", "kind": "greenhouse", "url": "https://jobs.example.test/alpha/11"}, "freshness": {"first_seen_at": "2026-08-29T08:00:00Z", "last_seen_at": "2026-08-29T08:00:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000012", "company_name": "Alpha", "title": "Senior Backend Engineer", "source": {"key": "alpha", "kind": "greenhouse", "url": "https://jobs.example.test/alpha/12"}, "freshness": {"first_seen_at": "2026-08-29T08:01:00Z", "last_seen_at": "2026-08-29T08:01:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000013", "company_name": "Alpha", "title": "Senior Backend Engineer", "source": {"key": "alpha", "kind": "greenhouse", "url": "https://jobs.example.test/alpha/13"}, "freshness": {"first_seen_at": "2026-08-29T08:02:00Z", "last_seen_at": "2026-08-29T08:02:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000014", "company_name": "Alpha", "title": "Senior Backend Engineer", "source": {"key": "alpha", "kind": "greenhouse", "url": "https://jobs.example.test/alpha/14"}, "freshness": {"first_seen_at": "2026-08-29T08:03:00Z", "last_seen_at": "2026-08-29T08:03:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000015", "company_name": "Beta", "title": "Senior Backend Engineer", "source": {"key": "beta", "kind": "greenhouse", "url": "https://jobs.example.test/beta/15"}, "freshness": {"first_seen_at": "2026-08-29T08:04:00Z", "last_seen_at": "2026-08-29T08:04:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000016", "company_name": "Beta", "title": "Senior Backend Engineer", "source": {"key": "beta", "kind": "greenhouse", "url": "https://jobs.example.test/beta/16"}, "freshness": {"first_seen_at": "2026-08-29T08:05:00Z", "last_seen_at": "2026-08-29T08:05:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000017", "company_name": "Beta", "title": "Senior Backend Engineer", "source": {"key": "beta", "kind": "greenhouse", "url": "https://jobs.example.test/beta/17"}, "freshness": {"first_seen_at": "2026-08-29T08:06:00Z", "last_seen_at": "2026-08-29T08:06:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000018", "company_name": "Beta", "title": "Senior Backend Engineer", "source": {"key": "beta", "kind": "greenhouse", "url": "https://jobs.example.test/beta/18"}, "freshness": {"first_seen_at": "2026-08-29T08:07:00Z", "last_seen_at": "2026-08-29T08:07:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000019", "company_name": "Gamma", "title": "Senior Backend Engineer", "source": {"key": "gamma", "kind": "greenhouse", "url": "https://jobs.example.test/gamma/19"}, "freshness": {"first_seen_at": "2026-08-29T08:08:00Z", "last_seen_at": "2026-08-29T08:08:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000020", "company_name": "Gamma", "title": "Senior Backend Engineer", "source": {"key": "gamma", "kind": "greenhouse", "url": "https://jobs.example.test/gamma/20"}, "freshness": {"first_seen_at": "2026-08-29T08:09:00Z", "last_seen_at": "2026-08-29T08:09:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000021", "company_name": "Gamma", "title": "Senior Backend Engineer", "source": {"key": "gamma", "kind": "greenhouse", "url": "https://jobs.example.test/gamma/21"}, "freshness": {"first_seen_at": "2026-08-29T08:10:00Z", "last_seen_at": "2026-08-29T08:10:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000022", "company_name": "Gamma", "title": "Senior Backend Engineer", "source": {"key": "gamma", "kind": "greenhouse", "url": "https://jobs.example.test/gamma/22"}, "freshness": {"first_seen_at": "2026-08-29T08:11:00Z", "last_seen_at": "2026-08-29T08:11:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000023", "company_name": "Delta", "title": "Senior Backend Engineer", "source": {"key": "delta", "kind": "greenhouse", "url": "https://jobs.example.test/delta/23"}, "freshness": {"first_seen_at": "2026-08-29T08:12:00Z", "last_seen_at": "2026-08-29T08:12:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000024", "company_name": "Delta", "title": "Senior Backend Engineer", "source": {"key": "delta", "kind": "greenhouse", "url": "https://jobs.example.test/delta/24"}, "freshness": {"first_seen_at": "2026-08-29T08:13:00Z", "last_seen_at": "2026-08-29T08:13:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000025", "company_name": "Delta", "title": "Senior Backend Engineer", "source": {"key": "delta", "kind": "greenhouse", "url": "https://jobs.example.test/delta/25"}, "freshness": {"first_seen_at": "2026-08-29T08:14:00Z", "last_seen_at": "2026-08-29T08:14:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000026", "company_name": "Delta", "title": "Senior Backend Engineer", "source": {"key": "delta", "kind": "greenhouse", "url": "https://jobs.example.test/delta/26"}, "freshness": {"first_seen_at": "2026-08-29T08:15:00Z", "last_seen_at": "2026-08-29T08:15:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000027", "company_name": "Epsilon", "title": "Senior Backend Engineer", "source": {"key": "epsilon", "kind": "greenhouse", "url": "https://jobs.example.test/epsilon/27"}, "freshness": {"first_seen_at": "2026-08-29T08:16:00Z", "last_seen_at": "2026-08-29T08:16:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000028", "company_name": "Epsilon", "title": "Senior Backend Engineer", "source": {"key": "epsilon", "kind": "greenhouse", "url": "https://jobs.example.test/epsilon/28"}, "freshness": {"first_seen_at": "2026-08-29T08:17:00Z", "last_seen_at": "2026-08-29T08:17:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000029", "company_name": "Epsilon", "title": "Senior Backend Engineer", "source": {"key": "epsilon", "kind": "greenhouse", "url": "https://jobs.example.test/epsilon/29"}, "freshness": {"first_seen_at": "2026-08-29T08:18:00Z", "last_seen_at": "2026-08-29T08:18:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"},
+      {"job_id": "00000000-0000-0000-0000-000000000030", "company_name": "Epsilon", "title": "Senior Backend Engineer", "source": {"key": "epsilon", "kind": "greenhouse", "url": "https://jobs.example.test/epsilon/30"}, "freshness": {"first_seen_at": "2026-08-29T08:19:00Z", "last_seen_at": "2026-08-29T08:19:00Z"}, "locations": [], "remote_scope": null, "skill_mentions": [], "compensation": [], "status": "active", "role_family": "backend_engineering", "seniority": "senior", "workplace_type": "onsite"}
+    ]
+  },
+  "observations": {
+    "scope": "configured_source_panel",
+    "sample": {
+      "job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"],
+      "job_count": 20,
+      "company_names": ["Alpha", "Beta", "Delta", "Epsilon", "Gamma"],
+      "company_count": 5,
+      "max_company_concentration": {"company_name": "Alpha", "job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014"], "denominator_job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014", "00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018", "00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022", "00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026", "00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"], "job_count": 4, "job_share": 0.2},
+      "source_coverage": {
+        "configured_source_count": 5,
+        "configured_source_keys": ["alpha", "beta", "delta", "epsilon", "gamma"],
+        "matching_source_count": 5,
+        "matching_source_keys": ["alpha", "beta", "delta", "epsilon", "gamma"],
+        "source_share": 1.0,
+        "job_ids_by_source": [
+          {"source_key": "alpha", "job_ids": ["00000000-0000-0000-0000-000000000011", "00000000-0000-0000-0000-000000000012", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014"]},
+          {"source_key": "beta", "job_ids": ["00000000-0000-0000-0000-000000000015", "00000000-0000-0000-0000-000000000016", "00000000-0000-0000-0000-000000000017", "00000000-0000-0000-0000-000000000018"]},
+          {"source_key": "delta", "job_ids": ["00000000-0000-0000-0000-000000000023", "00000000-0000-0000-0000-000000000024", "00000000-0000-0000-0000-000000000025", "00000000-0000-0000-0000-000000000026"]},
+          {"source_key": "epsilon", "job_ids": ["00000000-0000-0000-0000-000000000027", "00000000-0000-0000-0000-000000000028", "00000000-0000-0000-0000-000000000029", "00000000-0000-0000-0000-000000000030"]},
+          {"source_key": "gamma", "job_ids": ["00000000-0000-0000-0000-000000000019", "00000000-0000-0000-0000-000000000020", "00000000-0000-0000-0000-000000000021", "00000000-0000-0000-0000-000000000022"]}
+        ]
+      },
+      "collection_cutoff": "2026-08-29T08:19:00Z",
+      "skill_denominator_job_ids": [],
+      "compensation_job_ids": []
+    },
+    "companies": [], "skills": [], "seniorities": [], "workplace_types": [], "countries": [], "compensation": [],
+    "profile_mentions": {"semantics": "mention_only", "profile_skill_ids": [], "covered_skill_ids": [], "neutral_skill_ids": [], "uncovered_mentions": []}
+  }
+}

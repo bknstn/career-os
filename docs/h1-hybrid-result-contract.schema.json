@@ -1,0 +1,733 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json",
+  "title": "Career OS H1 hybrid result contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "scope",
+    "filters",
+    "profile",
+    "quality",
+    "opportunities",
+    "observations"
+  ],
+  "properties": {
+    "contract_version": {"const": "h1.hybrid-result.v1"},
+    "scope": {"$ref": "#/$defs/scope"},
+    "filters": {"$ref": "#/$defs/filters"},
+    "profile": {"$ref": "#/$defs/profile"},
+    "quality": {"$ref": "#/$defs/quality"},
+    "opportunities": {"$ref": "#/$defs/opportunities"},
+    "observations": {"$ref": "#/$defs/observations"}
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "share": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "target_universe"],
+      "properties": {
+        "kind": {"const": "configured_source_panel"},
+        "name": {"type": "string", "minLength": 1},
+        "target_universe": {"type": "null"}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "claim_policy",
+        "gates",
+        "failed_gates",
+        "evaluation_provenance",
+        "observed_values"
+      ],
+      "properties": {
+        "state": {"enum": ["accepted", "evidence_limited"]},
+        "claim_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opportunities",
+            "panel_observations",
+            "broad_market_claims",
+            "skill_semantics",
+            "fit_probability"
+          ],
+          "properties": {
+            "opportunities": {"const": "available"},
+            "panel_observations": {"enum": ["panel_bounded", "qualified"]},
+            "broad_market_claims": {"const": "disabled"},
+            "skill_semantics": {"const": "mentions_only"},
+            "fit_probability": {"const": "not_provided"}
+          }
+        },
+        "gates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/gate"}
+        },
+        "failed_gates": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "evaluation_provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewed_eligible_jobs",
+            "represented_companies",
+            "max_company_concentration",
+            "demonstrated_eligibility_false_positives",
+            "skill_semantics",
+            "compensation_reconciled"
+          ],
+          "properties": {
+            "reviewed_eligible_jobs": {"$ref": "#/$defs/evaluation"},
+            "represented_companies": {"$ref": "#/$defs/evaluation"},
+            "max_company_concentration": {"$ref": "#/$defs/evaluation"},
+            "demonstrated_eligibility_false_positives": {"$ref": "#/$defs/evaluation"},
+            "skill_semantics": {"$ref": "#/$defs/evaluation"},
+            "compensation_reconciled": {"$ref": "#/$defs/evaluation"}
+          }
+        },
+        "observed_values": {"$ref": "#/$defs/observed_values"}
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "status",
+        "operator",
+        "threshold",
+        "observed",
+        "unit",
+        "evidence_job_ids",
+        "evidence_company_names"
+      ],
+      "properties": {
+        "gate_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["passed", "failed", "not_evaluable"]},
+        "operator": {"type": "string", "minLength": 1},
+        "threshold": {"type": ["number", "string", "boolean", "null"]},
+        "observed": {
+          "type": ["number", "string", "boolean", "null"],
+          "minimum": 0
+        },
+        "unit": {"type": "string", "minLength": 1},
+        "evidence_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "evidence_company_names": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "observed_values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matching_job_count",
+        "company_count",
+        "max_company_concentration",
+        "reviewed_eligible_job_count",
+        "represented_company_count",
+        "demonstrated_eligibility_false_positive_count",
+        "skill_semantics",
+        "compensation_reconciled",
+        "source_coverage",
+        "compensation_coverage",
+        "collection_cutoff"
+      ],
+      "properties": {
+        "matching_job_count": {"type": "integer", "minimum": 0},
+        "company_count": {"type": "integer", "minimum": 0},
+        "max_company_concentration": {"$ref": "#/$defs/share"},
+        "reviewed_eligible_job_count": {"type": "integer", "minimum": 0},
+        "represented_company_count": {"type": "integer", "minimum": 0},
+        "demonstrated_eligibility_false_positive_count": {"type": "integer", "minimum": 0},
+        "skill_semantics": {"const": "mentions_only"},
+        "compensation_reconciled": {"type": "boolean"},
+        "source_coverage": {"$ref": "#/$defs/share"},
+        "compensation_coverage": {"$ref": "#/$defs/share"},
+        "collection_cutoff": {
+          "anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis", "provenance"],
+      "properties": {
+        "basis": {"enum": ["computed", "contract_invariant", "manual_review"]},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "reviewed_job_ids"],
+      "properties": {
+        "kind": {"enum": ["result_derived", "contract_rule", "review_artifact"]},
+        "ref": {"type": "string", "minLength": 1},
+        "reviewed_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "title_include",
+        "title_exclude",
+        "role_families",
+        "seniorities",
+        "country_codes",
+        "include_remote",
+        "remote_scopes",
+        "company_names",
+        "active_only"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "title_include": {"$ref": "#/$defs/nonblank_string_array"},
+        "title_exclude": {"$ref": "#/$defs/nonblank_string_array"},
+        "role_families": {"$ref": "#/$defs/role_family_array"},
+        "seniorities": {"$ref": "#/$defs/seniority_array"},
+        "country_codes": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Z]{2}$"},
+          "uniqueItems": true
+        },
+        "include_remote": {"type": "boolean"},
+        "remote_scopes": {"$ref": "#/$defs/nonblank_string_array"},
+        "company_names": {"$ref": "#/$defs/nonblank_string_array"},
+        "active_only": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"include_remote": {"const": true}}},
+          "then": {
+            "properties": {
+              "country_codes": {"minItems": 1},
+              "remote_scopes": {"minItems": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"include_remote": {"const": false}}},
+          "then": {"properties": {"remote_scopes": {"maxItems": 0}}}
+        }
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "target_role_families", "seniority", "skills"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "target_role_families": {"$ref": "#/$defs/role_family_array_min_one"},
+        "seniority": {"$ref": "#/$defs/seniority"},
+        "skills": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/profile_skill"}
+        }
+      }
+    },
+    "profile_skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "years"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "level": {"enum": ["learning", "working", "strong", "expert"]},
+        "years": {
+          "anyOf": [
+            {"type": "number", "minimum": 0},
+            {"type": "string", "pattern": "^(0|[0-9]+(\\.[0-9]+)?)$"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "nonblank_string_array": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "role_family": {
+      "enum": [
+        "engineering_management", "product_management", "data_engineering",
+        "data_science", "platform_engineering", "devops_engineering",
+        "backend_engineering", "frontend_engineering", "fullstack_engineering",
+        "cloud_engineering"
+      ]
+    },
+    "role_family_array": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/role_family"},
+      "uniqueItems": true
+    },
+    "role_family_array_min_one": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/role_family"},
+      "uniqueItems": true
+    },
+    "seniority": {
+      "enum": ["intern", "junior", "mid", "senior", "lead", "staff", "principal", "manager", "director", "executive"]
+    },
+    "seniority_array": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/seniority"},
+      "uniqueItems": true
+    },
+    "opportunities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_ids", "count", "company_count", "items"],
+      "properties": {
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "count": {"type": "integer", "minimum": 0},
+        "company_count": {"type": "integer", "minimum": 0},
+        "items": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/opportunity"}
+        }
+      }
+    },
+    "opportunity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "company_name",
+        "title",
+        "source",
+        "freshness",
+        "locations",
+        "remote_scope",
+        "skill_mentions",
+        "compensation",
+        "status",
+        "role_family",
+        "seniority",
+        "workplace_type"
+      ],
+      "properties": {
+        "job_id": {"$ref": "#/$defs/uuid"},
+        "company_name": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "source": {"$ref": "#/$defs/source"},
+        "freshness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first_seen_at", "last_seen_at"],
+          "properties": {
+            "first_seen_at": {"$ref": "#/$defs/timestamp"},
+            "last_seen_at": {"$ref": "#/$defs/timestamp"}
+          }
+        },
+        "locations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/location"}
+        },
+        "remote_scope": {"type": ["string", "null"]},
+        "skill_mentions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/skill_mention"}
+        },
+        "compensation": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/job_compensation"}
+        },
+        "status": {"enum": ["active", "inactive"]},
+        "role_family": {"type": ["string", "null"]},
+        "seniority": {"type": ["string", "null"]},
+        "workplace_type": {"type": ["string", "null"]}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "kind", "url"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "url": {"type": ["string", "null"]}
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "city", "region", "country_code", "is_primary", "confidence"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 0},
+        "city": {"type": ["string", "null"]},
+        "region": {"type": ["string", "null"]},
+        "country_code": {"type": ["string", "null"]},
+        "is_primary": {"type": "boolean"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "skill_mention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "skill_id",
+        "matched_text",
+        "section",
+        "method",
+        "confidence",
+        "taxonomy_version"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/uuid"},
+        "skill_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "matched_text": {"type": "string", "minLength": 1},
+        "section": {
+          "enum": ["title", "requirements", "responsibilities", "other", null]
+        },
+        "method": {"enum": ["alias", "exact", "pattern", "manual", "llm"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "taxonomy_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "job_compensation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_id",
+        "component_type",
+        "min_value",
+        "max_value",
+        "currency",
+        "interval",
+        "location_tier",
+        "source_method"
+      ],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/uuid"},
+        "component_type": {"type": "string", "minLength": 1},
+        "min_value": {"type": ["number", "null"], "minimum": 0},
+        "max_value": {"type": ["number", "null"], "minimum": 0},
+        "currency": {"type": ["string", "null"], "pattern": "^[A-Z]{3}$"},
+        "interval": {"type": ["string", "null"], "minLength": 1},
+        "location_tier": {"type": ["string", "null"]},
+        "source_method": {"type": "string", "minLength": 1}
+      }
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "sample",
+        "companies",
+        "skills",
+        "seniorities",
+        "workplace_types",
+        "countries",
+        "compensation",
+        "profile_mentions"
+      ],
+      "properties": {
+        "scope": {"const": "configured_source_panel"},
+        "sample": {"$ref": "#/$defs/sample"},
+        "companies": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bucket"}
+        },
+        "skills": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/skill"}
+        },
+        "seniorities": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bucket"}
+        },
+        "workplace_types": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bucket"}
+        },
+        "countries": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bucket"}
+        },
+        "compensation": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/compensation"}
+        },
+        "profile_mentions": {"$ref": "#/$defs/profile_mentions"}
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_ids",
+        "job_count",
+        "company_names",
+        "company_count",
+        "max_company_concentration",
+        "source_coverage",
+        "collection_cutoff",
+        "skill_denominator_job_ids",
+        "compensation_job_ids"
+      ],
+      "properties": {
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "job_count": {"type": "integer", "minimum": 0},
+        "company_names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "company_count": {"type": "integer", "minimum": 0},
+        "max_company_concentration": {
+          "anyOf": [{"$ref": "#/$defs/concentration"}, {"type": "null"}]
+        },
+        "source_coverage": {"$ref": "#/$defs/source_coverage"},
+        "collection_cutoff": {
+          "anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]
+        },
+        "skill_denominator_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "compensation_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "concentration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["company_name", "job_ids", "denominator_job_ids", "job_count", "job_share"],
+      "properties": {
+        "company_name": {"type": "string", "minLength": 1},
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "denominator_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "job_count": {"type": "integer", "minimum": 0},
+        "job_share": {"$ref": "#/$defs/share"}
+      }
+    },
+    "source_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "configured_source_count",
+        "configured_source_keys",
+        "matching_source_count",
+        "matching_source_keys",
+        "source_share",
+        "job_ids_by_source"
+      ],
+      "properties": {
+        "configured_source_count": {"type": "integer", "minimum": 0},
+        "configured_source_keys": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "matching_source_count": {"type": "integer", "minimum": 0},
+        "matching_source_keys": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "source_share": {"$ref": "#/$defs/share"},
+        "job_ids_by_source": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source_key", "job_ids"],
+            "properties": {
+              "source_key": {"type": "string", "minLength": 1},
+              "job_ids": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/uuid"},
+                "uniqueItems": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "job_ids", "denominator_job_ids", "job_count", "job_share"],
+      "properties": {
+        "value": {"type": "string", "minLength": 1},
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "denominator_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "job_count": {"type": "integer", "minimum": 0},
+        "job_share": {"$ref": "#/$defs/share"}
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skill_id",
+        "label",
+        "semantics",
+        "job_ids",
+        "job_count",
+        "job_share",
+        "denominator_job_ids",
+        "company_names",
+        "company_count",
+        "company_share",
+        "denominator_company_names"
+      ],
+      "properties": {
+        "skill_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "label": {"type": "string", "minLength": 1},
+        "semantics": {"const": "mention"},
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "job_count": {"type": "integer", "minimum": 0},
+        "job_share": {"$ref": "#/$defs/share"},
+        "denominator_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "company_names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "company_count": {"type": "integer", "minimum": 0},
+        "company_share": {"$ref": "#/$defs/share"},
+        "denominator_company_names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "compensation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_type",
+        "currency",
+        "interval",
+        "location_tier",
+        "component_ids",
+        "job_ids",
+        "denominator_job_ids",
+        "component_count",
+        "job_count",
+        "job_share",
+        "min_value",
+        "max_value"
+      ],
+      "properties": {
+        "component_type": {"type": "string", "minLength": 1},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "interval": {"type": "string", "minLength": 1},
+        "location_tier": {"type": ["string", "null"]},
+        "component_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "denominator_job_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uuid"},
+          "uniqueItems": true
+        },
+        "component_count": {"type": "integer", "minimum": 1},
+        "job_count": {"type": "integer", "minimum": 1},
+        "job_share": {"$ref": "#/$defs/share"},
+        "min_value": {"type": ["number", "null"]},
+        "max_value": {"type": ["number", "null"]}
+      }
+    },
+    "profile_mentions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantics",
+        "profile_skill_ids",
+        "covered_skill_ids",
+        "neutral_skill_ids",
+        "uncovered_mentions"
+      ],
+      "properties": {
+        "semantics": {"const": "mention_only"},
+        "profile_skill_ids": {"type": "array", "items": {"type": "string"}},
+        "covered_skill_ids": {"type": "array", "items": {"type": "string"}},
+        "neutral_skill_ids": {"type": "array", "items": {"type": "string"}},
+        "uncovered_mentions": {"type": "array", "items": {"$ref": "#/$defs/skill"}}
+      }
+    }
+  }
+}

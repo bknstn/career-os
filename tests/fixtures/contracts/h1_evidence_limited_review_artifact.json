@@ -1,0 +1,10 @@
+{
+  "artifact_version": "h1.fixture-review.v1",
+  "result_fixture": "h1_evidence_limited_result.json",
+  "reviewed_job_ids": [
+    "00000000-0000-0000-0000-000000000001",
+    "00000000-0000-0000-0000-000000000002",
+    "00000000-0000-0000-0000-000000000003"
+  ],
+  "false_positive_job_ids": []
+}
