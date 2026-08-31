@@ -1,6 +1,16 @@
 """PostgreSQL persistence metadata for Career OS."""
 
 from career_os.persistence.models import Base
+from career_os.persistence.report_queries import (
+    ReportCompensationEvidence,
+    ReportEvidenceConsistencyError,
+    ReportEvidenceRepository,
+    ReportEvidenceSnapshot,
+    ReportJobEvidence,
+    ReportLocationEvidence,
+    ReportSkillEvidence,
+    ReportSourceEvidence,
+)
 from career_os.persistence.repositories import (
     CanonicalJobRepository,
     CanonicalVersionConflictError,
@@ -34,6 +44,14 @@ __all__ = [
     "JobUpsertResult",
     "LifecycleReconciliationConflictError",
     "PersistenceError",
+    "ReportCompensationEvidence",
+    "ReportEvidenceConsistencyError",
+    "ReportEvidenceRepository",
+    "ReportEvidenceSnapshot",
+    "ReportJobEvidence",
+    "ReportLocationEvidence",
+    "ReportSkillEvidence",
+    "ReportSourceEvidence",
     "SkillEvidenceReplaceResult",
     "SourceConfigurationConflictError",
     "SourceConfigurationRepository",

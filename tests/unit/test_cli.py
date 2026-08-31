@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from typer.testing import CliRunner
 from career_os import cli
 from career_os.application.market import MarketDataConsistencyError
 from career_os.application.operations import SourceOperationalStatus
-from career_os.cli import _job_payload, _run_payload, _selected_sources, app
+from career_os.cli import _job_payload, _load_quality_review, _run_payload, _selected_sources, app
 from career_os.config.sources import (
     AshbySourceConfig,
     ConfigurationError,
@@ -28,6 +29,34 @@ from career_os.config.sources import (
 )
 from career_os.db import DatabaseConfigurationError
 from career_os.persistence import PersistenceError
+
+
+def test_quality_review_loader_is_strict_and_preserves_review_evidence(tmp_path: Path) -> None:
+    first = uuid4()
+    second = uuid4()
+    reviewed = tuple(sorted((first, second)))
+    artifact = tmp_path / "review.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "ref": "docs/review.md#rows",
+                "reviewed_job_ids": [str(value) for value in reviewed],
+                "false_positive_job_ids": [str(reviewed[0])],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = _load_quality_review(artifact)
+
+    assert loaded is not None
+    assert loaded.ref == "docs/review.md#rows"
+    assert loaded.reviewed_job_ids == reviewed
+    assert loaded.false_positive_job_ids == (reviewed[0],)
+
+    artifact.write_text('{"ref":"review","unknown":true}', encoding="utf-8")
+    with pytest.raises(ConfigurationError, match="unknown keys"):
+        _load_quality_review(artifact)
 
 
 def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> None:

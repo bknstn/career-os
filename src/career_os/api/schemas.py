@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from career_os.config.markets import MarketFilters
 from career_os.config.profiles import Profile
@@ -158,18 +158,218 @@ class JobDetailResponse(JobSummaryResponse):
 class MarketReportRequest(ApiModel):
     market: MarketFilters
     profile: Profile
+    quality_review: QualityReviewRequest | None = None
 
 
-class BucketResponse(ApiModel):
+class QualityReviewRequest(ApiModel):
+    ref: str = Field(min_length=1)
+    reviewed_job_ids: tuple[UUID, ...] = ()
+    false_positive_job_ids: tuple[UUID, ...] = ()
+
+    @field_validator("ref")
+    @classmethod
+    def nonblank_ref(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("ref must be non-blank")
+        return value
+
+    @field_validator("reviewed_job_ids", "false_positive_job_ids")
+    @classmethod
+    def sorted_unique_ids(cls, value: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if value != tuple(sorted(set(value))):
+            raise ValueError("review IDs must be unique and sorted")
+        return value
+
+    @model_validator(mode="after")
+    def validate_subset(self) -> QualityReviewRequest:
+        if not set(self.false_positive_job_ids) <= set(self.reviewed_job_ids):
+            raise ValueError("false_positive_job_ids must be a subset of reviewed_job_ids")
+        return self
+
+
+MarketReportRequest.model_rebuild()
+
+
+class HybridScopeResponse(ApiModel):
+    kind: Literal["configured_source_panel"]
+    name: str
+    target_universe: None = None
+
+
+class HybridClaimPolicyResponse(ApiModel):
+    opportunities: Literal["available"]
+    panel_observations: Literal["panel_bounded", "qualified"]
+    broad_market_claims: Literal["disabled"]
+    skill_semantics: Literal["mentions_only"]
+    fit_probability: Literal["not_provided"]
+
+
+class HybridProvenanceResponse(ApiModel):
+    kind: Literal["result_derived", "contract_rule", "review_artifact"]
+    ref: str
+    reviewed_job_ids: tuple[UUID, ...]
+
+
+class HybridEvaluationResponse(ApiModel):
+    basis: Literal["computed", "contract_invariant", "manual_review"]
+    provenance: HybridProvenanceResponse
+
+
+class HybridGateResponse(ApiModel):
+    gate_id: str
+    status: Literal["passed", "failed", "not_evaluable"]
+    operator: str
+    threshold: int | float | str | bool | None
+    observed: int | float | str | bool | None
+    unit: str
+    evidence_job_ids: tuple[UUID, ...]
+    evidence_company_names: tuple[str, ...]
+
+
+class HybridObservedValuesResponse(ApiModel):
+    matching_job_count: int
+    company_count: int
+    max_company_concentration: float | None
+    reviewed_eligible_job_count: int
+    represented_company_count: int
+    demonstrated_eligibility_false_positive_count: int
+    skill_semantics: Literal["mentions_only"]
+    compensation_reconciled: bool
+    source_coverage: float | None
+    compensation_coverage: float | None
+    collection_cutoff: datetime | None
+
+
+class HybridQualityResponse(ApiModel):
+    state: Literal["accepted", "evidence_limited"]
+    claim_policy: HybridClaimPolicyResponse
+    gates: tuple[HybridGateResponse, ...]
+    failed_gates: tuple[str, ...]
+    evaluation_provenance: dict[str, HybridEvaluationResponse]
+    observed_values: HybridObservedValuesResponse
+
+
+class HybridSourceResponse(ApiModel):
+    key: str
+    kind: str
+    url: str | None
+
+
+class HybridFreshnessResponse(ApiModel):
+    first_seen_at: datetime
+    last_seen_at: datetime
+
+
+class HybridLocationResponse(ApiModel):
+    ordinal: int
+    city: str | None
+    region: str | None
+    country_code: str | None
+    is_primary: bool
+    confidence: float
+
+
+class HybridSkillMentionResponse(ApiModel):
+    id: UUID
+    skill_id: str
+    matched_text: str
+    section: Literal["title", "requirements", "responsibilities", "other"] | None
+    method: Literal["alias", "exact", "pattern", "manual", "llm"]
+    confidence: float
+    taxonomy_version: str
+
+
+class HybridJobCompensationResponse(ApiModel):
+    component_id: UUID
+    component_type: str
+    min_value: float | None
+    max_value: float | None
+    currency: str | None
+    interval: str | None
+    location_tier: str | None
+    source_method: str
+
+
+class HybridOpportunityResponse(ApiModel):
+    job_id: UUID
+    company_name: str
+    title: str
+    source: HybridSourceResponse
+    freshness: HybridFreshnessResponse
+    locations: tuple[HybridLocationResponse, ...]
+    remote_scope: str | None
+    skill_mentions: tuple[HybridSkillMentionResponse, ...]
+    compensation: tuple[HybridJobCompensationResponse, ...]
+    status: Literal["active", "inactive"]
+    role_family: str | None
+    seniority: str | None
+    workplace_type: str | None
+
+
+class HybridOpportunitiesResponse(ApiModel):
+    job_ids: tuple[UUID, ...]
+    count: int
+    company_count: int
+    items: tuple[HybridOpportunityResponse, ...]
+
+
+class HybridConcentrationResponse(ApiModel):
+    company_name: str
+    job_ids: tuple[UUID, ...]
+    denominator_job_ids: tuple[UUID, ...]
+    job_count: int
+    job_share: float | None
+
+
+class HybridSourceJobsResponse(ApiModel):
+    source_key: str
+    job_ids: tuple[UUID, ...]
+
+
+class HybridSourceCoverageResponse(ApiModel):
+    configured_source_count: int
+    configured_source_keys: tuple[str, ...]
+    matching_source_count: int
+    matching_source_keys: tuple[str, ...]
+    source_share: float | None
+    job_ids_by_source: tuple[HybridSourceJobsResponse, ...]
+
+
+class HybridSampleResponse(ApiModel):
+    job_ids: tuple[UUID, ...]
+    job_count: int
+    company_names: tuple[str, ...]
+    company_count: int
+    max_company_concentration: HybridConcentrationResponse | None
+    source_coverage: HybridSourceCoverageResponse
+    collection_cutoff: datetime | None
+    skill_denominator_job_ids: tuple[UUID, ...]
+    compensation_job_ids: tuple[UUID, ...]
+
+
+class HybridBucketResponse(ApiModel):
     value: str
     job_ids: tuple[UUID, ...]
     denominator_job_ids: tuple[UUID, ...]
     job_count: int
-    denominator: int
-    job_share: Decimal
+    job_share: float | None
 
 
-class CompensationAggregateResponse(ApiModel):
+class HybridSkillResponse(ApiModel):
+    skill_id: str
+    label: str
+    semantics: Literal["mention"]
+    job_ids: tuple[UUID, ...]
+    job_count: int
+    job_share: float | None
+    denominator_job_ids: tuple[UUID, ...]
+    company_names: tuple[str, ...]
+    company_count: int
+    company_share: float | None
+    denominator_company_names: tuple[str, ...]
+
+
+class HybridCompensationResponse(ApiModel):
     component_type: str
     currency: str
     interval: str
@@ -179,86 +379,39 @@ class CompensationAggregateResponse(ApiModel):
     denominator_job_ids: tuple[UUID, ...]
     component_count: int
     job_count: int
-    denominator: int
-    job_share: Decimal
-    min_value: Decimal | None
-    max_value: Decimal | None
+    job_share: float | None
+    min_value: float | None
+    max_value: float | None
 
 
-class MarketAggregatesResponse(ApiModel):
-    market_name: str
-    matching_job_ids: tuple[UUID, ...]
-    skill_denominator_job_ids: tuple[UUID, ...]
-    compensation_job_ids: tuple[UUID, ...]
-    matching_job_count: int
-    company_count: int
-    compensation_coverage: Decimal
-    collection_cutoff: datetime | None
-    taxonomy_version: str
-    normalizer_version: str
-    companies: tuple[BucketResponse, ...]
-    skills: tuple[BucketResponse, ...]
-    seniorities: tuple[BucketResponse, ...]
-    workplace_types: tuple[BucketResponse, ...]
-    countries: tuple[BucketResponse, ...]
-    compensation: tuple[CompensationAggregateResponse, ...]
-
-
-class GapThresholdsResponse(ApiModel):
-    min_job_count: int
-    min_job_share: Decimal
-
-
-class SkillGapResponse(ApiModel):
-    skill_id: str
-    demand: BucketResponse
-    rank_score: float
-
-
-class JobSkillCoverageResponse(ApiModel):
-    job_id: UUID
-    in_skill_denominator: bool
-    mentioned_skill_ids: tuple[str, ...]
+class HybridProfileMentionsResponse(ApiModel):
+    semantics: Literal["mention_only"]
+    profile_skill_ids: tuple[str, ...]
     covered_skill_ids: tuple[str, ...]
-    gap_skill_ids: tuple[str, ...]
-    mentioned_skill_count: int
-    covered_skill_count: int
-    skill_coverage: Decimal | None
+    neutral_skill_ids: tuple[str, ...]
+    uncovered_mentions: tuple[HybridSkillResponse, ...]
 
 
-class ProfileComparisonResponse(ApiModel):
-    profile_name: str
-    market_name: str
-    matching_job_ids: tuple[UUID, ...]
-    skill_denominator_job_ids: tuple[UUID, ...]
-    demanded_skills: tuple[BucketResponse, ...]
-    covered_skills: tuple[BucketResponse, ...]
-    neutral_profile_skill_ids: tuple[str, ...]
-    gaps: tuple[SkillGapResponse, ...]
-    gap_thresholds: GapThresholdsResponse
-    job_skill_coverage: tuple[JobSkillCoverageResponse, ...]
-    representative_jobs: tuple[JobSkillCoverageResponse, ...]
-
-
-class ReportJobEvidenceResponse(ApiModel):
-    job_id: UUID
-    company_name: str
-    title: str
-    source_url: str | None
-
-
-class SkillLabelResponse(ApiModel):
-    skill_id: str
-    label: str
+class HybridObservationsResponse(ApiModel):
+    scope: Literal["configured_source_panel"]
+    sample: HybridSampleResponse
+    companies: tuple[HybridBucketResponse, ...]
+    skills: tuple[HybridSkillResponse, ...]
+    seniorities: tuple[HybridBucketResponse, ...]
+    workplace_types: tuple[HybridBucketResponse, ...]
+    countries: tuple[HybridBucketResponse, ...]
+    compensation: tuple[HybridCompensationResponse, ...]
+    profile_mentions: HybridProfileMentionsResponse
 
 
 class MarketReportResponse(ApiModel):
+    contract_version: Literal["h1.hybrid-result.v1"]
+    scope: HybridScopeResponse
     filters: MarketFilters
     profile: Profile
-    market: MarketAggregatesResponse
-    comparison: ProfileComparisonResponse
-    jobs: tuple[ReportJobEvidenceResponse, ...]
-    skill_labels: tuple[SkillLabelResponse, ...]
+    quality: HybridQualityResponse
+    opportunities: HybridOpportunitiesResponse
+    observations: HybridObservationsResponse
 
 
 class JobFilters(ApiModel):

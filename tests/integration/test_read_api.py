@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -12,6 +13,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -181,6 +183,13 @@ def test_real_read_api_filters_cursor_detail_readiness_and_report_reconciliation
     response = client.post("/v1/market-reports", json=report_request)
     assert response.status_code == 200, response.text
     report = response.json()
+    schema = json.loads(
+        (PROJECT_ROOT / "docs/h1-hybrid-result-contract.schema.json").read_text(encoding="utf-8")
+    )
+    schema_errors = list(
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(report)
+    )
+    assert schema_errors == [], [(list(error.path), error.message) for error in schema_errors]
     expected_ids = [str(job_id) for job_id in JOB_IDS]
     assert report["filters"] == {
         **report_request["market"],
@@ -195,39 +204,51 @@ def test_real_read_api_filters_cursor_detail_readiness_and_report_reconciliation
             {"id": "terraform", "level": "working", "years": None},
         ],
     }
-    assert report["market"]["matching_job_ids"] == expected_ids
-    assert report["market"]["matching_job_count"] == 6
-    assert report["market"]["skill_denominator_job_ids"] == expected_ids
-    assert len(report["market"]["skill_denominator_job_ids"]) == 6
-    assert report["market"]["compensation_job_ids"] == [
+    assert report["contract_version"] == "h1.hybrid-result.v1"
+    assert report["scope"] == {
+        "kind": "configured_source_panel",
+        "name": report_request["market"]["name"],
+        "target_universe": None,
+    }
+    assert report["quality"]["state"] == "evidence_limited"
+    assert report["quality"]["claim_policy"] == {
+        "opportunities": "available",
+        "panel_observations": "qualified",
+        "broad_market_claims": "disabled",
+        "skill_semantics": "mentions_only",
+        "fit_probability": "not_provided",
+    }
+    assert report["opportunities"]["job_ids"] == expected_ids
+    assert report["opportunities"]["count"] == 6
+    assert [item["job_id"] for item in report["opportunities"]["items"]] == expected_ids
+    assert [item["source"]["url"] for item in report["opportunities"]["items"]] == [
+        urls[job_id] for job_id in JOB_IDS
+    ]
+    sample = report["observations"]["sample"]
+    assert sample["job_ids"] == expected_ids
+    assert sample["job_count"] == 6
+    assert sample["skill_denominator_job_ids"] == expected_ids
+    assert sample["compensation_job_ids"] == [
         str(JOB_IDS[0]),
         str(JOB_IDS[1]),
         str(JOB_IDS[3]),
     ]
-    assert [item["job_id"] for item in report["jobs"]] == expected_ids
-    assert [item["source_url"] for item in report["jobs"]] == [urls[job_id] for job_id in JOB_IDS]
-    compensation = report["market"]["compensation"]
+    compensation = report["observations"]["compensation"]
     assert {component for group in compensation for component in group["component_ids"]} == {
         str(UUID(int=value)) for value in range(2001, 2005)
     }
     assert all(group["denominator_job_ids"] == expected_ids for group in compensation)
     assert all(set(group["job_ids"]) <= set(expected_ids) for group in compensation)
-    assert report["comparison"]["matching_job_ids"] == expected_ids
-    assert report["comparison"]["skill_denominator_job_ids"] == expected_ids
-    assert [item["value"] for item in report["comparison"]["covered_skills"]] == ["python"]
-    kafka_gap = report["comparison"]["gaps"][0]
-    assert kafka_gap["skill_id"] == "kafka"
-    assert kafka_gap["demand"]["job_count"] == 5
-    assert kafka_gap["demand"]["denominator"] == 6
-    assert kafka_gap["rank_score"] > 0
-    coverage = report["comparison"]["job_skill_coverage"]
-    assert [item["job_id"] for item in coverage] == expected_ids
-    assert all(
-        set(item["covered_skill_ids"]) <= set(item["mentioned_skill_ids"]) for item in coverage
-    )
-    assert {item["job_id"] for item in report["comparison"]["representative_jobs"]} <= set(
-        expected_ids
-    )
+    assert [item["skill_id"] for item in report["observations"]["skills"]] == [
+        "kafka",
+        "postgresql",
+        "python",
+        "redis",
+    ]
+    profile_mentions = report["observations"]["profile_mentions"]
+    assert profile_mentions["covered_skill_ids"] == ["python"]
+    assert profile_mentions["neutral_skill_ids"] == ["terraform"]
+    assert all("rank_score" not in str(item) for item in report["observations"]["skills"])
 
 
 def _return_database_to_empty(engine: Engine, alembic_config: Config, upgraded: bool) -> None:

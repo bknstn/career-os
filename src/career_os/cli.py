@@ -66,6 +66,7 @@ from career_os.db import (
     session_scope,
 )
 from career_os.domain import SourceAdapter
+from career_os.domain.hybrid_results import QualityReviewInput
 from career_os.logging import configure_logging, safe_exception
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
 from career_os.normalization.skills import SkillExtractor
@@ -125,6 +126,13 @@ _REPORT_MARKET_OPTION = typer.Option(..., "--market", exists=False, dir_okay=Fal
 _REPORT_PROFILE_OPTION = typer.Option(..., "--profile", exists=False, dir_okay=False)
 _REPORT_FORMAT_OPTION = typer.Option(ReportFormat.MARKDOWN, "--format")
 _REPORT_OUTPUT_OPTION = typer.Option(..., "--output", exists=False, dir_okay=False)
+_REPORT_QUALITY_REVIEW_OPTION = typer.Option(
+    None,
+    "--quality-review",
+    exists=False,
+    dir_okay=False,
+    help="Optional strict JSON review artifact for H1 quality gates.",
+)
 
 
 def adapter_registry(*, enable_workable_public: bool = False) -> AdapterRegistry:
@@ -210,6 +218,33 @@ def _json_default(value: object) -> str:
     if isinstance(value, UUID):
         return str(value)
     raise TypeError(f"cannot serialize {type(value).__name__}")
+
+
+def _load_quality_review(path: Path | None) -> QualityReviewInput | None:
+    """Load the optional strict review document without persisting it."""
+    if path is None:
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise ConfigurationError(f"Quality review file does not exist: {path}") from error
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ConfigurationError(f"Quality review file is not valid JSON: {path}") from error
+    if not isinstance(payload, dict):
+        raise ConfigurationError("Quality review must contain a JSON object")
+    allowed = {"ref", "reviewed_job_ids", "false_positive_job_ids"}
+    if set(payload) - allowed:
+        raise ConfigurationError("Quality review contains unknown keys")
+    try:
+        reviewed = tuple(UUID(value) for value in payload.get("reviewed_job_ids", ()))
+        false_positive = tuple(UUID(value) for value in payload.get("false_positive_job_ids", ()))
+        return QualityReviewInput(
+            ref=payload.get("ref", ""),
+            reviewed_job_ids=reviewed,
+            false_positive_job_ids=false_positive,
+        )
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError(f"Invalid quality review: {error}") from error
 
 
 def _selected_sources(
@@ -356,20 +391,28 @@ def market_report(
     output_format: ReportFormat = _REPORT_FORMAT_OPTION,
     output: Path = _REPORT_OUTPUT_OPTION,
     taxonomy: Path = _ENRICH_TAXONOMY_OPTION,
+    quality_review: Path | None = _REPORT_QUALITY_REVIEW_OPTION,
 ) -> None:
     """Write one reconciled market/profile report from local config files."""
     try:
         filters = load_market_filters(market)
         skill_taxonomy = load_skill_taxonomy(taxonomy)
         loaded_profile = load_profile(profile, taxonomy=skill_taxonomy)
+        review = _load_quality_review(quality_review)
         session_factory = _database_session_factory(load_settings())
         with session_factory() as session:
             session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
-            report = MarketReportService(
+            service = MarketReportService(
                 session=session,
                 taxonomy=skill_taxonomy,
                 normalizer_version=JOB_NORMALIZER_VERSION,
-            ).calculate(filters=filters, profile=loaded_profile)
+            )
+            if review is None:
+                report = service.calculate(filters=filters, profile=loaded_profile)
+            else:
+                report = service.calculate(
+                    filters=filters, profile=loaded_profile, quality_review=review
+                )
         if output_format is not ReportFormat.MARKDOWN:  # pragma: no cover - enum is exhaustive.
             raise ConfigurationError(f"unsupported report format: {output_format}")
         rendered = render_markdown_report(report)

@@ -124,10 +124,17 @@ def test_real_cli_report_matches_snapshot_and_reconciles_ids_and_urls(
 
     assert result.exit_code == 0, result.output
     rendered = output.read_text(encoding="utf-8")
-    expected = (PROJECT_ROOT / "tests/fixtures/reports/demo_market_profile.md").read_text(
-        encoding="utf-8"
+    assert rendered.startswith("# Market Explorer result: senior-backend-poland-eu\n")
+    assert "- Contract: `h1.hybrid-result.v1`" in rendered
+    assert "- Opportunities: **available** (6 jobs)" in rendered
+    assert "## Concrete opportunities" in rendered
+    assert "## Panel-bounded observations (configured source panel)" in rendered
+    assert rendered.index("## Concrete opportunities") < rendered.index(
+        "## Panel-bounded observations (configured source panel)"
     )
-    assert rendered == expected
+    assert "## Demand" not in rendered
+    assert "rank_score" not in rendered
+    assert "Ranked uncovered mentions" not in rendered
     assert set(stored) == set(JOB_IDS)
     for job_id, source_url in stored.items():
         assert str(job_id) in rendered

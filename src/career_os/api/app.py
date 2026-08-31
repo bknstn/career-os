@@ -20,30 +20,21 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
 from career_os.api.schemas import (
-    BucketResponse,
-    CompensationAggregateResponse,
     ErrorResponse,
-    GapThresholdsResponse,
     JobCompensationResponse,
     JobDetailResponse,
     JobFilters,
     JobLocationResponse,
     JobPageResponse,
-    JobSkillCoverageResponse,
     JobSkillEvidenceResponse,
     JobSummaryResponse,
     JobVersionResponse,
     LiveResponse,
-    MarketAggregatesResponse,
     MarketReportRequest,
     MarketReportResponse,
-    ProfileComparisonResponse,
     ReadyResponse,
-    ReportJobEvidenceResponse,
     RunCountsResponse,
     RunResponse,
-    SkillGapResponse,
-    SkillLabelResponse,
     SourceResponse,
 )
 from career_os.application.market import MarketDataConsistencyError
@@ -51,8 +42,7 @@ from career_os.application.operations import (
     CollectionOperationalPolicy,
     SourceOperationalStatus,
 )
-from career_os.application.profile_fit import ProfileComparisonConsistencyError
-from career_os.application.report import MarketProfileReport, MarketReportService
+from career_os.application.report import MarketReportService
 from career_os.config.profiles import validate_profile_taxonomy
 from career_os.config.skills import SkillTaxonomy, load_skill_taxonomy
 from career_os.config.sources import ConfigurationError
@@ -61,9 +51,8 @@ from career_os.db import (
     create_database_engine,
     create_session_factory,
 )
-from career_os.domain.markets import CompensationAggregate, MarketAggregates, MarketBucket
+from career_os.domain.hybrid_results import HybridResult, QualityReviewInput
 from career_os.domain.normalization import EmploymentType, RoleFamily, Seniority
-from career_os.domain.profiles import JobSkillCoverage, ProfileComparison, SkillGap
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
 from career_os.persistence.api_queries import (
     ApiReadRepository,
@@ -348,13 +337,27 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
                     session=session,
                     taxonomy=taxonomy,
                     normalizer_version=JOB_NORMALIZER_VERSION,
-                ).calculate(filters=request.market, profile=request.profile)
+                ).calculate(
+                    filters=request.market,
+                    profile=request.profile,
+                    quality_review=(
+                        QualityReviewInput(
+                            ref=request.quality_review.ref,
+                            reviewed_job_ids=request.quality_review.reviewed_job_ids,
+                            false_positive_job_ids=request.quality_review.false_positive_job_ids,
+                        )
+                        if request.quality_review is not None
+                        else None
+                    ),
+                )
                 return _report_response(report)
         except (
             MarketDataConsistencyError,
-            ProfileComparisonConsistencyError,
             ReportEvidenceConsistencyError,
+            ValueError,
         ) as error:
+            if isinstance(error, ValueError):
+                raise HTTPException(status_code=422, detail=str(error)) from error
             raise HTTPException(status_code=409, detail=str(error)) from error
 
     return app
@@ -441,109 +444,9 @@ def _job_detail(item: JobDetail) -> JobDetailResponse:
     )
 
 
-def _bucket(item: MarketBucket) -> BucketResponse:
-    return BucketResponse(
-        value=item.value,
-        job_ids=item.job_ids,
-        denominator_job_ids=item.denominator_job_ids,
-        job_count=item.job_count,
-        denominator=item.denominator,
-        job_share=item.job_share,
-    )
-
-
-def _compensation(item: CompensationAggregate) -> CompensationAggregateResponse:
-    return CompensationAggregateResponse(
-        component_type=item.component_type,
-        currency=item.currency,
-        interval=item.interval,
-        location_tier=item.location_tier,
-        component_ids=item.component_ids,
-        job_ids=item.job_ids,
-        denominator_job_ids=item.denominator_job_ids,
-        component_count=item.component_count,
-        job_count=item.job_count,
-        denominator=item.denominator,
-        job_share=item.job_share,
-        min_value=item.min_value,
-        max_value=item.max_value,
-    )
-
-
-def _market(item: MarketAggregates) -> MarketAggregatesResponse:
-    return MarketAggregatesResponse(
-        market_name=item.market_name,
-        matching_job_ids=item.matching_job_ids,
-        skill_denominator_job_ids=item.skill_denominator_job_ids,
-        compensation_job_ids=item.compensation_job_ids,
-        matching_job_count=item.matching_job_count,
-        company_count=item.company_count,
-        compensation_coverage=item.compensation_coverage,
-        collection_cutoff=item.collection_cutoff,
-        taxonomy_version=item.taxonomy_version,
-        normalizer_version=item.normalizer_version,
-        companies=tuple(map(_bucket, item.companies)),
-        skills=tuple(map(_bucket, item.skills)),
-        seniorities=tuple(map(_bucket, item.seniorities)),
-        workplace_types=tuple(map(_bucket, item.workplace_types)),
-        countries=tuple(map(_bucket, item.countries)),
-        compensation=tuple(map(_compensation, item.compensation)),
-    )
-
-
-def _coverage(item: JobSkillCoverage) -> JobSkillCoverageResponse:
-    return JobSkillCoverageResponse(
-        job_id=item.job_id,
-        in_skill_denominator=item.in_skill_denominator,
-        mentioned_skill_ids=item.mentioned_skill_ids,
-        covered_skill_ids=item.covered_skill_ids,
-        gap_skill_ids=item.gap_skill_ids,
-        mentioned_skill_count=item.denominator,
-        covered_skill_count=item.numerator,
-        skill_coverage=item.skill_coverage,
-    )
-
-
-def _gap(item: SkillGap) -> SkillGapResponse:
-    return SkillGapResponse(
-        skill_id=item.skill_id, demand=_bucket(item.demand), rank_score=item.rank_score
-    )
-
-
-def _comparison(item: ProfileComparison) -> ProfileComparisonResponse:
-    return ProfileComparisonResponse(
-        profile_name=item.profile_name,
-        market_name=item.market_name,
-        matching_job_ids=item.matching_job_ids,
-        skill_denominator_job_ids=item.skill_denominator_job_ids,
-        demanded_skills=tuple(map(_bucket, item.demanded_skills)),
-        covered_skills=tuple(map(_bucket, item.covered_skills)),
-        neutral_profile_skill_ids=item.neutral_profile_skill_ids,
-        gaps=tuple(map(_gap, item.gaps)),
-        gap_thresholds=GapThresholdsResponse(
-            min_job_count=item.gap_thresholds.min_job_count,
-            min_job_share=item.gap_thresholds.min_job_share,
-        ),
-        job_skill_coverage=tuple(map(_coverage, item.job_skill_coverage)),
-        representative_jobs=tuple(map(_coverage, item.representative_jobs)),
-    )
-
-
-def _report_response(report: MarketProfileReport) -> MarketReportResponse:
-    return MarketReportResponse(
-        filters=report.filters,
-        profile=report.profile,
-        market=_market(report.market),
-        comparison=_comparison(report.comparison),
-        jobs=tuple(
-            ReportJobEvidenceResponse.model_validate(item, from_attributes=True)
-            for item in report.jobs
-        ),
-        skill_labels=tuple(
-            SkillLabelResponse(skill_id=skill_id, label=label)
-            for skill_id, label in report.skill_labels
-        ),
-    )
+def _report_response(report: HybridResult) -> MarketReportResponse:
+    """Serialize the canonical H1 result without recomputing any evidence."""
+    return MarketReportResponse.model_validate(report.to_payload())
 
 
 def _prometheus_metrics(statuses: tuple[SourceOperationalStatus, ...]) -> str:
