@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-os.local/schemas/h2-target-universe-result-contract.v1.json",
+  "title": "Career OS H2 Target Universe result contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "scope",
+    "profile",
+    "quality",
+    "opportunities",
+    "observations"
+  ],
+  "properties": {
+    "contract_version": {"const": "h2.target-universe.v1"},
+    "scope": {"$ref": "#/$defs/scope"},
+    "profile": {
+      "$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/profile"
+    },
+    "quality": {"$ref": "#/$defs/quality"},
+    "opportunities": {
+      "$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/opportunities"
+    },
+    "observations": {"$ref": "#/$defs/observations"}
+  },
+  "$defs": {
+    "nonblank": {"type": "string", "minLength": 1},
+    "share": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "source_panel_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_key", "company_name"],
+      "properties": {
+        "source_key": {"$ref": "#/$defs/nonblank"},
+        "company_name": {"$ref": "#/$defs/nonblank"}
+      }
+    },
+    "geography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["country_codes", "include_remote", "remote_scopes"],
+      "properties": {
+        "country_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Z]{2}$"}
+        },
+        "include_remote": {"type": "boolean"},
+        "remote_scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonblank"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"include_remote": {"const": true}}},
+          "then": {"properties": {"remote_scopes": {"minItems": 1}}}
+        },
+        {
+          "if": {"properties": {"include_remote": {"const": false}}},
+          "then": {"properties": {"remote_scopes": {"maxItems": 0}}}
+        }
+      ]
+    },
+    "exclusions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title_contains"],
+      "properties": {
+        "title_contains": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonblank"}
+        }
+      }
+    },
+    "target_universe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "role_families",
+        "seniorities",
+        "source_panel",
+        "geography",
+        "exclusions"
+      ],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonblank"},
+        "role_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/role_family"
+          }
+        },
+        "seniorities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/seniority"
+          }
+        },
+        "source_panel": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/source_panel_item"}
+        },
+        "geography": {"$ref": "#/$defs/geography"},
+        "exclusions": {"$ref": "#/$defs/exclusions"}
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "target_universe"],
+      "properties": {
+        "kind": {"const": "target_universe"},
+        "name": {"$ref": "#/$defs/nonblank"},
+        "target_universe": {"$ref": "#/$defs/target_universe"}
+      }
+    },
+    "claim_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opportunities",
+        "target_universe_observations",
+        "broad_market_claims",
+        "skill_semantics",
+        "fit_probability"
+      ],
+      "properties": {
+        "opportunities": {"const": "available"},
+        "target_universe_observations": {"enum": ["bounded", "qualified"]},
+        "broad_market_claims": {"const": "disabled"},
+        "skill_semantics": {"const": "mentions_only"},
+        "fit_probability": {"const": "not_provided"}
+      }
+    },
+    "h2_gate_ids": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "target_universe_boundary"}}}]},
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "opportunity_evidence_reconciled"}}}]},
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "reviewed_eligible_opportunities"}}}]},
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "demonstrated_eligibility_false_positives"}}}]},
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "skill_semantics"}}}]},
+        {"allOf": [{"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/gate"}, {"properties": {"gate_id": {"const": "compensation_reconciled"}}}]}
+      ],
+      "items": false
+    },
+    "evaluation_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_universe_boundary",
+        "opportunity_evidence_reconciled",
+        "reviewed_eligible_opportunities",
+        "demonstrated_eligibility_false_positives",
+        "skill_semantics",
+        "compensation_reconciled"
+      ],
+      "properties": {
+        "target_universe_boundary": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"},
+        "opportunity_evidence_reconciled": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"},
+        "reviewed_eligible_opportunities": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"},
+        "demonstrated_eligibility_false_positives": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"},
+        "skill_semantics": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"},
+        "compensation_reconciled": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/evaluation"}
+      }
+    },
+    "observed_values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matching_opportunity_count",
+        "source_panel_source_count",
+        "reviewed_eligible_opportunity_count",
+        "demonstrated_eligibility_false_positive_count",
+        "target_universe_boundary_resolved",
+        "opportunity_evidence_reconciled",
+        "skill_semantics",
+        "compensation_reconciled",
+        "source_coverage",
+        "compensation_coverage",
+        "collection_cutoff"
+      ],
+      "properties": {
+        "matching_opportunity_count": {"type": "integer", "minimum": 0},
+        "source_panel_source_count": {"type": "integer", "minimum": 0},
+        "reviewed_eligible_opportunity_count": {"type": "integer", "minimum": 0},
+        "demonstrated_eligibility_false_positive_count": {"type": "integer", "minimum": 0},
+        "target_universe_boundary_resolved": {"const": true},
+        "opportunity_evidence_reconciled": {"const": true},
+        "skill_semantics": {"const": "mentions_only"},
+        "compensation_reconciled": {"const": true},
+        "source_coverage": {"$ref": "#/$defs/share"},
+        "compensation_coverage": {"$ref": "#/$defs/share"},
+        "collection_cutoff": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "claim_policy",
+        "gates",
+        "failed_gates",
+        "evaluation_provenance",
+        "observed_values"
+      ],
+      "properties": {
+        "state": {"enum": ["accepted", "evidence_limited"]},
+        "claim_policy": {"$ref": "#/$defs/claim_policy"},
+        "gates": {"$ref": "#/$defs/h2_gate_ids"},
+        "failed_gates": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "evaluation_provenance": {"$ref": "#/$defs/evaluation_provenance"},
+        "observed_values": {"$ref": "#/$defs/observed_values"}
+      }
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "sample",
+        "companies",
+        "skills",
+        "seniorities",
+        "workplace_types",
+        "countries",
+        "compensation",
+        "profile_mentions"
+      ],
+      "properties": {
+        "scope": {"const": "target_universe_configured_source_panel"},
+        "sample": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/sample"},
+        "companies": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/bucket"}},
+        "skills": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/skill"}},
+        "seniorities": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/bucket"}},
+        "workplace_types": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/bucket"}},
+        "countries": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/bucket"}},
+        "compensation": {"type": "array", "items": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/compensation"}},
+        "profile_mentions": {"$ref": "https://career-os.local/schemas/h1-hybrid-result-contract.v1.json#/$defs/profile_mentions"}
+      }
+    }
+  }
+}

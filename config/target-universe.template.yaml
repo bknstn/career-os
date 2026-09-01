@@ -1,0 +1,22 @@
+# Unreviewed illustrative template only. These source rows are drawn from the
+# checked-in source configuration; they are not a confirmed user's target
+# universe. Copy and explicitly review every field before generating a report.
+target_universe:
+  name: example-review-required
+  role_families: [backend_engineering, platform_engineering]
+  seniorities: [senior, lead, staff]
+  source_panel:
+    - source_key: affirm-greenhouse
+      company_name: Affirm
+    - source_key: gitlab-greenhouse
+      company_name: GitLab
+    - source_key: hostinger-ashby
+      company_name: Hostinger
+    - source_key: kestra-ashby
+      company_name: Kestra
+  geography:
+    country_codes: [PL]
+    include_remote: true
+    remote_scopes: [Poland, EU, Europe]
+  exclusions:
+    title_contains: [frontend, mobile, qa]

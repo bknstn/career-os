@@ -14,15 +14,18 @@ from uuid import UUID
 from career_os.application.report import MarketProfileReport
 from career_os.config.markets import MarketFilters
 from career_os.config.profiles import Profile
+from career_os.config.target_universes import TargetUniverse
 from career_os.domain.hybrid_results import (
     HybridBucket,
     HybridConcentration,
     HybridJobCompensation,
     HybridLocation,
+    HybridQuality,
     HybridResult,
     HybridSkillMention,
 )
 from career_os.domain.markets import MarketBucket
+from career_os.domain.target_universe_results import TargetUniverseQuality, TargetUniverseResult
 
 
 def _render_legacy_markdown(report: MarketProfileReport) -> str:
@@ -436,8 +439,12 @@ def _cutoff(value: datetime | None) -> str:
     return _code(value.isoformat().replace("+00:00", "Z"))
 
 
-def render_markdown_report(report: MarketProfileReport | HybridResult) -> str:
-    """Render the canonical H1 result (with a compatibility path for old unit fixtures)."""
+def render_markdown_report(
+    report: MarketProfileReport | HybridResult | TargetUniverseResult,
+) -> str:
+    """Render H1 or H2 evidence without deriving transport-only facts."""
+    if isinstance(report, TargetUniverseResult):
+        return _render_target_universe_markdown(report)
     if isinstance(report, HybridResult):
         return _render_hybrid_markdown(report)
     return _render_legacy_markdown(report)
@@ -445,17 +452,89 @@ def render_markdown_report(report: MarketProfileReport | HybridResult) -> str:
 
 def _render_hybrid_markdown(report: HybridResult) -> str:
     """Pure deterministic presentation of one immutable H1 application result."""
-    quality = report.quality
+    return _render_evidence_markdown(
+        report,
+        title=f"Market Explorer result: {_inline(report.filters.name)}",
+        contract="h1.hybrid-result.v1",
+        scope="configured_source_panel",
+        observation_summary_label="Panel observations",
+        observation_state="panel-bounded" if report.quality.state == "accepted" else "qualified",
+        observation_heading="Panel-bounded observations (configured source panel)",
+        observation_intro=(
+            "All observations below describe only this configured public-source panel and its "
+            f"{len(report.observations.sample.job_ids)}-job matching sample."
+        ),
+        audit_heading="Exact filters and profile metadata",
+        audit_intro=(
+            "The exact validated query filters and reviewed profile are retained as audit context; "
+            "they do not become an inferred target universe."
+        ),
+        audit_context=[
+            *_hybrid_filters_table(report.filters),
+            "",
+            *_hybrid_profile_table(report.profile),
+        ],
+    )
+
+
+def _render_target_universe_markdown(report: TargetUniverseResult) -> str:
+    """Present H2 with its declared universe, never its derived market filters."""
+    universe = report.target_universe
+    return _render_evidence_markdown(
+        report.evidence_result,
+        title=f"Target Universe result: {_inline(universe.name)}",
+        contract=report.contract_version,
+        scope="target_universe_configured_source_panel",
+        observation_summary_label="Target-universe observations",
+        observation_state="bounded" if report.quality.state == "accepted" else "qualified",
+        observation_heading="Bounded observations (target universe / configured source panel)",
+        observation_intro=(
+            "All observations below describe only the explicit target universe and its declared "
+            f"configured public-source panel, across {len(report.observations.sample.job_ids)} "
+            "matching jobs."
+        ),
+        audit_heading="Exact target universe and profile metadata",
+        audit_intro=(
+            "The target universe is explicit user configuration. The profile remains existing "
+            "mention-only context; H2 does not infer Profile v2 facts, requirements, gaps, fit, "
+            "or hiring probability."
+        ),
+        audit_context=[
+            *_target_universe_table(universe),
+            "",
+            *_hybrid_profile_table(report.evidence_result.profile),
+        ],
+        quality=report.quality,
+    )
+
+
+def _render_evidence_markdown(
+    report: HybridResult,
+    *,
+    title: str,
+    contract: str,
+    scope: str,
+    observation_summary_label: str,
+    observation_state: str,
+    observation_heading: str,
+    observation_intro: str,
+    audit_heading: str,
+    audit_intro: str,
+    audit_context: list[str],
+    quality: HybridQuality | TargetUniverseQuality | None = None,
+) -> str:
+    """Render one already-reconciled evidence result under a declared boundary."""
+    quality = quality or report.quality
     observations = report.observations
     sample = observations.sample
     failed = quality.failed_gates
     lines = [
-        f"# Market Explorer result: {_inline(report.filters.name)}",
+        f"# {title}",
         "",
-        f"- Contract: {_code('h1.hybrid-result.v1')}",
+        f"- Contract: {_code(contract)}",
         f"- Result state: {_code(quality.state)}",
         f"- Opportunities: **available** ({report.opportunities.count} jobs); broad-market claims: **disabled**.",
-        f"- Panel observations: **{'panel-bounded' if quality.state == 'accepted' else 'qualified'}**; scope: {_code('configured_source_panel')}.",
+        f"- {observation_summary_label}: **{observation_state}**; scope: {_code(scope)}.",
     ]
     if failed:
         lines.append(
@@ -515,9 +594,9 @@ def _render_hybrid_markdown(report: HybridResult) -> str:
     lines.extend(
         [
             "",
-            "## Panel-bounded observations (configured source panel)",
+            f"## {observation_heading}",
             "",
-            f"All observations below describe only this configured public-source panel and its {len(sample.job_ids)}-job matching sample.",
+            observation_intro,
             "",
             "### Evidence quality",
             "",
@@ -670,13 +749,7 @@ def _render_hybrid_markdown(report: HybridResult) -> str:
         )
         + "."
     )
-    lines.extend(["", "## Exact filters and profile metadata", ""])
-    lines.append(
-        "The exact validated query filters and reviewed profile are retained as audit context; they do not become an inferred target universe."
-    )
-    lines.extend(
-        ["", *_hybrid_filters_table(report.filters), "", *_hybrid_profile_table(report.profile)]
-    )
+    lines.extend(["", f"## {audit_heading}", "", audit_intro, "", *audit_context])
     return "\n".join(lines) + "\n"
 
 
@@ -712,6 +785,32 @@ def _hybrid_filters_table(filters: MarketFilters) -> list[str]:
             ("remote_scopes (exact normalized scope)", _values(filters.remote_scopes)),
             ("company_names", _values(filters.company_names)),
             ("active_only", _code(str(filters.active_only).lower())),
+        ),
+    )
+
+
+def _target_universe_table(universe: TargetUniverse) -> list[str]:
+    return _table(
+        ("Target-universe field", "Exact declared value"),
+        (
+            ("name", _code(universe.name)),
+            ("role_families", _values(universe.role_families)),
+            ("seniorities", _values(universe.seniorities)),
+            (
+                "source_panel (source_key → company_name)",
+                ", ".join(
+                    f"{_code(item.source_key)} → {_cell(item.company_name)}"
+                    for item in universe.source_panel
+                ),
+            ),
+            ("country_codes", _values(universe.geography.country_codes)),
+            ("include_remote", _code(str(universe.geography.include_remote).lower())),
+            (
+                "remote_scopes (exact normalized scope)",
+                _values(universe.geography.remote_scopes),
+            ),
+            ("exclusions.title_contains (NONE)", _values(universe.exclusions.title_contains)),
+            ("active_only", _code("true")),
         ),
     )
 

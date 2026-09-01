@@ -14,6 +14,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry, Resource
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -249,6 +250,91 @@ def test_real_read_api_filters_cursor_detail_readiness_and_report_reconciliation
     assert profile_mentions["covered_skill_ids"] == ["python"]
     assert profile_mentions["neutral_skill_ids"] == ["terraform"]
     assert all("rank_score" not in str(item) for item in report["observations"]["skills"])
+
+    universe_request = {
+        "target_universe": {
+            "name": "senior-backend-poland-eu-target",
+            "role_families": ["backend_engineering", "platform_engineering"],
+            "seniorities": ["senior", "staff"],
+            "source_panel": [
+                {"source_key": "alpha", "company_name": "Alpha Systems"},
+                {"source_key": "beta", "company_name": "Beta Cloud"},
+            ],
+            "geography": {
+                "country_codes": ["PL"],
+                "include_remote": True,
+                "remote_scopes": ["EU"],
+            },
+            "exclusions": {"title_contains": ["frontend"]},
+        },
+        "profile": report_request["profile"],
+    }
+    universe_response = client.post("/v1/target-universe-reports", json=universe_request)
+    assert universe_response.status_code == 200, universe_response.text
+    universe_report = universe_response.json()
+    assert universe_report["contract_version"] == "h2.target-universe.v1"
+    assert "filters" not in universe_report
+    assert universe_report["scope"] == {
+        "kind": "target_universe",
+        "name": "senior-backend-poland-eu-target",
+        "target_universe": {
+            **universe_request["target_universe"],
+            "source_panel": [
+                {"source_key": "alpha", "company_name": "Alpha Systems"},
+                {"source_key": "beta", "company_name": "Beta Cloud"},
+            ],
+            "geography": {
+                **universe_request["target_universe"]["geography"],
+                "remote_scopes": ["eu"],
+            },
+            "exclusions": {"title_contains": ["frontend"]},
+        },
+    }
+    assert universe_report["observations"]["scope"] == "target_universe_configured_source_panel"
+    assert universe_report["quality"]["claim_policy"] == {
+        "opportunities": "available",
+        "target_universe_observations": "qualified",
+        "broad_market_claims": "disabled",
+        "skill_semantics": "mentions_only",
+        "fit_probability": "not_provided",
+    }
+    assert universe_report["opportunities"]["job_ids"] == expected_ids
+    assert universe_report["observations"]["sample"]["job_ids"] == expected_ids
+    assert universe_report["observations"]["sample"]["source_coverage"] == {
+        "configured_source_count": 2,
+        "configured_source_keys": ["alpha", "beta"],
+        "matching_source_count": 2,
+        "matching_source_keys": ["alpha", "beta"],
+        "source_share": 1.0,
+        "job_ids_by_source": [
+            {"source_key": "alpha", "job_ids": [str(job_id) for job_id in JOB_IDS[:3]]},
+            {"source_key": "beta", "job_ids": [str(job_id) for job_id in JOB_IDS[3:]]},
+        ],
+    }
+    assert _target_universe_schema_errors(universe_report) == []
+
+
+def _target_universe_schema_errors(payload: dict[str, object]) -> list[object]:
+    h1 = json.loads(
+        (PROJECT_ROOT / "docs/h1-hybrid-result-contract.schema.json").read_text(encoding="utf-8")
+    )
+    h2 = json.loads(
+        (PROJECT_ROOT / "docs/h2-target-universe-result-contract.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    Draft202012Validator.check_schema(h2)
+    registry = Registry().with_resources(
+        (
+            (h1["$id"], Resource.from_contents(h1)),
+            (h2["$id"], Resource.from_contents(h2)),
+        )
+    )
+    return list(
+        Draft202012Validator(h2, registry=registry, format_checker=FormatChecker()).iter_errors(
+            payload
+        )
+    )
 
 
 def _return_database_to_empty(engine: Engine, alembic_config: Config, upgraded: bool) -> None:

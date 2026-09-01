@@ -59,6 +59,7 @@ from career_os.config.sources import (
     WorkablePublicSourceConfig,
     load_sources_config,
 )
+from career_os.config.target_universes import load_target_universe
 from career_os.db import (
     DatabaseConfigurationError,
     create_database_engine,
@@ -66,7 +67,8 @@ from career_os.db import (
     session_scope,
 )
 from career_os.domain import SourceAdapter
-from career_os.domain.hybrid_results import QualityReviewInput
+from career_os.domain.hybrid_results import HybridResult, QualityReviewInput
+from career_os.domain.target_universe_results import TargetUniverseResult
 from career_os.logging import configure_logging, safe_exception
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
 from career_os.normalization.skills import SkillExtractor
@@ -122,7 +124,14 @@ class ReportFormat(StrEnum):
     MARKDOWN = "markdown"
 
 
-_REPORT_MARKET_OPTION = typer.Option(..., "--market", exists=False, dir_okay=False)
+_REPORT_MARKET_OPTION = typer.Option(None, "--market", exists=False, dir_okay=False)
+_REPORT_TARGET_UNIVERSE_OPTION = typer.Option(
+    None,
+    "--target-universe",
+    exists=False,
+    dir_okay=False,
+    help="Explicit H2 Target Universe v1 YAML configuration.",
+)
 _REPORT_PROFILE_OPTION = typer.Option(..., "--profile", exists=False, dir_okay=False)
 _REPORT_FORMAT_OPTION = typer.Option(ReportFormat.MARKDOWN, "--format")
 _REPORT_OUTPUT_OPTION = typer.Option(..., "--output", exists=False, dir_okay=False)
@@ -386,7 +395,8 @@ def enrich(taxonomy: Path = _ENRICH_TAXONOMY_OPTION) -> None:
 
 @market_app.command("report")
 def market_report(
-    market: Path = _REPORT_MARKET_OPTION,
+    market: Path | None = _REPORT_MARKET_OPTION,
+    target_universe: Path | None = _REPORT_TARGET_UNIVERSE_OPTION,
     profile: Path = _REPORT_PROFILE_OPTION,
     output_format: ReportFormat = _REPORT_FORMAT_OPTION,
     output: Path = _REPORT_OUTPUT_OPTION,
@@ -395,10 +405,14 @@ def market_report(
 ) -> None:
     """Write one reconciled market/profile report from local config files."""
     try:
-        filters = load_market_filters(market)
+        if (market is None) == (target_universe is None):
+            raise ConfigurationError("provide exactly one of --market or --target-universe")
+        filters = load_market_filters(market) if market is not None else None
+        universe = load_target_universe(target_universe) if target_universe is not None else None
         skill_taxonomy = load_skill_taxonomy(taxonomy)
         loaded_profile = load_profile(profile, taxonomy=skill_taxonomy)
         review = _load_quality_review(quality_review)
+        report: HybridResult | TargetUniverseResult
         session_factory = _database_session_factory(load_settings())
         with session_factory() as session:
             session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
@@ -407,12 +421,26 @@ def market_report(
                 taxonomy=skill_taxonomy,
                 normalizer_version=JOB_NORMALIZER_VERSION,
             )
-            if review is None:
-                report = service.calculate(filters=filters, profile=loaded_profile)
+            if market is not None:
+                assert filters is not None
+                if review is None:
+                    report = service.calculate(filters=filters, profile=loaded_profile)
+                else:
+                    report = service.calculate(
+                        filters=filters, profile=loaded_profile, quality_review=review
+                    )
             else:
-                report = service.calculate(
-                    filters=filters, profile=loaded_profile, quality_review=review
-                )
+                assert universe is not None
+                if review is None:
+                    report = service.calculate_target_universe(
+                        target_universe=universe, profile=loaded_profile
+                    )
+                else:
+                    report = service.calculate_target_universe(
+                        target_universe=universe,
+                        profile=loaded_profile,
+                        quality_review=review,
+                    )
         if output_format is not ReportFormat.MARKDOWN:  # pragma: no cover - enum is exhaustive.
             raise ConfigurationError(f"unsupported report format: {output_format}")
         rendered = render_markdown_report(report)

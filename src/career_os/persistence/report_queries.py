@@ -190,7 +190,13 @@ class ReportEvidenceRepository:
             )
         return evidence
 
-    def get_bulk(self, job_ids: tuple[UUID, ...], filters: MarketFilters) -> ReportEvidenceSnapshot:
+    def get_bulk(
+        self,
+        job_ids: tuple[UUID, ...],
+        filters: MarketFilters,
+        *,
+        source_keys: tuple[str, ...] = (),
+    ) -> ReportEvidenceSnapshot:
         """Load all H1 evidence with bounded, set-based queries.
 
         The caller owns the repeatable-read transaction.  This method performs
@@ -202,7 +208,9 @@ class ReportEvidenceRepository:
                 .where(
                     Source.enabled.is_(True),
                     *(
-                        [func.lower(Source.company_name).in_(filters.company_names)]
+                        [Source.key.in_(source_keys)]
+                        if source_keys
+                        else [func.lower(Source.company_name).in_(filters.company_names)]
                         if filters.company_names
                         else []
                     ),

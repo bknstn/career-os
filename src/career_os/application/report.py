@@ -14,6 +14,7 @@ from career_os.application.market import MarketAggregateService
 from career_os.config.markets import MarketFilters
 from career_os.config.profiles import Profile
 from career_os.config.skills import SkillTaxonomy
+from career_os.config.target_universes import TargetUniverse
 from career_os.domain.hybrid_results import (
     GATE_IDS,
     HybridBucket,
@@ -40,6 +41,7 @@ from career_os.domain.hybrid_results import (
 )
 from career_os.domain.markets import MarketAggregates
 from career_os.domain.profiles import ProfileComparison
+from career_os.domain.target_universe_results import TargetUniverseResult
 from career_os.persistence.report_queries import (
     ReportEvidenceConsistencyError,
     ReportEvidenceRepository,
@@ -82,6 +84,10 @@ class MarketProfileReport:
             raise ValueError("skill_labels must cover every reported skill")
 
 
+class TargetUniverseResolutionError(ValueError):
+    """A declared H2 source panel cannot be resolved to enabled source evidence."""
+
+
 @dataclass(slots=True)
 class MarketReportService:
     """Compose one report inside the caller-owned read transaction."""
@@ -112,6 +118,58 @@ class MarketReportService:
             evidence=evidence,
             quality_review=quality_review,
         )
+
+    def calculate_target_universe(
+        self,
+        *,
+        target_universe: TargetUniverse,
+        profile: Profile,
+        quality_review: QualityReviewInput | None = None,
+    ) -> TargetUniverseResult:
+        """Build one H2 result over the exact declared, enabled source panel."""
+        filters = target_universe.as_market_filters()
+        market = MarketAggregateService(
+            self.session,
+            taxonomy_version=self.taxonomy.version,
+            normalizer_version=self.normalizer_version,
+        ).calculate(filters, source_keys=target_universe.source_keys)
+        evidence = ReportEvidenceRepository(self.session).get_bulk(
+            job_ids=market.matching_job_ids,
+            filters=filters,
+            source_keys=target_universe.source_keys,
+        )
+        self._validate_target_universe_panel(target_universe, evidence)
+        return TargetUniverseResult(
+            target_universe=target_universe,
+            evidence_result=HybridResultBuilder(self.taxonomy).build(
+                filters=filters,
+                profile=profile,
+                market=market,
+                evidence=evidence,
+                quality_review=quality_review,
+            ),
+        )
+
+    @staticmethod
+    def _validate_target_universe_panel(
+        target_universe: TargetUniverse, evidence: ReportEvidenceSnapshot
+    ) -> None:
+        """Fail closed if a declared name/key pair is not a live configured panel row."""
+        actual = {source.key: source for source in evidence.configured_sources}
+        if tuple(actual) != target_universe.source_keys:
+            raise TargetUniverseResolutionError(
+                "target universe source_panel must resolve to enabled configured source keys"
+            )
+        for source_key, expected_company in target_universe.normalized_source_companies.items():
+            source = actual[source_key]
+            if not source.enabled:
+                raise TargetUniverseResolutionError(
+                    "target universe source_panel must resolve to enabled configured source keys"
+                )
+            if source.company_name.lower() != expected_company:
+                raise TargetUniverseResolutionError(
+                    "target universe source_panel company_name must match persisted source identity"
+                )
 
 
 @dataclass(frozen=True, slots=True)

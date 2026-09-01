@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from career_os.config.markets import MarketFilters
 from career_os.config.profiles import Profile
+from career_os.config.target_universes import TargetUniverse
 from career_os.domain.normalization import EmploymentType, RoleFamily, Seniority
 
 
@@ -188,6 +189,14 @@ class QualityReviewRequest(ApiModel):
 
 
 MarketReportRequest.model_rebuild()
+
+
+class TargetUniverseReportRequest(ApiModel):
+    """H2 uses an explicit universe, not a generic market-filter request."""
+
+    target_universe: TargetUniverse
+    profile: Profile
+    quality_review: QualityReviewRequest | None = None
 
 
 class HybridScopeResponse(ApiModel):
@@ -412,6 +421,64 @@ class MarketReportResponse(ApiModel):
     quality: HybridQualityResponse
     opportunities: HybridOpportunitiesResponse
     observations: HybridObservationsResponse
+
+
+class TargetUniverseScopeResponse(ApiModel):
+    kind: Literal["target_universe"]
+    name: str
+    target_universe: TargetUniverse
+
+
+class TargetUniverseObservationsResponse(ApiModel):
+    scope: Literal["target_universe_configured_source_panel"]
+    sample: HybridSampleResponse
+    companies: tuple[HybridBucketResponse, ...]
+    skills: tuple[HybridSkillResponse, ...]
+    seniorities: tuple[HybridBucketResponse, ...]
+    workplace_types: tuple[HybridBucketResponse, ...]
+    countries: tuple[HybridBucketResponse, ...]
+    compensation: tuple[HybridCompensationResponse, ...]
+    profile_mentions: HybridProfileMentionsResponse
+
+
+class TargetUniverseClaimPolicyResponse(ApiModel):
+    opportunities: Literal["available"]
+    target_universe_observations: Literal["bounded", "qualified"]
+    broad_market_claims: Literal["disabled"]
+    skill_semantics: Literal["mentions_only"]
+    fit_probability: Literal["not_provided"]
+
+
+class TargetUniverseObservedValuesResponse(ApiModel):
+    matching_opportunity_count: int
+    source_panel_source_count: int
+    reviewed_eligible_opportunity_count: int
+    demonstrated_eligibility_false_positive_count: int
+    target_universe_boundary_resolved: bool
+    opportunity_evidence_reconciled: bool
+    skill_semantics: Literal["mentions_only"]
+    compensation_reconciled: bool
+    source_coverage: float | None
+    compensation_coverage: float | None
+    collection_cutoff: datetime | None
+
+
+class TargetUniverseQualityResponse(ApiModel):
+    state: Literal["accepted", "evidence_limited"]
+    claim_policy: TargetUniverseClaimPolicyResponse
+    gates: tuple[HybridGateResponse, ...]
+    failed_gates: tuple[str, ...]
+    evaluation_provenance: dict[str, HybridEvaluationResponse]
+    observed_values: TargetUniverseObservedValuesResponse
+
+
+class TargetUniverseReportResponse(ApiModel):
+    contract_version: Literal["h2.target-universe.v1"]
+    scope: TargetUniverseScopeResponse
+    profile: Profile
+    quality: TargetUniverseQualityResponse
+    opportunities: HybridOpportunitiesResponse
+    observations: TargetUniverseObservationsResponse
 
 
 class JobFilters(ApiModel):

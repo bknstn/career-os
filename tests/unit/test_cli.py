@@ -191,6 +191,67 @@ def test_market_report_writes_only_complete_rendered_output(monkeypatch, tmp_pat
     assert output.read_text(encoding="utf-8") == "# complete\n"
 
 
+def test_market_report_uses_explicit_target_universe_path(monkeypatch, tmp_path: Path) -> None:
+    output = tmp_path / "target-universe.md"
+    universe = SimpleNamespace(name="target-universe")
+    taxonomy = SimpleNamespace(version="1.0.0")
+    profile = SimpleNamespace(name="profile")
+    report = object()
+    calls: list[dict[str, object]] = []
+
+    class FakeSession:
+        def __enter__(self) -> FakeSession:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def connection(self, **_kwargs: object) -> object:
+            return object()
+
+    class FakeReportService:
+        def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def calculate(self, **_kwargs: object) -> object:
+            raise AssertionError("H1 calculate must not handle --target-universe")
+
+        def calculate_target_universe(self, **kwargs: object) -> object:
+            calls.append(kwargs)
+            return report
+
+    def unexpected_market_loader(_path: Path) -> object:
+        raise AssertionError("--target-universe must not load MarketFilters")
+
+    monkeypatch.setattr(cli, "load_market_filters", unexpected_market_loader)
+    monkeypatch.setattr(cli, "load_target_universe", lambda _path: universe)
+    monkeypatch.setattr(cli, "load_skill_taxonomy", lambda _path: taxonomy)
+    monkeypatch.setattr(cli, "load_profile", lambda _path, **_kwargs: profile)
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: FakeSession)
+    monkeypatch.setattr(cli, "MarketReportService", FakeReportService)
+    monkeypatch.setattr(cli, "render_markdown_report", lambda value: "# target universe\n")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "market",
+            "report",
+            "--target-universe",
+            "universe.yaml",
+            "--profile",
+            "profile.yaml",
+            "--format",
+            "markdown",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [{"target_universe": universe, "profile": profile}]
+    assert output.read_text(encoding="utf-8") == "# target universe\n"
+
+
 def test_market_audit_writes_only_reconciled_rendered_output(monkeypatch, tmp_path: Path) -> None:
     output = tmp_path / "audit.md"
     filters = SimpleNamespace(name="market")

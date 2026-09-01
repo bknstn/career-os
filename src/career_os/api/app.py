@@ -36,6 +36,8 @@ from career_os.api.schemas import (
     RunCountsResponse,
     RunResponse,
     SourceResponse,
+    TargetUniverseReportRequest,
+    TargetUniverseReportResponse,
 )
 from career_os.application.market import MarketDataConsistencyError
 from career_os.application.operations import (
@@ -53,6 +55,7 @@ from career_os.db import (
 )
 from career_os.domain.hybrid_results import HybridResult, QualityReviewInput
 from career_os.domain.normalization import EmploymentType, RoleFamily, Seniority
+from career_os.domain.target_universe_results import TargetUniverseResult
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
 from career_os.persistence.api_queries import (
     ApiReadRepository,
@@ -360,6 +363,56 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
                 raise HTTPException(status_code=422, detail=str(error)) from error
             raise HTTPException(status_code=409, detail=str(error)) from error
 
+    @app.post(
+        "/v1/target-universe-reports",
+        response_model=TargetUniverseReportResponse,
+        responses={
+            409: {"model": ErrorResponse},
+            422: {"model": ErrorResponse},
+            503: {"model": ErrorResponse},
+        },
+        tags=["target-universes"],
+    )
+    def target_universe_report(
+        request: TargetUniverseReportRequest,
+    ) -> TargetUniverseReportResponse:
+        try:
+            taxonomy = deps.taxonomy_provider()
+        except (ConfigurationError, OSError, ValueError):
+            raise HTTPException(status_code=503, detail="taxonomy unavailable") from None
+        try:
+            validate_profile_taxonomy(request.profile, taxonomy=taxonomy)
+        except ConfigurationError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        try:
+            with _read_session(deps.session_factory_provider) as session:
+                report = MarketReportService(
+                    session=session,
+                    taxonomy=taxonomy,
+                    normalizer_version=JOB_NORMALIZER_VERSION,
+                ).calculate_target_universe(
+                    target_universe=request.target_universe,
+                    profile=request.profile,
+                    quality_review=(
+                        QualityReviewInput(
+                            ref=request.quality_review.ref,
+                            reviewed_job_ids=request.quality_review.reviewed_job_ids,
+                            false_positive_job_ids=request.quality_review.false_positive_job_ids,
+                        )
+                        if request.quality_review is not None
+                        else None
+                    ),
+                )
+                return _target_universe_report_response(report)
+        except (
+            MarketDataConsistencyError,
+            ReportEvidenceConsistencyError,
+            ValueError,
+        ) as error:
+            if isinstance(error, ValueError):
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
     return app
 
 
@@ -447,6 +500,13 @@ def _job_detail(item: JobDetail) -> JobDetailResponse:
 def _report_response(report: HybridResult) -> MarketReportResponse:
     """Serialize the canonical H1 result without recomputing any evidence."""
     return MarketReportResponse.model_validate(report.to_payload())
+
+
+def _target_universe_report_response(
+    report: TargetUniverseResult,
+) -> TargetUniverseReportResponse:
+    """Serialize the canonical H2 result without recalculating any evidence."""
+    return TargetUniverseReportResponse.model_validate(report.to_payload())
 
 
 def _prometheus_metrics(statuses: tuple[SourceOperationalStatus, ...]) -> str:

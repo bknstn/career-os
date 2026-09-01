@@ -34,8 +34,13 @@ class MarketAggregateService:
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field} must be non-blank")
 
-    def calculate(self, filters: MarketFilters) -> MarketAggregates:
-        matching_ids = tuple(self.session.scalars(build_market_job_ids_query(filters)))
+    def calculate(
+        self, filters: MarketFilters, *, source_keys: tuple[str, ...] = ()
+    ) -> MarketAggregates:
+        """Calculate one selection, optionally restricted to exact source identity."""
+        matching_ids = tuple(
+            self.session.scalars(build_market_job_ids_query(filters, source_keys=source_keys))
+        )
         if not matching_ids:
             return MarketAggregates(
                 market_name=filters.name,

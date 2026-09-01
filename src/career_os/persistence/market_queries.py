@@ -7,15 +7,19 @@ from uuid import UUID
 from sqlalchemy import Select, and_, exists, func, or_, select
 
 from career_os.config.markets import MarketFilters
-from career_os.persistence.models import JobLocation, JobPosting
+from career_os.persistence.models import JobLocation, JobPosting, Source
 
 
-def build_market_job_ids_query(filters: MarketFilters) -> Select[tuple[UUID]]:
+def build_market_job_ids_query(
+    filters: MarketFilters, *, source_keys: tuple[str, ...] = ()
+) -> Select[tuple[UUID]]:
     """Select stable job IDs without joins that could multiply canonical jobs.
 
     Title inclusion is ANY requested literal substring; exclusion is NONE.
     Country matching uses normalized location rows.  Eligible remote jobs are
     added to a country market only by exact, case-insensitive scope equality.
+    ``source_keys`` is an internal, exact source-identity restriction used by
+    H2 Target Universe; it is deliberately not part of ``MarketFilters``.
     """
     predicates = []
     if filters.active_only:
@@ -33,6 +37,10 @@ def build_market_job_ids_query(filters: MarketFilters) -> Select[tuple[UUID]]:
         predicates.append(JobPosting.seniority.in_(filters.seniorities))
     if filters.company_names:
         predicates.append(func.lower(JobPosting.company_name).in_(filters.company_names))
+    if source_keys:
+        predicates.append(
+            JobPosting.source_id.in_(select(Source.id).where(Source.key.in_(source_keys)))
+        )
     if filters.country_codes:
         local_match = exists(
             select(1).where(

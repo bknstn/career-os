@@ -49,6 +49,7 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
         "/v1/jobs",
         "/v1/jobs/{job_id}",
         "/v1/market-reports",
+        "/v1/target-universe-reports",
     }
     job_detail_schema = schema["components"]["schemas"]["JobDetailResponse"]
     serialized = str(job_detail_schema)
@@ -59,6 +60,9 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
     assert "MarketReportResponse" in report_operation
     assert "MarketAggregatesResponse" not in report_operation
     assert "ProfileComparisonResponse" not in report_operation
+    target_universe_operation = str(schema["paths"]["/v1/target-universe-reports"])
+    assert "TargetUniverseReportResponse" in target_universe_operation
+    assert "MarketReportResponse" not in target_universe_operation
 
 
 def test_prometheus_metrics_are_low_cardinality_and_escape_source_labels() -> None:
@@ -285,6 +289,46 @@ def test_report_rejects_noncanonical_quality_review_before_infrastructure() -> N
                 "ref": "review.md#rows",
                 "reviewed_job_ids": [str(UUID(int=2)), str(UUID(int=1))],
                 "false_positive_job_ids": [],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "request validation failed"}
+    assert calls == 0
+
+
+def test_target_universe_report_rejects_an_implicit_boundary_before_infrastructure() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise AssertionError("invalid target universe reached infrastructure")
+
+    client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=unavailable,
+                taxonomy_provider=unavailable,
+            )
+        )
+    )
+    response = client.post(
+        "/v1/target-universe-reports",
+        json={
+            "target_universe": {
+                "name": "example",
+                "role_families": ["backend_engineering"],
+                "seniorities": ["senior"],
+                "source_panel": [],
+                "geography": {"country_codes": ["PL"]},
+            },
+            "profile": {
+                "name": "example",
+                "target_role_families": ["backend_engineering"],
+                "seniority": "senior",
+                "skills": [],
             },
         },
     )
