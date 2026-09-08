@@ -273,7 +273,7 @@ def test_source_content_change_resets_taxonomy_marker_and_versions_actual_diff(
         job = session.get(JobPosting, job_id)
         assert job is not None
         assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
-            "job-normalization-v5",
+            "job-normalization-v6",
             "1.0.2",
         )
         assert (job.title_normalized, job.role_family, job.seniority) == (
@@ -318,7 +318,7 @@ def test_raw_only_reingestion_marks_job_enrichment_stale_without_source_version_
         job = session.get(JobPosting, job_id)
         assert job is not None
         assert (job.enrichment_normalizer_version, job.taxonomy_version) == (
-            "job-normalization-v5",
+            "job-normalization-v6",
             "1.0.2",
         )
         assert [
@@ -343,7 +343,7 @@ def test_bulk_enrichment_persists_ashby_normalization_skills_and_markers_without
             job.normalizer_version,
             job.enrichment_normalizer_version,
             job.taxonomy_version,
-        ) == ("ashby-v1", "job-normalization-v5", "1.0.2")
+        ) == ("ashby-v1", "job-normalization-v6", "1.0.2")
         assert (
             job.role_family,
             job.seniority,
@@ -416,7 +416,7 @@ def test_bulk_failure_isolation_keeps_malformed_job_stale_and_commits_peer(
     with session_scope(session_factory) as session:
         valid = session.get(JobPosting, good)
         malformed = session.get(JobPosting, bad)
-        assert valid is not None and valid.enrichment_normalizer_version == "job-normalization-v5"
+        assert valid is not None and valid.enrichment_normalizer_version == "job-normalization-v6"
         assert malformed is not None
         assert (malformed.enrichment_normalizer_version, malformed.taxonomy_version) == (
             "none-v1",
@@ -438,7 +438,7 @@ def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_row
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.enrichment_normalizer_version == "job-normalization-v5"
+        assert job.enrichment_normalizer_version == "job-normalization-v6"
         location_keys = tuple(
             (row.job_id, row.ordinal)
             for row in session.scalars(
@@ -495,7 +495,7 @@ def test_taxonomy_only_stale_reprocessing_preserves_normalization_and_manual_row
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, job_id)
         assert job is not None
-        assert job.enrichment_normalizer_version == "job-normalization-v5"
+        assert job.enrichment_normalizer_version == "job-normalization-v6"
         assert (
             tuple(
                 (row.job_id, row.ordinal)

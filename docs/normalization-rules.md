@@ -1,6 +1,6 @@
 # Deterministic job normalization rules
 
-`job-normalization-v5` owns the pure, source-neutral rules in
+`job-normalization-v6` owns the pure, source-neutral rules in
 `career_os.normalization.jobs`. The version is emitted with every output; task
 22 owns selection, persistence, and bulk re-enrichment.
 
@@ -23,6 +23,17 @@ such as `Treasury Partner Lead - Platform` is not an engineering role. An
 explicit non-platform family such as backend, data engineering, product
 management, or DevOps wins over a simultaneous platform/infrastructure marker.
 Otherwise contradictory role-family markers fail closed to unknown.
+
+The v6 bounded fallback uses direct bullet duties under `You will:` only for
+otherwise generic Software Engineer titles. Explicit backend systems design or
+horizontal infrastructure/tooling duties establish backend or platform respectively;
+conflicting families remain unknown. Exact duty evidence is retained. Preferences,
+experience requirements and company context are excluded. Tech/Technical Lead
+Manager titles map to engineering management + manager; Engineer / TLM alternatives
+remain unknown. See `WAYMO_CLASSIFICATION_REVIEW_2026-09-08.md` for scope and fixtures.
+Greenhouse canonical normalization is now `greenhouse-v2`: encoded HTML documents
+receive one decoding pass before text extraction, preserving the original payload.
+Refresh canonical data before v6 re-enrichment when old descriptions contain markup.
 
 Locations retain every input value and ordinal. Parsing recognizes only a small
 country alias set (including `PL`) and never turns a country-only value into a

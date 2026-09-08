@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging as stdlib_logging
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime
-from html import escape
+from html import escape, unescape
 from typing import Protocol, TypeVar
 from uuid import uuid4
 
@@ -47,7 +48,7 @@ from career_os.persistence.repositories import (
 type SessionFactory = sessionmaker[Session]
 ConfigT = TypeVar("ConfigT", bound=SourceConfig, contravariant=True)
 
-GREENHOUSE_NORMALIZER_VERSION = "greenhouse-v1"
+GREENHOUSE_NORMALIZER_VERSION = "greenhouse-v2"
 LEVER_NORMALIZER_VERSION = "lever-v1"
 ASHBY_NORMALIZER_VERSION = "ashby-v1"
 WORKABLE_PUBLIC_NORMALIZER_VERSION = "workable-public-v1"
@@ -237,6 +238,8 @@ def greenhouse_candidate(
     content = posting.payload.get("content")
     if not isinstance(title, str) or not title.strip():
         raise IngestionError("Greenhouse raw posting has no non-blank title")
+    if isinstance(content, str) and re.match(r"\s*&lt;(?:div|p|h[1-6]|ul|ol)\b", content, re.I):
+        content = unescape(content)
     if not isinstance(content, str) or not html_to_text(content):
         raise IngestionError("Greenhouse raw posting has no non-blank description content")
     return CanonicalJobCandidate(

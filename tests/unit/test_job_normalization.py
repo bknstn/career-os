@@ -1045,3 +1045,88 @@ def _json_fixture(name: str) -> dict[str, Any]:
 
 def _fixture_path(name: str) -> Path:
     return Path(__file__).resolve().parents[1] / "fixtures" / name
+
+
+@pytest.mark.parametrize(
+    "title", ["Tech Lead Manager, Backend", "Technical Lead Manager, Full-stack"]
+)
+def test_tech_lead_manager_is_management_not_ic(title: str) -> None:
+    result = normalize_job(JobNormalizationInput(title=title, description=""))
+    assert result.role_family.value == "engineering_management"
+    assert result.seniority.value == "manager"
+    ic = normalize_job(JobNormalizationInput(title="Tech Lead, Backend", description=""))
+    assert ic.role_family.value == "backend_engineering"
+    assert ic.seniority.value == "lead"
+
+
+@pytest.mark.parametrize(
+    ("duty", "family"),
+    [
+        (
+            "Lead the design and development of high-impact backend systems and APIs.",
+            "backend_engineering",
+        ),
+        (
+            "Help build and evolve mission-critical horizontal infrastructure and tooling.",
+            "platform_engineering",
+        ),
+    ],
+)
+def test_generic_software_role_uses_direct_duties_with_evidence(duty: str, family: str) -> None:
+    result = normalize_job(
+        JobNormalizationInput(
+            title="Staff Software Engineer, Example",
+            description=f"You will:\n\n• {duty}\n\nYou have:\n• 6 years experience.",
+        )
+    )
+    assert result.role_family.value == family
+    assert result.role_family.method == "description_rule"
+    assert result.role_family.evidence == duty
+    assert result.role_family.confidence == Decimal("0.700")
+    assert result.seniority.value == "staff"
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "We build backend systems and infrastructure.",
+        "You have:\n• 6+ years of backend or infrastructure experience",
+        "We prefer:\n• Lead the design and development of high-impact backend systems and APIs.",
+        "You will:\n• Collaborate with engineers who build infrastructure.",
+        "You will:\n• Do not lead the design and development of backend systems.",
+        "You will:\n• Work with teams.\nYou have:\n"
+        "• Lead the design and development of backend systems.",
+        "You will:\n• Lead the design and development of backend systems.\n"
+        "• Help build and evolve horizontal infrastructure and tooling.",
+    ],
+)
+def test_role_description_fallback_rejects_context_preferences_negation_and_conflicts(
+    description: str,
+) -> None:
+    result = normalize_job(
+        JobNormalizationInput(title="Staff Software Engineer", description=description)
+    )
+    assert result.role_family.value is None
+
+
+@pytest.mark.parametrize(
+    ("title", "family"),
+    [
+        ("Senior Android Engineer", None),
+        ("Software Engineer, Android", None),
+        ("Account Executive", None),
+        ("Backend and Frontend Engineer", None),
+        ("Frontend Software Engineer", "frontend_engineering"),
+        ("Software Engineer, Full Stack", "fullstack_engineering"),
+    ],
+)
+def test_description_does_not_override_specialist_or_conflicting_titles(
+    title: str, family: str | None
+) -> None:
+    result = normalize_job(
+        JobNormalizationInput(
+            title=title,
+            description="You will:\n• Lead the design and development of backend systems.",
+        )
+    )
+    assert result.role_family.value == family

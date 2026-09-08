@@ -20,7 +20,33 @@ from career_os.domain.normalization import (
 )
 from career_os.normalization.text import clean_text
 
-JOB_NORMALIZER_VERSION: Final = "job-normalization-v5"
+JOB_NORMALIZER_VERSION: Final = "job-normalization-v6"
+
+_TECH_LEAD_MANAGER: Final = re.compile(r"\btech(?:nical)? lead manager\b", re.I)
+_GENERIC_SOFTWARE_TITLE: Final = re.compile(
+    r"(?:(?:senior|staff|principal|lead|junior) )?software engineer(?:\s*[,\u2013-]\s*.+)?", re.I
+)
+_SPECIALIST_TITLE: Final = re.compile(
+    r"\b(?:android|ios|mobile|embedded|firmware|robotics|perception|machine learning"
+    r"|security|qa|test)\b",
+    re.I,
+)
+_RESPONSIBILITY_ROLES: Final = (
+    (
+        "backend_engineering",
+        re.compile(
+            r"Lead the design and development of (?:high-impact )?backend systems(?: and APIs)?\b",
+            re.I,
+        ),
+    ),
+    (
+        "platform_engineering",
+        re.compile(
+            r"Help build and evolve (?:mission-critical )?horizontal infrastructure and tooling\b",
+            re.I,
+        ),
+    ),
+)
 
 _TITLE_SENIORITY: Final = (
     ("executive", re.compile(r"\b(?:chief|cto|vp|vice president)\b", re.I)),
@@ -212,7 +238,7 @@ def normalize_job(value: JobNormalizationInput) -> JobNormalization:
     return JobNormalization(
         normalizer_version=JOB_NORMALIZER_VERSION,
         title_normalized=title,
-        role_family=_role_family(title),
+        role_family=_role_family(title, description),
         seniority=_seniority(title, value.source_level, value.source_category, description),
         locations=_locations(value.locations),
         employment_type=_employment(value.source_employment_type, description),
@@ -232,7 +258,12 @@ def normalize_job(value: JobNormalizationInput) -> JobNormalization:
     )
 
 
-def _role_family(title: str) -> NormalizedField:
+def _role_family(title: str, description: str) -> NormalizedField:
+    manager = _TECH_LEAD_MANAGER.search(title)
+    if manager is not None and re.search(r"\bengineer\s*/", title, re.I):
+        return NormalizedField(None)
+    if manager is not None:
+        return _field("engineering_management", "title_rule", manager.group(0), Decimal("0.900"))
     matches = [(role, pattern.search(title)) for role, pattern in _ROLE_FAMILIES]
     matched = [(role, match) for role, match in matches if match is not None]
     explicit_fullstack = next(
@@ -248,12 +279,50 @@ def _role_family(title: str) -> NormalizedField:
     if len(matched) == 1:
         role, match = matched[0]
         return _field(role, "title_rule", match.group(0), Decimal("0.900"))
+    if (
+        not matched
+        and _GENERIC_SOFTWARE_TITLE.fullmatch(title)
+        and not _SPECIALIST_TITLE.search(title)
+    ):
+        return _responsibility_role(description)
+    return NormalizedField(None)
+
+
+def _responsibility_role(description: str) -> NormalizedField:
+    # Only direct duties inside an explicit section qualify; experience and
+    # company/team prose must not silently turn into the vacancy's role family.
+    in_duties = False
+    evidence: dict[str, str] = {}
+    for line in description.splitlines():
+        line = line.strip()
+        if line.casefold() == "you will:":
+            in_duties = True
+            continue
+        if not line:
+            continue
+        if not in_duties:
+            continue
+        if not line.startswith("• "):
+            in_duties = False
+            continue
+        duty = line[2:]
+        for role, pattern in _RESPONSIBILITY_ROLES:
+            if pattern.match(duty):
+                evidence.setdefault(role, duty)
+    if len(evidence) == 1:
+        role, quote = next(iter(evidence.items()))
+        return _field(role, "description_rule", quote, Decimal("0.700"))
     return NormalizedField(None)
 
 
 def _seniority(
     title: str, source_level: str | None, source_category: str | None, description: str
 ) -> NormalizedField:
+    manager = _TECH_LEAD_MANAGER.search(title)
+    if manager is not None and re.search(r"\bengineer\s*/", title, re.I):
+        return NormalizedField(None)
+    if manager is not None:
+        return _field("manager", "title_rule", manager.group(0), Decimal("1.000"))
     title_matches = [
         (seniority, match)
         for seniority, pattern in _TITLE_SENIORITY
