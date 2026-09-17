@@ -1,0 +1,143 @@
+{
+  "$defs": {
+    "VacancyEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        },
+        "section": {
+          "enum": [
+            "required",
+            "preferred",
+            "responsibility",
+            "context"
+          ],
+          "title": "Section",
+          "type": "string"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "signal": {
+          "enum": [
+            "skill",
+            "experience",
+            "education",
+            "scope",
+            "leadership",
+            "domain"
+          ],
+          "title": "Signal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end",
+        "quote",
+        "section",
+        "summary",
+        "signal"
+      ],
+      "title": "VacancyEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "h4.vacancy-evidence.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "vacancy_id": {
+      "minLength": 1,
+      "title": "Vacancy Id",
+      "type": "string"
+    },
+    "company": {
+      "minLength": 1,
+      "title": "Company",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "retained_reference": {
+      "minLength": 1,
+      "title": "Retained Reference",
+      "type": "string"
+    },
+    "captured_on": {
+      "format": "date",
+      "title": "Captured On",
+      "type": "string"
+    },
+    "source_text": {
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "source_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Sha256",
+      "type": "string"
+    },
+    "annotation_method": {
+      "const": "manual",
+      "title": "Annotation Method",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/VacancyEvidence"
+      },
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "vacancy_id",
+    "company",
+    "title",
+    "source_url",
+    "retained_reference",
+    "captured_on",
+    "source_text",
+    "source_sha256",
+    "annotation_method",
+    "evidence"
+  ],
+  "title": "VacancySnapshot",
+  "type": "object"
+}

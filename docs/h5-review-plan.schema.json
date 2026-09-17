@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "Assessment": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "relevant",
+            "partial",
+            "not_established"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "profile_refs": {
+          "items": {
+            "$ref": "#/$defs/ProfileReference"
+          },
+          "title": "Profile Refs",
+          "type": "array"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "next_check": {
+          "minLength": 1,
+          "title": "Next Check",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "relation",
+        "profile_refs",
+        "rationale",
+        "next_check"
+      ],
+      "title": "Assessment",
+      "type": "object"
+    },
+    "ConstraintCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "enum": [
+            "role",
+            "location",
+            "work_mode",
+            "employment",
+            "base_pay"
+          ],
+          "title": "Dimension",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "compatible",
+            "unknown",
+            "conflict"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "source_excerpt": {
+          "title": "Source Excerpt",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "next_check": {
+          "minLength": 1,
+          "title": "Next Check",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dimension",
+        "status",
+        "source_excerpt",
+        "rationale",
+        "next_check"
+      ],
+      "title": "ConstraintCheck",
+      "type": "object"
+    },
+    "ProfileReference": {
+      "additionalProperties": false,
+      "properties": {
+        "collection": {
+          "enum": [
+            "claims",
+            "skills",
+            "employment"
+          ],
+          "title": "Collection",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "collection",
+        "id"
+      ],
+      "title": "ProfileReference",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "h5.review-plan.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "method": {
+      "const": "manual_evidence_mapping",
+      "title": "Method",
+      "type": "string"
+    },
+    "reviewed_on": {
+      "format": "date",
+      "title": "Reviewed On",
+      "type": "string"
+    },
+    "profile_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Profile Sha256",
+      "type": "string"
+    },
+    "vacancy_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Vacancy Sha256",
+      "type": "string"
+    },
+    "priority_evidence_ids": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "maxItems": 3,
+      "minItems": 1,
+      "title": "Priority Evidence Ids",
+      "type": "array"
+    },
+    "assessments": {
+      "items": {
+        "$ref": "#/$defs/Assessment"
+      },
+      "title": "Assessments",
+      "type": "array"
+    },
+    "constraints": {
+      "items": {
+        "$ref": "#/$defs/ConstraintCheck"
+      },
+      "title": "Constraints",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "method",
+    "reviewed_on",
+    "profile_sha256",
+    "vacancy_sha256",
+    "priority_evidence_ids",
+    "assessments",
+    "constraints"
+  ],
+  "title": "ReviewPlan",
+  "type": "object"
+}

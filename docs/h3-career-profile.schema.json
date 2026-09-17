@@ -1,0 +1,457 @@
+{
+  "$defs": {
+    "CareerClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "current_role",
+            "domain",
+            "scope",
+            "architecture",
+            "technical_leadership",
+            "people_management",
+            "business_goal",
+            "outcome",
+            "preference",
+            "constraint",
+            "skill_context",
+            "language",
+            "education",
+            "career_direction"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "context": {
+          "minLength": 1,
+          "title": "Context",
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "context",
+        "statement",
+        "evidence"
+      ],
+      "title": "CareerClaim",
+      "type": "object"
+    },
+    "CareerSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "learning",
+            "working",
+            "strong",
+            "expert"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "years": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Years"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "id",
+        "level",
+        "evidence"
+      ],
+      "title": "CareerSkill",
+      "type": "object"
+    },
+    "CareerTarget": {
+      "additionalProperties": false,
+      "description": "User-declared intent, not an executable H2 selection or eligibility verdict.",
+      "properties": {
+        "role_families": {
+          "items": {
+            "enum": [
+              "engineering_management",
+              "product_management",
+              "data_engineering",
+              "data_science",
+              "platform_engineering",
+              "devops_engineering",
+              "backend_engineering",
+              "frontend_engineering",
+              "fullstack_engineering",
+              "cloud_engineering"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Role Families",
+          "type": "array"
+        },
+        "primary_seniority": {
+          "enum": [
+            "intern",
+            "junior",
+            "mid",
+            "senior",
+            "lead",
+            "staff",
+            "principal",
+            "manager",
+            "director",
+            "executive"
+          ],
+          "title": "Primary Seniority",
+          "type": "string"
+        },
+        "exploratory_seniorities": {
+          "items": {
+            "enum": [
+              "intern",
+              "junior",
+              "mid",
+              "senior",
+              "lead",
+              "staff",
+              "principal",
+              "manager",
+              "director",
+              "executive"
+            ],
+            "type": "string"
+          },
+          "title": "Exploratory Seniorities",
+          "type": "array"
+        },
+        "country": {
+          "pattern": "^[A-Z]{2}$",
+          "title": "Country",
+          "type": "string"
+        },
+        "remote_from_country": {
+          "title": "Remote From Country",
+          "type": "boolean"
+        },
+        "onsite_or_hybrid_cities": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Onsite Or Hybrid Cities",
+          "type": "array"
+        },
+        "relocation": {
+          "title": "Relocation",
+          "type": "boolean"
+        },
+        "employment_model": {
+          "minLength": 1,
+          "title": "Employment Model",
+          "type": "string"
+        },
+        "minimum_base_pay": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            }
+          ],
+          "title": "Minimum Base Pay"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "pay_period": {
+          "enum": [
+            "month",
+            "year",
+            "hour"
+          ],
+          "title": "Pay Period",
+          "type": "string"
+        },
+        "pay_basis": {
+          "enum": [
+            "gross",
+            "net"
+          ],
+          "title": "Pay Basis",
+          "type": "string"
+        },
+        "accept_undisclosed_pay_for_review": {
+          "title": "Accept Undisclosed Pay For Review",
+          "type": "boolean"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "role_families",
+        "primary_seniority",
+        "exploratory_seniorities",
+        "country",
+        "remote_from_country",
+        "onsite_or_hybrid_cities",
+        "relocation",
+        "employment_model",
+        "minimum_base_pay",
+        "currency",
+        "pay_period",
+        "pay_basis",
+        "accept_undisclosed_pay_for_review",
+        "evidence"
+      ],
+      "title": "CareerTarget",
+      "type": "object"
+    },
+    "Employment": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "employer": {
+          "minLength": 1,
+          "title": "Employer",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "start": {
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "id",
+        "employer",
+        "title",
+        "start",
+        "end",
+        "evidence"
+      ],
+      "title": "Employment",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "user_confirmed",
+            "document_unreviewed",
+            "interpretation",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "source_ids"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ProfileSource": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "user_statement",
+            "document",
+            "analysis"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "locator": {
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "recorded_on": {
+          "format": "date",
+          "title": "Recorded On",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "reference",
+        "locator",
+        "recorded_on"
+      ],
+      "title": "ProfileSource",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "h3.career-profile.v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "evidence_as_of": {
+      "format": "date",
+      "title": "Evidence As Of",
+      "type": "string"
+    },
+    "review_status": {
+      "enum": [
+        "draft",
+        "user_reviewed"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "review_source_id": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Review Source Id"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/ProfileSource"
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "target": {
+      "$ref": "#/$defs/CareerTarget"
+    },
+    "employment": {
+      "items": {
+        "$ref": "#/$defs/Employment"
+      },
+      "title": "Employment",
+      "type": "array"
+    },
+    "skills": {
+      "items": {
+        "$ref": "#/$defs/CareerSkill"
+      },
+      "title": "Skills",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/CareerClaim"
+      },
+      "minItems": 1,
+      "title": "Claims",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "name",
+    "evidence_as_of",
+    "review_status",
+    "sources",
+    "target",
+    "employment",
+    "skills",
+    "claims"
+  ],
+  "title": "CareerProfile",
+  "type": "object"
+}

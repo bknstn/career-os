@@ -34,6 +34,7 @@ from career_os.application import (
     LeverIngestionService,
     WorkablePublicIngestionService,
 )
+from career_os.application.career_review import build_career_review, load_review_plan
 from career_os.application.eligibility_funnel import (
     EligibilityFunnelConsistencyError,
     EligibilityFunnelService,
@@ -46,6 +47,7 @@ from career_os.application.operations import (
 )
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.report import MarketReportService
+from career_os.config.career_profiles import load_career_profile
 from career_os.config.markets import load_market_filters
 from career_os.config.profiles import load_profile
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
@@ -60,6 +62,7 @@ from career_os.config.sources import (
     load_sources_config,
 )
 from career_os.config.target_universes import load_target_universe
+from career_os.config.vacancy_evidence import load_vacancy_snapshot
 from career_os.db import (
     DatabaseConfigurationError,
     create_database_engine,
@@ -81,6 +84,7 @@ from career_os.persistence.operations import OperationalStatusRepository
 from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
 from career_os.reporting import render_eligibility_funnel, render_markdown_report
+from career_os.reporting.career_review import render_career_review
 from career_os.settings import Settings, load_settings
 
 app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job evidence.")
@@ -90,6 +94,10 @@ jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical j
 taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
 market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed market reports.")
 operations_app = typer.Typer(no_args_is_help=True, help="Inspect collection health and metrics.")
+profile_app = typer.Typer(no_args_is_help=True, help="Validate H3 career profile evidence.")
+career_app = typer.Typer(no_args_is_help=True, help="Review one vacancy against H3 evidence.")
+app.add_typer(career_app, name="career")
+app.add_typer(profile_app, name="profile")
 app.add_typer(sources_app, name="sources")
 app.add_typer(runs_app, name="runs")
 app.add_typer(jobs_app, name="jobs")
@@ -274,6 +282,55 @@ def _selected_sources(
     if not selected:
         raise ConfigurationError("no enabled sources were selected")
     return selected
+
+
+_VACANCY_OPTION = typer.Option(..., "--vacancy", dir_okay=False)
+_REVIEW_PLAN_OPTION = typer.Option(..., "--review-plan", dir_okay=False)
+_CAREER_FORMAT_OPTION = typer.Option("markdown", "--format", help="markdown or json")
+
+
+@career_app.command("review")
+def career_review(
+    profile: Path = _REPORT_PROFILE_OPTION,
+    vacancy: Path = _VACANCY_OPTION,
+    review_plan: Path = _REVIEW_PLAN_OPTION,
+    taxonomy: Path = _ENRICH_TAXONOMY_OPTION,
+    output: Path = _REPORT_OUTPUT_OPTION,
+    output_format: str = _CAREER_FORMAT_OPTION,
+) -> None:
+    """Assemble a digest-bound, manually mapped single-vacancy review offline."""
+    try:
+        if output_format not in ("markdown", "json"):
+            raise ConfigurationError("format must be markdown or json")
+        if output.resolve() in {p.resolve() for p in (profile, vacancy, review_plan, taxonomy)}:
+            raise ConfigurationError("output must not overwrite an input")
+        result = build_career_review(
+            load_career_profile(profile, taxonomy=load_skill_taxonomy(taxonomy)),
+            load_vacancy_snapshot(vacancy),
+            load_review_plan(review_plan),
+        )
+        rendered = (
+            result.model_dump_json(indent=2) + "\n"
+            if output_format == "json"
+            else render_career_review(result)
+        )
+        _atomic_write_text(output, rendered)
+    except (ConfigurationError, OSError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo({"output": str(output), "constraint_status": result.constraint_status})
+
+
+@profile_app.command("validate")
+def profile_validate(
+    config: Path = _REPORT_PROFILE_OPTION,
+    taxonomy: Path = _ENRICH_TAXONOMY_OPTION,
+) -> None:
+    """Emit the validated H3 profile as JSON without database or network access."""
+    try:
+        profile = load_career_profile(config, taxonomy=load_skill_taxonomy(taxonomy))
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(profile.model_dump(mode="json"))
 
 
 @taxonomy_app.command("validate")
