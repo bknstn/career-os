@@ -1,0 +1,28 @@
+compensation_record:
+  schema_version: compensation-record.v1
+  source:
+    id: example_user_statement_2026_09_20
+    kind: user_statement
+    reference: User statement recorded for a manual compensation update
+    locator: Replace with the date and non-sensitive origin of the reported information; do not copy private correspondence into the ledger.
+    recorded_on: '2026-09-20'
+  observation:
+    id: example_opportunity_compensation_2026_09_20
+    subject:
+      kind: opportunity
+      id: example_opportunity
+      label: Example opportunity
+      reference: https://example.invalid/jobs/123
+    amount:
+      minimum: null
+      maximum: null
+      currency: null
+      period: unknown
+      basis: unknown
+      component: unknown
+      employment_model: unknown
+    disclosure_kind: unknown
+    source_id: example_user_statement_2026_09_20
+    disclosed_on: '2026-09-20'
+    supersedes: null
+    note: Replace this record with an explicit value or retain unknown fields when terms were not disclosed.

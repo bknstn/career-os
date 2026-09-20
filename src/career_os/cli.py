@@ -35,6 +35,7 @@ from career_os.application import (
     WorkablePublicIngestionService,
 )
 from career_os.application.career_review import build_career_review, load_review_plan
+from career_os.application.compensation import build_compensation_comparison
 from career_os.application.eligibility_funnel import (
     EligibilityFunnelConsistencyError,
     EligibilityFunnelService,
@@ -48,6 +49,13 @@ from career_os.application.operations import (
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.report import MarketReportService
 from career_os.config.career_profiles import load_career_profile
+from career_os.config.compensation_supplements import (
+    append_compensation_record,
+    dump_compensation_ledger,
+    load_compensation_ledger,
+    load_compensation_record,
+    new_compensation_ledger,
+)
 from career_os.config.markets import load_market_filters
 from career_os.config.profiles import load_profile
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
@@ -85,6 +93,7 @@ from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
 from career_os.reporting import render_eligibility_funnel, render_markdown_report
 from career_os.reporting.career_review import render_career_review
+from career_os.reporting.compensation import render_compensation_comparison
 from career_os.settings import Settings, load_settings
 
 app = typer.Typer(no_args_is_help=True, help="Collect and inspect Career OS job evidence.")
@@ -96,6 +105,10 @@ market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed marke
 operations_app = typer.Typer(no_args_is_help=True, help="Inspect collection health and metrics.")
 profile_app = typer.Typer(no_args_is_help=True, help="Validate H3 career profile evidence.")
 career_app = typer.Typer(no_args_is_help=True, help="Review one vacancy against H3 evidence.")
+compensation_app = typer.Typer(
+    no_args_is_help=True, help="Record and compare manual compensation evidence offline."
+)
+career_app.add_typer(compensation_app, name="compensation")
 app.add_typer(career_app, name="career")
 app.add_typer(profile_app, name="profile")
 app.add_typer(sources_app, name="sources")
@@ -287,6 +300,10 @@ def _selected_sources(
 _VACANCY_OPTION = typer.Option(..., "--vacancy", dir_okay=False)
 _REVIEW_PLAN_OPTION = typer.Option(..., "--review-plan", dir_okay=False)
 _CAREER_FORMAT_OPTION = typer.Option("markdown", "--format", help="markdown or json")
+_COMPENSATION_LEDGER_OPTION = typer.Option(..., "--ledger", exists=False, dir_okay=False)
+_COMPENSATION_RECORD_OPTION = typer.Option(..., "--record", exists=False, dir_okay=False)
+_COMPENSATION_CURRENT_ROLE_OPTION = typer.Option(..., "--current-role")
+_COMPENSATION_OPPORTUNITY_OPTION = typer.Option(..., "--opportunity")
 
 
 @career_app.command("review")
@@ -318,6 +335,78 @@ def career_review(
     except (ConfigurationError, OSError) as error:
         _emit_error(error, exit_code=2)
     _json_echo({"output": str(output), "constraint_status": result.constraint_status})
+
+
+@compensation_app.command("validate")
+def compensation_validate(
+    ledger: Path = _COMPENSATION_LEDGER_OPTION,
+) -> None:
+    """Emit a strict compensation ledger without touching H3/H4 inputs or a database."""
+    try:
+        result = load_compensation_ledger(ledger)
+    except ConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(result.model_dump(mode="json"))
+
+
+@compensation_app.command("record")
+def compensation_record(
+    ledger: Path = _COMPENSATION_LEDGER_OPTION,
+    record: Path = _COMPENSATION_RECORD_OPTION,
+) -> None:
+    """Atomically append one manual observation; corrections must use explicit supersedes."""
+    try:
+        if ledger.resolve() == record.resolve():
+            raise ConfigurationError("ledger and record must be different files")
+        new_record = load_compensation_record(record)
+        result = (
+            append_compensation_record(load_compensation_ledger(ledger), new_record)
+            if ledger.exists()
+            else new_compensation_ledger(new_record)
+        )
+        _atomic_write_text(ledger, dump_compensation_ledger(result))
+    except (ConfigurationError, OSError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo({"ledger": str(ledger), "observations": len(result.observations)})
+
+
+@compensation_app.command("compare")
+def compensation_compare(
+    ledger: Path = _COMPENSATION_LEDGER_OPTION,
+    profile: Path = _REPORT_PROFILE_OPTION,
+    current_role: str = _COMPENSATION_CURRENT_ROLE_OPTION,
+    opportunity: str = _COMPENSATION_OPPORTUNITY_OPTION,
+    output: Path = _REPORT_OUTPUT_OPTION,
+    taxonomy: Path = _ENRICH_TAXONOMY_OPTION,
+    output_format: str = _CAREER_FORMAT_OPTION,
+) -> None:
+    """Write a Decimal-only compensation comparison from manual supplemental evidence."""
+    try:
+        if output_format not in ("markdown", "json"):
+            raise ConfigurationError("format must be markdown or json")
+        if output.resolve() in {path.resolve() for path in (ledger, profile, taxonomy)}:
+            raise ConfigurationError("output must not overwrite an input")
+        result = build_compensation_comparison(
+            load_compensation_ledger(ledger),
+            load_career_profile(profile, taxonomy=load_skill_taxonomy(taxonomy)),
+            current_role_id=current_role,
+            opportunity_id=opportunity,
+        )
+        rendered = (
+            result.model_dump_json(indent=2) + "\n"
+            if output_format == "json"
+            else render_compensation_comparison(result)
+        )
+        _atomic_write_text(output, rendered)
+    except (ConfigurationError, OSError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(
+        {
+            "output": str(output),
+            "comparable": result.comparable,
+            "floor_status": result.floor.status,
+        }
+    )
 
 
 @profile_app.command("validate")
