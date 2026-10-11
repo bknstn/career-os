@@ -15,6 +15,8 @@ CAREER_OS_TABLE_NAMES = frozenset(
         "job_locations",
         "job_skills",
         "job_compensation",
+        "radar_panel_versions",
+        "radar_scan_observations",
     }
 )
 

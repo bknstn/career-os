@@ -10,10 +10,13 @@ from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 
 from career_os.persistence.models import (
     Base,
+    CollectionRun,
     JobCompensation,
     JobLocation,
     JobPosting,
     JobSkill,
+    RadarPanelVersion,
+    RadarScanObservation,
     Source,
 )
 
@@ -27,6 +30,8 @@ def test_initial_metadata_contains_only_the_planned_tables() -> None:
         "job_locations",
         "job_skills",
         "job_compensation",
+        "radar_panel_versions",
+        "radar_scan_observations",
     }
 
 
@@ -41,6 +46,22 @@ def test_postgresql_specific_columns_and_uuid_defaults_are_declared() -> None:
     assert isinstance(sources.c.config.type, JSONB)
     assert isinstance(job_versions.c.canonical_snapshot.type, JSONB)
     assert isinstance(job_versions.c.changed_fields.type, ARRAY)
+
+
+def test_radar_capture_metadata_keeps_panel_identity_and_observations_independent() -> None:
+    panel_versions = RadarPanelVersion.__table__
+    observations = RadarScanObservation.__table__
+
+    assert panel_versions.primary_key.columns.keys() == ["panel_version"]
+    assert isinstance(panel_versions.c.canonical_manifest.type, JSONB)
+    assert isinstance(panel_versions.c.source_config_digests.type, JSONB)
+    assert CollectionRun.__table__.c.radar_panel_version.nullable is True
+    assert {
+        (foreign_key.parent.name, foreign_key.target_fullname)
+        for foreign_key in observations.foreign_keys
+    } == {("run_id", "collection_runs.id")}
+    assert list(observations.primary_key.columns.keys()) == ["run_id", "external_id"]
+    assert {"title", "description", "observed_at"} <= set(observations.c.keys())
 
 
 def test_numeric_columns_preserve_decimal_values() -> None:

@@ -80,6 +80,35 @@ class Source(AuditTimestampMixin, Base):
     )
 
 
+class RadarPanelVersion(Base):
+    """One immutable manifest and source-configuration identity for Radar capture."""
+
+    __tablename__ = "radar_panel_versions"
+    __table_args__ = (
+        CheckConstraint(
+            "manifest_digest ~ '^[0-9a-f]{64}$'",
+            name="ck_radar_panel_versions_manifest_digest",
+        ),
+        CheckConstraint(
+            "panel_digest ~ '^[0-9a-f]{64}$'",
+            name="ck_radar_panel_versions_panel_digest",
+        ),
+        PrimaryKeyConstraint("panel_version", name="pk_radar_panel_versions"),
+    )
+
+    panel_version: Mapped[str] = mapped_column(String, primary_key=True)
+    manifest_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    panel_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_manifest: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    source_config_digests: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+
 class CollectionRun(Base):
     """A single attempted scan of one configured source."""
 
@@ -99,6 +128,18 @@ class CollectionRun(Base):
         CheckConstraint(
             "finished_at IS NULL OR finished_at >= started_at",
             name="ck_collection_runs_finished_after_started",
+        ),
+        CheckConstraint(
+            "(radar_panel_version IS NULL AND radar_manifest_digest IS NULL "
+            "AND radar_panel_digest IS NULL) OR "
+            "(radar_panel_version IS NOT NULL AND radar_manifest_digest IS NOT NULL "
+            "AND radar_panel_digest IS NOT NULL)",
+            name="ck_collection_runs_radar_panel_provenance_complete",
+        ),
+        Index(
+            "ix_collection_runs_radar_panel_version_finished_at",
+            "radar_panel_version",
+            "finished_at",
         ),
         PrimaryKeyConstraint("id", name="pk_collection_runs"),
     )
@@ -145,8 +186,29 @@ class CollectionRun(Base):
     )
     normalizer_version: Mapped[str] = mapped_column(String, nullable=False)
     taxonomy_version: Mapped[str] = mapped_column(String, nullable=False)
+    radar_panel_version: Mapped[str | None] = mapped_column(
+        ForeignKey("radar_panel_versions.panel_version")
+    )
+    radar_manifest_digest: Mapped[str | None] = mapped_column(String(64))
+    radar_panel_digest: Mapped[str | None] = mapped_column(String(64))
     error_summary: Mapped[str | None] = mapped_column(Text)
     incomplete_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class RadarScanObservation(Base):
+    """Immutable per-run classifier inputs, independent of mutable job projections."""
+
+    __tablename__ = "radar_scan_observations"
+    __table_args__ = (
+        CheckConstraint("length(external_id) > 0", name="ck_radar_scan_observations_external_id"),
+        PrimaryKeyConstraint("run_id", "external_id", name="pk_radar_scan_observations"),
+    )
+
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("collection_runs.id"), nullable=False)
+    external_id: Mapped[str] = mapped_column(String, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 class JobPosting(AuditTimestampMixin, Base):
