@@ -139,11 +139,6 @@ class RoleClassification:
             raise ValueError("evidence must contain ClassificationEvidence values")
         if self.managerial_function not in {True, False, None}:
             raise ValueError("managerial_function must be true, false, or unknown")
-        if self.status is ClassificationStatus.CLASSIFIED:
-            if self.role_family is None or self.scope is not RoleScope.IN_SCOPE:
-                raise ValueError("classified results require one in-scope role family")
-        elif self.role_family is not None:
-            raise ValueError("unclassified results must not carry a role family")
         expected_scope = {
             ClassificationStatus.CLASSIFIED: RoleScope.IN_SCOPE,
             ClassificationStatus.UNCLASSIFIED: RoleScope.IN_SCOPE,
@@ -154,6 +149,11 @@ class RoleClassification:
         }[self.status]
         if self.scope is not expected_scope:
             raise ValueError("classification status and scope do not agree")
+        if self.status is ClassificationStatus.CLASSIFIED:
+            if self.role_family is None:
+                raise ValueError("classified results require one role family")
+        elif self.role_family is not None:
+            raise ValueError("unclassified results must not carry a role family")
 
     @property
     def role_bucket(self) -> str:
@@ -311,9 +311,9 @@ _DISJUNCTION: Final = re.compile(
 
 _SENIORITY_PATTERNS: Final[tuple[tuple[Seniority, re.Pattern[str]], ...]] = (
     (Seniority.INTERN, re.compile(r"\bintern(?:ship)?\b", re.I)),
-    (Seniority.JUNIOR, re.compile(r"\b(?:junior|jr\.?|entry[- ]level|associate)\b", re.I)),
+    (Seniority.JUNIOR, re.compile(r"\b(?:junior|jr(?:\.)?|entry[- ]level|associate)(?!\w)", re.I)),
     (Seniority.MID, re.compile(r"\bmid(?:[- ]level)?\b", re.I)),
-    (Seniority.SENIOR, re.compile(r"\b(?:senior|sr\.?)\b", re.I)),
+    (Seniority.SENIOR, re.compile(r"\b(?:senior|sr(?:\.)?)(?!\w)", re.I)),
     (Seniority.LEAD, re.compile(r"\blead\b", re.I)),
     (Seniority.STAFF, re.compile(r"\bstaff\b", re.I)),
     (Seniority.PRINCIPAL, re.compile(r"\bprincipal\b", re.I)),
