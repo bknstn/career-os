@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from alembic import command
@@ -37,8 +38,10 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
     try:
         assert_disposable_test_database(database_url_from_settings(settings))
         assert_initial_schema_is_absent(inspect(engine).get_table_names())
-        command.upgrade(alembic_config, "head")
+        command.upgrade(alembic_config, "20260821_0003")
         upgraded = True
+        legacy_source_id, legacy_run_id = _seed_legacy_source_and_run(engine)
+        command.upgrade(alembic_config, "head")
 
         inspector = inspect(engine)
         assert set(inspector.get_table_names()) >= CAREER_OS_TABLE_NAMES
@@ -93,6 +96,13 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
             }
             & {column["name"] for column in downgraded_inspector.get_columns("collection_runs")}
         )
+        with engine.connect() as connection:
+            legacy_run = connection.execute(
+                text("SELECT source_id, status FROM collection_runs WHERE id = :run_id"),
+                {"run_id": legacy_run_id},
+            ).one()
+            assert legacy_run.source_id == legacy_source_id
+            assert legacy_run.status == "succeeded"
         command.upgrade(alembic_config, "head")
         reupgraded_inspector = inspect(engine)
         assert {"radar_panel_versions", "radar_scan_observations"} <= set(
@@ -103,6 +113,14 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
             "radar_manifest_digest",
             "radar_panel_digest",
         } <= {column["name"] for column in reupgraded_inspector.get_columns("collection_runs")}
+        with engine.connect() as connection:
+            assert (
+                connection.scalar(
+                    text("SELECT count(*) FROM collection_runs WHERE id = :run_id"),
+                    {"run_id": legacy_run_id},
+                )
+                == 1
+            )
     finally:
         try:
             if upgraded:
@@ -126,3 +144,47 @@ def _nonunique_index_names(indexes: list[dict[str, object]]) -> set[str]:
         for index in indexes
         if not index.get("unique", False) and not index.get("duplicates_constraint")
     }
+
+
+def _seed_legacy_source_and_run(engine, *, now=None):
+    """Insert a pre-capture source/run row while the database is at revision 0003."""
+    from datetime import UTC, datetime
+
+    source_id = uuid4()
+    run_id = uuid4()
+    seeded_at = now or datetime.now(UTC)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO sources "
+                "(id, key, kind, company_name, config, enabled, created_at, updated_at) "
+                "VALUES (:id, :key, :kind, :company_name, CAST(:config AS jsonb), "
+                ":enabled, :created_at, :updated_at)"
+            ),
+            {
+                "id": source_id,
+                "key": "legacy-upgrade-source",
+                "kind": "greenhouse",
+                "company_name": "Legacy Example",
+                "config": '{"key":"legacy-upgrade-source","kind":"greenhouse",'
+                '"company_name":"Legacy Example","board_token":"fixture"}',
+                "enabled": True,
+                "created_at": seeded_at,
+                "updated_at": seeded_at,
+            },
+        )
+        connection.execute(
+            text(
+                "INSERT INTO collection_runs "
+                "(id, source_id, status, started_at, finished_at, normalizer_version, "
+                "taxonomy_version) VALUES (:id, :source_id, 'succeeded', :started_at, "
+                ":finished_at, 'legacy-normalizer', 'legacy-taxonomy')"
+            ),
+            {
+                "id": run_id,
+                "source_id": source_id,
+                "started_at": seeded_at,
+                "finished_at": seeded_at,
+            },
+        )
+    return source_id, run_id
