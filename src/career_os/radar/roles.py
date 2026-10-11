@@ -95,6 +95,8 @@ class RoleTaxonomy:
     families: tuple[RoleFamilyDefinition, ...]
 
     def __post_init__(self) -> None:
+        if not isinstance(self.families, tuple):
+            raise ValueError("taxonomy families must be an immutable tuple")
         validate_role_taxonomy(self)
 
 
@@ -123,21 +125,35 @@ class RoleClassification:
     evidence: tuple[ClassificationEvidence, ...]
 
     def __post_init__(self) -> None:
-        if not self.classifier_version.strip() or not self.taxonomy_version.strip():
-            raise ValueError("classifier and taxonomy versions must be non-blank")
+        if not _SEMVER.fullmatch(self.classifier_version) or not _SEMVER.fullmatch(
+            self.taxonomy_version
+        ):
+            raise ValueError("classifier and taxonomy versions must be semantic versions")
         if not isinstance(self.context, tuple) or not isinstance(self.evidence, tuple):
             raise ValueError("context and evidence must be immutable tuples")
+        if not all(isinstance(value, RoleContext) for value in self.context):
+            raise ValueError("context contains an unsupported role context")
+        if len(self.context) != len(set(self.context)):
+            raise ValueError("context values must be unique")
+        if not all(isinstance(item, ClassificationEvidence) for item in self.evidence):
+            raise ValueError("evidence must contain ClassificationEvidence values")
+        if self.managerial_function not in {True, False, None}:
+            raise ValueError("managerial_function must be true, false, or unknown")
         if self.status is ClassificationStatus.CLASSIFIED:
             if self.role_family is None or self.scope is not RoleScope.IN_SCOPE:
                 raise ValueError("classified results require one in-scope role family")
         elif self.role_family is not None:
             raise ValueError("unclassified results must not carry a role family")
-        if self.status is ClassificationStatus.OUT_OF_SCOPE:
-            if self.scope is not RoleScope.OUT_OF_SCOPE:
-                raise ValueError("out_of_scope status requires out_of_scope scope")
-        if self.status is ClassificationStatus.UNKNOWN_SCOPE:
-            if self.scope is not RoleScope.UNKNOWN_SCOPE:
-                raise ValueError("unknown_scope status requires unknown_scope scope")
+        expected_scope = {
+            ClassificationStatus.CLASSIFIED: RoleScope.IN_SCOPE,
+            ClassificationStatus.UNCLASSIFIED: RoleScope.IN_SCOPE,
+            ClassificationStatus.AMBIGUOUS: RoleScope.IN_SCOPE,
+            ClassificationStatus.CONFLICT: RoleScope.IN_SCOPE,
+            ClassificationStatus.UNKNOWN_SCOPE: RoleScope.UNKNOWN_SCOPE,
+            ClassificationStatus.OUT_OF_SCOPE: RoleScope.OUT_OF_SCOPE,
+        }[self.status]
+        if self.scope is not expected_scope:
+            raise ValueError("classification status and scope do not agree")
 
     @property
     def role_bucket(self) -> str:
@@ -181,13 +197,13 @@ CLASSIFIER_VERSION: Final = "1.0.0"
 
 _TECHNICAL_ROLE_HEAD: Final = re.compile(
     r"\b(?:software\s+)?(?:engineer|developer|programmer|architect)\b|"
-    r"\b(?:technical|engineering)\s+support\b|"
+    r"\b(?:technical|engineering)\s+support\b|\btech\s+lead\b|"
     r"\b(?:data|research|applied)\s+scientist\b|\b(?:devops|sre)\b",
     re.I,
 )
 _TECHNICAL_TITLE: Final = re.compile(
     r"\b(?:engineer(?:ing)?|developer|software|programmer|architect|scientist|"
-    r"technical|devops|sre)\b",
+    r"technical|devops|sre)\b|\btech\s+lead\b",
     re.I,
 )
 _OUT_OF_SCOPE_HEAD: Final = re.compile(
@@ -243,8 +259,18 @@ _ROLE_PATTERNS: Final[dict[RoleFamily, tuple[tuple[str, re.Pattern[str]], ...]]]
         ("platform_engineer", re.compile(r"\bplatform\s+(?:infrastructure\s+)?engineer\b", re.I)),
         ("infrastructure_engineer", re.compile(r"\binfrastructure\s+engineer\b", re.I)),
         ("devops_engineer", re.compile(r"\bdevops\s+(?:software\s+)?engineer\b", re.I)),
-        ("sre_title", re.compile(r"\bsite\s+reliability\s+engineer\b|\bsre\b", re.I)),
-        ("devops_title", re.compile(r"\bdevops\b", re.I)),
+        (
+            "sre_title",
+            re.compile(
+                r"\bsite\s+reliability\s+engineer\b|"
+                r"^\s*(?:(?:staff|principal|senior|lead|junior)\s+)?sre(?:\s+(?:engineer|specialist))?\b",
+                re.I,
+            ),
+        ),
+        (
+            "devops_title",
+            re.compile(r"^\s*(?:(?:staff|principal|senior|lead|junior)\s+)?devops\b", re.I),
+        ),
     ),
     RoleFamily.MACHINE_LEARNING_ENGINEERING: (
         (
@@ -304,7 +330,7 @@ _CONTEXT_PATTERNS: Final[tuple[tuple[RoleContext, re.Pattern[str]], ...]] = (
     (RoleContext.FRONTEND, re.compile(r"\bfront\s*end\b", re.I)),
     (RoleContext.FULLSTACK, re.compile(r"\bfull\s*stack\b", re.I)),
     (RoleContext.DATA, re.compile(r"\bdata\b", re.I)),
-    (RoleContext.PLATFORM, re.compile(r"\bplatform\b", re.I)),
+    (RoleContext.PLATFORM, re.compile(r"\b(?:platform|devops|sre)\b", re.I)),
     (RoleContext.CLOUD, re.compile(r"\bcloud\b", re.I)),
     (RoleContext.SECURITY, re.compile(r"\bsecurity\b", re.I)),
     (RoleContext.CUSTOMER_FACING, re.compile(r"\bcustomer[- ]facing\b", re.I)),
@@ -353,11 +379,21 @@ _DUTY_PATTERNS: Final[dict[RoleFamily, tuple[str, re.Pattern[str]]]] = {
     ),
 }
 _PEOPLE_MANAGEMENT_DUTY: Final = re.compile(
-    r"\b(?:manage (?:a |the )?(?:team|people|direct reports)|"
-    r"people management|manage performance|have direct reports)\b",
+    r"^\s*(?:manage (?:a |the )?(?:team|people|direct reports)|"
+    r"manage performance (?:for|of) (?:the )?(?:team|people)|"
+    r"have direct reports|own people management)\b",
     re.I,
 )
-_NEGATED_DUTY: Final = re.compile(r"\b(?:no|not|never|without|don't|do not)\b", re.I)
+_NEGATED_ACTION: Final = re.compile(
+    r"\b(?:do not|don't|never|not)\s+(?:build|design|develop|own|operate|maintain|"
+    r"scale|implement|train|deploy|serve|evaluate|architect|deliver)\b",
+    re.I,
+)
+_NEGATED_PEOPLE_MANAGEMENT: Final = re.compile(
+    r"\b(?:no|not|never|without|don't|do not)\b.{0,30}\b"
+    r"(?:manage|management|direct reports)\b",
+    re.I,
+)
 
 
 def classify_role(
@@ -382,32 +418,43 @@ def classify_role(
     technical_head = _TECHNICAL_ROLE_HEAD.search(title_text)
     if out_match is not None and technical_head is None and explicit_management is None:
         evidence.append(_make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "nontechnical_role_head", out_match.group(0)))
+        seniority, seniority_evidence = _seniority(title_text, is_management=False)
+        evidence.extend(seniority_evidence)
         return _make_result(
             taxonomy, None, ClassificationStatus.OUT_OF_SCOPE, RoleScope.OUT_OF_SCOPE,
-            *_seniority(title_text, is_management=False), title_text, description_text, evidence,
+            seniority, title_text, description_text, evidence,
         )
     if out_match is not None and (technical_head is not None or explicit_management is not None):
         evidence.extend((
             _make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "nontechnical_role_head", out_match.group(0)),
             _make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_role_head", (technical_head or explicit_management).group(0)),
         ))
+        seniority, seniority_evidence = _seniority(
+            title_text, is_management=explicit_management is not None
+        )
+        evidence.extend(seniority_evidence)
         return _make_result(
             taxonomy, None, ClassificationStatus.CONFLICT, RoleScope.IN_SCOPE,
-            *_seniority(title_text, is_management=explicit_management is not None),
-            title_text, description_text, evidence,
+            seniority, title_text, description_text, evidence,
         )
 
     scope_match = technical_head or _TECHNICAL_TITLE.search(title_text) or explicit_management
     if scope_match is None:
+        seniority, seniority_evidence = _seniority(title_text, is_management=False)
+        evidence.extend(seniority_evidence)
         return _make_result(
             taxonomy, None, ClassificationStatus.UNKNOWN_SCOPE, RoleScope.UNKNOWN_SCOPE,
-            *_seniority(title_text, is_management=False), title_text, description_text, evidence,
+            seniority, title_text, description_text, evidence,
         )
     evidence.append(_make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_title", scope_match.group(0)))
 
     title_matches = _title_family_matches(title_text)
     seniority, seniority_evidence = _seniority(title_text, is_management=explicit_management is not None)
     evidence.extend(seniority_evidence)
+    evidence.extend(
+        _make_evidence(EvidenceAxis.ROLE, EvidenceSource.TITLE, rule_id, matched_text)
+        for rule_id, matched_text in title_matches.values()
+    )
     duty_matches = _description_duty_matches(description_text)
     evidence.extend(
         _make_evidence(EvidenceAxis.ROLE, EvidenceSource.DESCRIPTION_DUTY, rule_id, duty_text)
@@ -480,13 +527,12 @@ def _title_family_matches(title: str) -> dict[RoleFamily, tuple[str, str]]:
     disjunction = _DISJUNCTION.search(title)
     if disjunction is not None:
         for side in (disjunction.group("left"), disjunction.group("right")):
-            for family, pattern in _ROLE_TERMS:
-                term = pattern.search(side)
-                if term is not None:
-                    matches.setdefault(
-                        family,
-                        ("cross_family_disjunction", disjunction.group(0)),
-                    )
+            family = _disjunction_family(side)
+            if family is not None:
+                matches.setdefault(
+                    family,
+                    ("cross_family_disjunction", disjunction.group(0)),
+                )
 
     platform_context = re.search(r"\b(?:ml|machine\s+learning|ai)\s+platform\b", title, re.I)
     if not matches and platform_context is not None and _GENERIC_ENGINEERING_HEAD.match(title):
@@ -495,6 +541,27 @@ def _title_family_matches(title: str) -> dict[RoleFamily, tuple[str, str]]:
             platform_context.group(0),
         )
     return matches
+
+
+def _disjunction_family(segment: str) -> RoleFamily | None:
+    """Resolve one side of a title disjunction without promoting its context."""
+    if _AI_PRODUCT.search(segment):
+        return RoleFamily.AI_PRODUCT_ENGINEERING
+    if re.search(r"\bplatform\b", segment, re.I):
+        return RoleFamily.PLATFORM_INFRASTRUCTURE_ENGINEERING
+    for family, pattern in _ROLE_TERMS:
+        if pattern.search(segment) is None:
+            continue
+        if family is RoleFamily.AI_ENGINEERING and re.search(
+            r"\b(?:product|platform)\b", segment, re.I
+        ):
+            continue
+        if family is RoleFamily.MACHINE_LEARNING_ENGINEERING and re.search(
+            r"\bplatform\b", segment, re.I
+        ):
+            continue
+        return family
+    return None
 
 
 def _seniority(
@@ -540,7 +607,7 @@ def _description_duty_matches(description: str) -> dict[RoleFamily, tuple[str, s
     duties = _duty_bullets(description)
     matches: dict[RoleFamily, tuple[str, str]] = {}
     for duty in duties:
-        if _NEGATED_DUTY.search(duty):
+        if _NEGATED_ACTION.search(duty):
             continue
         for family, (rule_id, pattern) in _DUTY_PATTERNS.items():
             if pattern.search(duty) is not None:
@@ -596,7 +663,8 @@ def _make_result(
             (
                 duty
                 for duty in _duty_bullets(description)
-                if not _NEGATED_DUTY.search(duty) and _PEOPLE_MANAGEMENT_DUTY.search(duty)
+                if not _NEGATED_PEOPLE_MANAGEMENT.search(duty)
+                and _PEOPLE_MANAGEMENT_DUTY.search(duty)
             ),
             None,
         )

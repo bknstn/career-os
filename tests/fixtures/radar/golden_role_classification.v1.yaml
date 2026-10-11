@@ -1,0 +1,188 @@
+taxonomy_version: 1.0.0
+cases:
+  - id: retained_flip_lead_ai_engineer_mfd
+    origin: retained_db
+    provenance: {source_key: flip-ashby, job_id: 4c91d6e5-9bd6-41d9-86d0-93a300ca5504}
+    title: Lead AI Engineer (m/f/d)
+    expected: {status: classified, scope: in_scope, family: ai_engineering, seniority: lead, managerial_function: null, context: [ai]}
+  - id: retained_flip_lead_ai_engineer_mwd
+    origin: retained_db
+    provenance: {source_key: flip-ashby, job_id: 7a1fff6b-7c51-41e9-9e2c-78ab9feb0584}
+    title: Lead AI Engineer (m/w/d)
+    expected: {status: classified, scope: in_scope, family: ai_engineering, seniority: lead, managerial_function: null, context: [ai]}
+  - id: retained_product_engineer_backend
+    origin: retained_db
+    provenance: {source_key: flip-ashby, job_id: c8c9dfae-a368-4ed6-a0b0-487625b8a12f}
+    title: Product Engineer (Backend) (m/f/d)
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: null, managerial_function: null, context: [product, backend]}
+  - id: retained_fullstack_ai_agents
+    origin: retained_db
+    provenance: {source_key: hostinger-ashby, job_id: 0fb17f3e-ed65-4ded-b7c1-d92cb2c59981}
+    title: Full Stack Engineer (Automation & AI Agents) | Delivery Automation Team
+    expected: {status: classified, scope: in_scope, family: fullstack_engineering, seniority: null, managerial_function: null, context: [ai, fullstack]}
+  - id: retained_ai_technical_support
+    origin: retained_db
+    provenance: {source_key: hostinger-ashby, job_id: 6eed977a-aa6e-4a6a-a4d2-81d33c8023cd}
+    title: AI Technical Support Specialist | Based in Lithuania
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: [ai]}
+  - id: retained_engineering_manager_product
+    origin: retained_db
+    provenance: {source_key: secfix-ashby, job_id: 415f2148-5612-4758-b180-4f2dc342d5fd}
+    title: Engineering Manager, Product Engineering
+    expected: {status: classified, scope: in_scope, family: engineering_management, seniority: manager, managerial_function: true, context: [product]}
+  - id: retained_generic_senior_software_engineer
+    origin: retained_db
+    provenance: {source_key: percona-ashby, job_id: 1c59addd-8e35-43e5-922c-4bedcb269aa3}
+    title: Sr. Software Engineer - Go/MongoDB (Remote)
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: senior, managerial_function: null, context: []}
+  - id: synthetic_backend_role_beats_platform_context
+    origin: synthetic
+    title: Senior Backend Engineer, AI Platform
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: senior, managerial_function: null, context: [ai, backend, platform]}
+  - id: synthetic_platform_role_with_ml_context
+    origin: synthetic
+    title: Staff Software Engineer, ML Platform
+    expected: {status: classified, scope: in_scope, family: platform_infrastructure_engineering, seniority: staff, managerial_function: null, context: [machine_learning, platform]}
+  - id: synthetic_frontend
+    origin: synthetic
+    title: Frontend Engineer
+    expected: {status: classified, scope: in_scope, family: frontend_engineering, seniority: null, managerial_function: null, context: [frontend]}
+  - id: synthetic_data
+    origin: synthetic
+    title: Principal Data Engineer
+    expected: {status: classified, scope: in_scope, family: data_engineering, seniority: principal, managerial_function: null, context: [data]}
+  - id: synthetic_product
+    origin: synthetic
+    title: Product Engineer
+    expected: {status: classified, scope: in_scope, family: product_engineering, seniority: null, managerial_function: null, context: [product]}
+  - id: synthetic_machine_learning
+    origin: synthetic
+    title: ML Engineer
+    expected: {status: classified, scope: in_scope, family: machine_learning_engineering, seniority: null, managerial_function: null, context: [machine_learning]}
+  - id: synthetic_ai_product
+    origin: synthetic
+    title: AI Product Engineer
+    expected: {status: classified, scope: in_scope, family: ai_product_engineering, seniority: null, managerial_function: null, context: [ai, product]}
+  - id: synthetic_solutions_engineer
+    origin: synthetic
+    title: Solutions Engineer
+    expected: {status: classified, scope: in_scope, family: solutions_architecture, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_product_manager_out_of_scope
+    origin: synthetic
+    title: Product Manager
+    expected: {status: out_of_scope, scope: out_of_scope, family: null, seniority: manager, managerial_function: null, context: [product]}
+  - id: synthetic_unknown_scope
+    origin: synthetic
+    title: Analyst
+    expected: {status: unknown_scope, scope: unknown_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_ai_ml_role_conflict
+    origin: synthetic
+    title: AI Product Engineer / ML Engineer
+    expected: {status: ambiguous, scope: in_scope, family: null, seniority: null, managerial_function: null, context: [ai, machine_learning, product]}
+  - id: synthetic_backend_frontend_disjunction
+    origin: synthetic
+    title: Backend and Frontend Engineer
+    expected: {status: ambiguous, scope: in_scope, family: null, seniority: null, managerial_function: null, context: [backend, frontend]}
+  - id: synthetic_mixed_seniority
+    origin: synthetic
+    title: Mid/Senior Backend Engineer
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: null, managerial_function: null, context: [backend]}
+  - id: synthetic_staff_principal_not_families
+    origin: synthetic
+    title: Staff Principal Engineer
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_sales_engineer_is_not_backend
+    origin: synthetic
+    title: Sales Engineer
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_marketing_context_does_not_override_backend
+    origin: synthetic
+    title: Backend Engineer, Marketing Platform
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: null, managerial_function: null, context: [backend, platform]}
+  - id: synthetic_devops_team_is_context
+    origin: synthetic
+    title: Backend Engineer, DevOps Team
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: null, managerial_function: null, context: [backend, platform]}
+  - id: synthetic_sre_tools_are_context
+    origin: synthetic
+    title: Frontend Engineer, SRE Tools
+    expected: {status: classified, scope: in_scope, family: frontend_engineering, seniority: null, managerial_function: null, context: [frontend, platform]}
+  - id: synthetic_direct_backend_duty
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Build backend systems and APIs.
+    expected: {status: classified, scope: in_scope, family: backend_engineering, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_requirements_and_company_mentions_are_not_duties
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Requirements:
+      • Experience building backend systems.
+      Company: We build AI and ML tools for customers.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_product_duty_without_ai_inference
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      You will:
+      • Build product features without AI.
+    expected: {status: classified, scope: in_scope, family: product_engineering, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_marketing_page_ai_mention_is_not_duty
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Design marketing pages about AI.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_negated_backend_duty_is_ignored
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Do not build backend systems.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_two_direct_duties_are_ambiguous
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Build backend systems.
+      • Design user interfaces.
+    expected: {status: ambiguous, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_title_and_duty_conflict
+    origin: synthetic
+    title: Backend Engineer
+    description: |-
+      Responsibilities:
+      • Deploy machine learning models.
+    expected: {status: conflict, scope: in_scope, family: null, seniority: null, managerial_function: null, context: [backend]}
+  - id: synthetic_explicit_people_management_duty
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Manage a team of engineers.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: true, context: []}
+  - id: synthetic_people_management_experience_is_not_assignment
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Experience in people management is helpful.
+      • Support managers who manage a team.
+      • Mentor engineers.
+      Team: Our managers lead teams across the company.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_negated_management_duty
+    origin: synthetic
+    title: Software Engineer
+    description: |-
+      Responsibilities:
+      • Do not manage a team or direct reports.
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: null, managerial_function: null, context: []}
+  - id: synthetic_tech_lead_is_not_manager
+    origin: synthetic
+    title: Tech Lead
+    expected: {status: unclassified, scope: in_scope, family: null, seniority: lead, managerial_function: null, context: []}
