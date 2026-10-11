@@ -11,9 +11,33 @@ from types import MappingProxyType
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from yaml.nodes import MappingNode
+from yaml.resolver import BaseResolver
 
 from career_os.config.sources import ConfigurationError, SourceConfig, SourcesConfig
 from career_os.domain.canonical import content_hash
+
+
+class _UniqueKeyYamlLoader(yaml.SafeLoader):
+    """Reject duplicate mapping keys so every manifest field has one meaning."""
+
+
+def _construct_unique_mapping(
+    loader: _UniqueKeyYamlLoader, node: MappingNode, deep: bool = False
+) -> dict[object, object]:
+    mapping: dict[object, object] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        try:
+            if key in mapping:
+                raise yaml.YAMLError("duplicate mapping key")
+            mapping[key] = loader.construct_object(value_node, deep=deep)
+        except TypeError as error:
+            raise yaml.YAMLError("mapping keys must be hashable") from error
+    return mapping
+
+
+_UniqueKeyYamlLoader.add_constructor(BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping)
 
 
 class _PanelSourceDocument(BaseModel):
@@ -87,9 +111,13 @@ class RadarPanelManifest:
             raise ConfigurationError(
                 f"Could not read Radar panel manifest: {manifest_path}"
             ) from error
+        except UnicodeDecodeError as error:
+            raise ConfigurationError(
+                f"Radar panel manifest was not valid UTF-8: {manifest_path}"
+            ) from error
 
         try:
-            payload = yaml.safe_load(text)
+            payload = yaml.load(text, Loader=_UniqueKeyYamlLoader)
         except yaml.YAMLError as error:
             raise ConfigurationError(
                 f"Malformed YAML in Radar panel manifest: {manifest_path}"

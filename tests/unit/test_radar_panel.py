@@ -101,6 +101,7 @@ def test_panel_digest_covers_typed_config_for_every_declared_source(tmp_path: Pa
             "    unexpected: value\n",
             "Extra inputs are not permitted",
         ),
+        ("panel_version: v1\npanel_version: v2\nsources: []\n", "Malformed YAML"),
     ],
 )
 def test_manifest_rejects_unknown_mismatched_duplicate_and_extra_fields(
@@ -117,6 +118,21 @@ def test_manifest_rejects_unknown_mismatched_duplicate_and_extra_fields(
     )
 
     with pytest.raises(ConfigurationError, match=message):
+        RadarPanelManifest.load(manifest_path, sources)
+
+
+def test_manifest_rejects_non_utf8_input(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "panel.yaml"
+    manifest_path.write_bytes(b"\xff")
+    sources = SourcesConfig(
+        sources=[
+            GreenhouseSourceConfig(
+                key="example", kind="greenhouse", company_name="Example", board_token="board"
+            )
+        ]
+    )
+
+    with pytest.raises(ConfigurationError, match="not valid UTF-8"):
         RadarPanelManifest.load(manifest_path, sources)
 
 
