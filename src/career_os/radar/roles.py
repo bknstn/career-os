@@ -337,25 +337,41 @@ _CONTEXT_PATTERNS: Final[tuple[tuple[RoleContext, re.Pattern[str]], ...]] = (
 )
 
 _DUTY_SECTION: Final = re.compile(
-    r"^\s*(?:you will:?|responsibilities:?|what you(?:'|’)ll do:?)\s*$", re.I
+    r"^\s*(?:you will:?|responsibilities:?|what you'll do:?)\s*$", re.I
 )
 _BULLET: Final = re.compile(r"^\s*(?:[•*\-]|\d+[.)])\s+(.+?)\s*$")
 _DUTY_PATTERNS: Final[dict[RoleFamily, tuple[str, re.Pattern[str]]]] = {
     RoleFamily.BACKEND_ENGINEERING: (
         "duty_backend_systems",
-        re.compile(r"^(?:build|design|develop|own|operate|maintain|scale|implement)\s+(?:reliable\s+)?(?:backend|back-end|server-side)\s+(?:systems?|services?|apis?|applications?)\b", re.I),
+        re.compile(
+            r"^(?:build|design|develop|own|operate|maintain|scale|implement)\s+(?:reliable\s+)?(?:backend|back-end|server-side)\s+(?:systems?|services?|apis?|applications?)\b",
+            re.I,
+        ),
     ),
     RoleFamily.FRONTEND_ENGINEERING: (
         "duty_frontend_interfaces",
-        re.compile(r"^(?:build|design|develop|own|maintain|implement)\s+(?:responsive\s+)?(?:frontend|front-end|web\s+)?(?:user interfaces?|ui|web applications?)\b", re.I),
+        re.compile(
+            r"^(?:build|design|develop|own|maintain|implement)\s+"
+            r"(?:responsive\s+)?(?:frontend|front-end|web\s+)?"
+            r"(?:user interfaces?|ui|web applications?)\b",
+            re.I,
+        ),
     ),
     RoleFamily.FULLSTACK_ENGINEERING: (
         "duty_fullstack_features",
-        re.compile(r"^(?:own|build|develop|deliver)\s+(?:end-to-end|full[- ]stack)\s+(?:product\s+)?features?\b", re.I),
+        re.compile(
+            r"^(?:own|build|develop|deliver)\s+"
+            r"(?:end-to-end|full[- ]stack)\s+(?:product\s+)?features?\b",
+            re.I,
+        ),
     ),
     RoleFamily.DATA_ENGINEERING: (
         "duty_data_pipelines",
-        re.compile(r"^(?:build|design|develop|own|operate|maintain|scale|implement)\s+(?:reliable\s+)?data pipelines?\b", re.I),
+        re.compile(
+            r"^(?:build|design|develop|own|operate|maintain|scale|implement)\s+"
+            r"(?:reliable\s+)?data pipelines?\b",
+            re.I,
+        ),
     ),
     RoleFamily.PRODUCT_ENGINEERING: (
         "duty_product_features",
@@ -363,19 +379,34 @@ _DUTY_PATTERNS: Final[dict[RoleFamily, tuple[str, re.Pattern[str]]]] = {
     ),
     RoleFamily.PLATFORM_INFRASTRUCTURE_ENGINEERING: (
         "duty_platform_infrastructure",
-        re.compile(r"^(?:build|design|develop|own|operate|maintain|automate|scale)\s+(?:cloud\s+)?(?:platforms?|infrastructure|kubernetes clusters?|ci/cd platforms?)\b", re.I),
+        re.compile(
+            r"^(?:build|design|develop|own|operate|maintain|automate|scale)\s+"
+            r"(?:cloud\s+)?(?:platforms?|infrastructure|kubernetes clusters?|ci/cd platforms?)\b",
+            re.I,
+        ),
     ),
     RoleFamily.MACHINE_LEARNING_ENGINEERING: (
         "duty_machine_learning_models",
-        re.compile(r"^(?:train|build|develop|deploy|serve|evaluate|operate)\s+(?:production\s+)?(?:machine learning|ml) models?\b", re.I),
+        re.compile(
+            r"^(?:train|build|develop|deploy|serve|evaluate|operate)\s+"
+            r"(?:production\s+)?(?:machine learning|ml) models?\b",
+            re.I,
+        ),
     ),
     RoleFamily.AI_ENGINEERING: (
         "duty_ai_systems",
-        re.compile(r"^(?:build|design|develop|deploy|operate|evaluate)\s+(?:production\s+)?(?:ai|artificial intelligence|llm|generative ai)(?:-powered)?\s+(?:systems?|applications?|models?)\b", re.I),
+        re.compile(
+            r"^(?:build|design|develop|deploy|operate|evaluate)\s+"
+            r"(?:production\s+)?(?:ai|artificial intelligence|llm|generative ai)"
+            r"(?:-powered)?\s+(?:systems?|applications?|models?)\b",
+            re.I,
+        ),
     ),
     RoleFamily.SOLUTIONS_ARCHITECTURE: (
         "duty_solution_architecture",
-        re.compile(r"^(?:design|architect|deliver)\s+(?:secure\s+)?(?:customer|client) solutions?\b", re.I),
+        re.compile(
+            r"^(?:design|architect|deliver)\s+(?:secure\s+)?(?:customer|client) solutions?\b", re.I
+        ),
     ),
 }
 _PEOPLE_MANAGEMENT_DUTY: Final = re.compile(
@@ -409,33 +440,74 @@ def classify_role(
     evidence: list[ClassificationEvidence] = []
     if not title_text:
         return _make_result(
-            taxonomy, None, ClassificationStatus.UNKNOWN_SCOPE, RoleScope.UNKNOWN_SCOPE,
-            None, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.UNKNOWN_SCOPE,
+            RoleScope.UNKNOWN_SCOPE,
+            None,
+            title_text,
+            description_text,
+            evidence,
         )
 
     out_match = _OUT_OF_SCOPE_HEAD.search(title_text)
     explicit_management = _ENGINEERING_MANAGEMENT.search(title_text)
     technical_head = _TECHNICAL_ROLE_HEAD.search(title_text)
     if out_match is not None and technical_head is None and explicit_management is None:
-        evidence.append(_make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "nontechnical_role_head", out_match.group(0)))
+        evidence.append(
+            _make_evidence(
+                EvidenceAxis.SCOPE,
+                EvidenceSource.TITLE,
+                "nontechnical_role_head",
+                out_match.group(0),
+            )
+        )
         seniority, seniority_evidence = _seniority(title_text, is_management=False)
         evidence.extend(seniority_evidence)
         return _make_result(
-            taxonomy, None, ClassificationStatus.OUT_OF_SCOPE, RoleScope.OUT_OF_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.OUT_OF_SCOPE,
+            RoleScope.OUT_OF_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
     if out_match is not None and (technical_head is not None or explicit_management is not None):
-        evidence.extend((
-            _make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "nontechnical_role_head", out_match.group(0)),
-            _make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_role_head", (technical_head or explicit_management).group(0)),
-        ))
+        technical_or_management = (
+            technical_head if technical_head is not None else explicit_management
+        )
+        assert technical_or_management is not None
+        evidence.extend(
+            (
+                _make_evidence(
+                    EvidenceAxis.SCOPE,
+                    EvidenceSource.TITLE,
+                    "nontechnical_role_head",
+                    out_match.group(0),
+                ),
+                _make_evidence(
+                    EvidenceAxis.SCOPE,
+                    EvidenceSource.TITLE,
+                    "technical_role_head",
+                    technical_or_management.group(0),
+                ),
+            )
+        )
         seniority, seniority_evidence = _seniority(
             title_text, is_management=explicit_management is not None
         )
         evidence.extend(seniority_evidence)
         return _make_result(
-            taxonomy, None, ClassificationStatus.CONFLICT, RoleScope.IN_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.CONFLICT,
+            RoleScope.IN_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
 
     scope_match = technical_head or _TECHNICAL_TITLE.search(title_text) or explicit_management
@@ -443,13 +515,25 @@ def classify_role(
         seniority, seniority_evidence = _seniority(title_text, is_management=False)
         evidence.extend(seniority_evidence)
         return _make_result(
-            taxonomy, None, ClassificationStatus.UNKNOWN_SCOPE, RoleScope.UNKNOWN_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.UNKNOWN_SCOPE,
+            RoleScope.UNKNOWN_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
-    evidence.append(_make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_title", scope_match.group(0)))
+    evidence.append(
+        _make_evidence(
+            EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_title", scope_match.group(0)
+        )
+    )
 
     title_matches = _title_family_matches(title_text)
-    seniority, seniority_evidence = _seniority(title_text, is_management=explicit_management is not None)
+    seniority, seniority_evidence = _seniority(
+        title_text, is_management=explicit_management is not None
+    )
     evidence.extend(seniority_evidence)
     evidence.extend(
         _make_evidence(EvidenceAxis.ROLE, EvidenceSource.TITLE, rule_id, matched_text)
@@ -463,36 +547,80 @@ def classify_role(
 
     if len(title_matches) > 1:
         return _make_result(
-            taxonomy, None, ClassificationStatus.AMBIGUOUS, RoleScope.IN_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.AMBIGUOUS,
+            RoleScope.IN_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
     if not title_matches:
-        if _GENERIC_ENGINEERING_HEAD.match(title_text) and len(duty_matches) == 1:
+        generic_head = _GENERIC_ENGINEERING_HEAD.match(title_text)
+        if generic_head is not None and len(duty_matches) == 1:
             family = next(iter(duty_matches))
-            evidence.append(_make_evidence(EvidenceAxis.ROLE, EvidenceSource.TITLE, "generic_technical_title", _GENERIC_ENGINEERING_HEAD.search(title_text).group(0)))
+            evidence.append(
+                _make_evidence(
+                    EvidenceAxis.ROLE,
+                    EvidenceSource.TITLE,
+                    "generic_technical_title",
+                    generic_head.group(0),
+                )
+            )
             return _make_result(
-                taxonomy, family, ClassificationStatus.CLASSIFIED, RoleScope.IN_SCOPE,
-                seniority, title_text, description_text, evidence,
+                taxonomy,
+                family,
+                ClassificationStatus.CLASSIFIED,
+                RoleScope.IN_SCOPE,
+                seniority,
+                title_text,
+                description_text,
+                evidence,
             )
         if len(duty_matches) > 1:
             return _make_result(
-                taxonomy, None, ClassificationStatus.AMBIGUOUS, RoleScope.IN_SCOPE,
-                seniority, title_text, description_text, evidence,
+                taxonomy,
+                None,
+                ClassificationStatus.AMBIGUOUS,
+                RoleScope.IN_SCOPE,
+                seniority,
+                title_text,
+                description_text,
+                evidence,
             )
         return _make_result(
-            taxonomy, None, ClassificationStatus.UNCLASSIFIED, RoleScope.IN_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.UNCLASSIFIED,
+            RoleScope.IN_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
 
     family = next(iter(title_matches))
     if duty_matches and set(duty_matches) != {family}:
         return _make_result(
-            taxonomy, None, ClassificationStatus.CONFLICT, RoleScope.IN_SCOPE,
-            seniority, title_text, description_text, evidence,
+            taxonomy,
+            None,
+            ClassificationStatus.CONFLICT,
+            RoleScope.IN_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
         )
     return _make_result(
-        taxonomy, family, ClassificationStatus.CLASSIFIED, RoleScope.IN_SCOPE,
-        seniority, title_text, description_text, evidence,
+        taxonomy,
+        family,
+        ClassificationStatus.CLASSIFIED,
+        RoleScope.IN_SCOPE,
+        seniority,
+        title_text,
+        description_text,
+        evidence,
     )
 
 
@@ -509,8 +637,10 @@ def _title_family_matches(title: str) -> dict[RoleFamily, tuple[str, str]]:
 
     ai_product_span = spans.get(RoleFamily.AI_PRODUCT_ENGINEERING)
     product_span = spans.get(RoleFamily.PRODUCT_ENGINEERING)
-    if ai_product_span and product_span and (
-        ai_product_span[0] <= product_span[0] and ai_product_span[1] >= product_span[1]
+    if (
+        ai_product_span
+        and product_span
+        and (ai_product_span[0] <= product_span[0] and ai_product_span[1] >= product_span[1])
     ):
         matches.pop(RoleFamily.PRODUCT_ENGINEERING, None)
         spans.pop(RoleFamily.PRODUCT_ENGINEERING, None)
@@ -527,10 +657,10 @@ def _title_family_matches(title: str) -> dict[RoleFamily, tuple[str, str]]:
     disjunction = _DISJUNCTION.search(title)
     if disjunction is not None:
         for side in (disjunction.group("left"), disjunction.group("right")):
-            family = _disjunction_family(side)
-            if family is not None:
+            disjunction_family = _disjunction_family(side)
+            if disjunction_family is not None:
                 matches.setdefault(
-                    family,
+                    disjunction_family,
                     ("cross_family_disjunction", disjunction.group(0)),
                 )
 
@@ -575,7 +705,9 @@ def _seniority(
 
     if is_management:
         level_modifiers = [item for item in matches if item[0] not in _MANAGEMENT_SENIORITY]
-        candidates = level_modifiers or [item for item in matches if item[0] in _MANAGEMENT_SENIORITY]
+        candidates = level_modifiers or [
+            item for item in matches if item[0] in _MANAGEMENT_SENIORITY
+        ]
     else:
         candidates = matches
 
@@ -649,14 +781,26 @@ def _make_result(
         if match is not None:
             contexts.append(context)
             evidence.append(
-                _make_evidence(EvidenceAxis.CONTEXT, EvidenceSource.TITLE, f"context_{context.value}", match.group(0))
+                _make_evidence(
+                    EvidenceAxis.CONTEXT,
+                    EvidenceSource.TITLE,
+                    f"context_{context.value}",
+                    match.group(0),
+                )
             )
 
-    manager_title = re.search(r"\bengineering\s+manager\b|\bmanager\s+of\s+engineering\b", title, re.I)
+    manager_title = re.search(
+        r"\bengineering\s+manager\b|\bmanager\s+of\s+engineering\b", title, re.I
+    )
     if manager_title is not None:
         managerial_function: bool | None = True
         evidence.append(
-            _make_evidence(EvidenceAxis.MANAGERIAL_FUNCTION, EvidenceSource.TITLE, "engineering_manager_title", manager_title.group(0))
+            _make_evidence(
+                EvidenceAxis.MANAGERIAL_FUNCTION,
+                EvidenceSource.TITLE,
+                "engineering_manager_title",
+                manager_title.group(0),
+            )
         )
     else:
         manager_duty = next(
@@ -685,7 +829,11 @@ def _make_result(
     if scope_evidence is None and scope is RoleScope.IN_SCOPE:
         match = _TECHNICAL_TITLE.search(title)
         if match is not None:
-            evidence.append(_make_evidence(EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_title", match.group(0)))
+            evidence.append(
+                _make_evidence(
+                    EvidenceAxis.SCOPE, EvidenceSource.TITLE, "technical_title", match.group(0)
+                )
+            )
     return RoleClassification(
         classifier_version=CLASSIFIER_VERSION,
         taxonomy_version=taxonomy.version,

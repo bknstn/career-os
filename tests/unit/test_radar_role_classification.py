@@ -35,10 +35,7 @@ def _case_results() -> list[tuple[dict[str, object], object]]:
     corpus = _corpus()
     cases = corpus["cases"]
     assert isinstance(cases, list)
-    return [
-        (case, classify_role(case["title"], case.get("description")))
-        for case in cases
-    ]
+    return [(case, classify_role(case["title"], case.get("description"))) for case in cases]
 
 
 def test_versioned_golden_corpus_has_provenance_and_expected_labels() -> None:
@@ -66,9 +63,7 @@ def test_versioned_golden_corpus_has_provenance_and_expected_labels() -> None:
         assert "provenance" not in case
 
     expected_families = {
-        family
-        for case in cases
-        if (family := case["expected"]["family"]) is not None
+        family for case in cases if (family := case["expected"]["family"]) is not None
     }
     assert expected_families == {family.value for family in RoleFamily}
 
@@ -78,12 +73,12 @@ def test_versioned_golden_corpus_has_provenance_and_expected_labels() -> None:
         assert result.taxonomy_version == corpus["taxonomy_version"], case["id"]
         assert result.status.value == expected["status"], case["id"]
         assert result.scope.value == expected["scope"], case["id"]
-        assert (
-            result.role_family.value if result.role_family else None
-        ) == expected["family"], case["id"]
-        assert (result.seniority.value if result.seniority else None) == expected["seniority"], case[
-            "id"
-        ]
+        assert (result.role_family.value if result.role_family else None) == expected["family"], (
+            case["id"]
+        )
+        assert (result.seniority.value if result.seniority else None) == expected["seniority"], (
+            case["id"]
+        )
         assert result.managerial_function is expected["managerial_function"], case["id"]
         assert [value.value for value in result.context] == expected["context"], case["id"]
 
@@ -95,7 +90,7 @@ def test_taxonomy_validation_freezes_exactly_eleven_r1_families() -> None:
 
     with pytest.raises(ValueError, match="immutable tuple"):
         RoleTaxonomy(version="1.0.0", families=list(FAMILIES))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="MAJOR.MINOR.PATCH"):
+    with pytest.raises(ValueError, match=r"MAJOR.MINOR.PATCH"):
         RoleTaxonomy(version="v1", families=FAMILIES)
     with pytest.raises(ValueError, match="unique"):
         RoleTaxonomy(version="1.0.1", families=(*FAMILIES, FAMILIES[0]))
@@ -175,9 +170,7 @@ def test_seniority_conflict_is_unknown_and_staff_principal_lead_are_not_families
     mixed = classify_role("Mid/Senior Backend Engineer")
     assert mixed.role_family is RoleFamily.BACKEND_ENGINEERING
     assert mixed.seniority is None
-    assert sum(
-        item.rule_id == "conflicting_seniority_markers" for item in mixed.evidence
-    ) == 2
+    assert sum(item.rule_id == "conflicting_seniority_markers" for item in mixed.evidence) == 2
 
     staff_principal = classify_role("Staff Principal Engineer")
     assert staff_principal.role_family is None
