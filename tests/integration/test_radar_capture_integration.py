@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from collections.abc import AsyncIterator, Generator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from threading import Barrier, Lock
 from uuid import UUID
 
 import pytest
@@ -17,9 +20,11 @@ from sqlalchemy import func, inspect, select, text
 from sqlalchemy.orm import Session, sessionmaker
 from typer.testing import CliRunner
 
+import career_os.radar.aggregate as radar_aggregate
 from career_os.application import GreenhouseIngestionService, IngestionResult
 from career_os.application.collect import CollectionRun, CollectionRunStatus
 from career_os.application.operations import CollectionOperationalPolicy
+from career_os.application.radar import RadarBuildService
 from career_os.cli import app
 from career_os.config.radar_panel import RadarPanelManifest
 from career_os.config.sources import GreenhouseSourceConfig, SourcesConfig
@@ -53,8 +58,11 @@ from career_os.persistence.models import (
 from career_os.persistence.models import (
     JobPosting,
     JobVersion,
+    RadarBuild,
     RadarScanObservation,
 )
+from career_os.persistence.radar_builds import RadarBuildRepository
+from career_os.radar.aggregate import RadarPanelInput
 from career_os.settings import load_settings
 
 pytestmark = pytest.mark.integration
@@ -360,6 +368,300 @@ def test_same_version_config_drift_is_rejected_before_adapter_or_source_sync(
         )
         assert persisted_source_token.scalar_one() == "capture-token"
         assert list(session.scalars(select(CollectionRunModel))) == []
+
+
+def test_radar_build_persists_empty_history_and_uses_registered_manifest_only(
+    session_factory: sessionmaker[Session], tmp_path: Path
+) -> None:
+    _, panel = _register_panel(session_factory, tmp_path)
+    manifest_path = tmp_path / "panel.yaml"
+    cutoff = datetime(2026, 1, 1, tzinfo=UTC)
+
+    first = RadarBuildService(session_factory).build(str(manifest_path), cutoff)
+    repeated = RadarBuildService(session_factory).build(str(manifest_path), cutoff)
+
+    assert first["status"] == "insufficient"
+    assert first["matched_pair_count"] == 0
+    assert first["input_digest"] == repeated["input_digest"]
+    assert first["run_id"] == repeated["run_id"]
+    assert first["panel"]["source_config_digests"] == dict(panel.source_config_digests)
+    for window in first["windows"].values():
+        assert window["denominator"] is None
+        assert window["unclassified_share"] is None
+    assert not next(gate for gate in first["gates"]["run"] if gate["code"] == "missing_history")[
+        "passed"
+    ]
+
+    run_id = UUID(str(first["run_id"]))
+    assert RadarBuildService(session_factory).show(run_id) == first
+    with session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(RadarBuild)) == 1
+
+
+def test_radar_build_replays_frozen_inputs_and_ignores_later_redundant_scan(
+    session_factory: sessionmaker[Session],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_config, _ = _register_panel(session_factory, tmp_path)
+    panel_manifest = str(tmp_path / "panel.yaml")
+    cutoff = datetime(2026, 1, 1, tzinfo=UTC)
+    previous_time = cutoff - timedelta(days=175)
+    current_time = cutoff - timedelta(days=85)
+
+    previous = _collect_one(
+        session_factory,
+        source_config,
+        _registered_panel(tmp_path),
+        "Platform Engineer",
+        "previous frozen description",
+    )
+    current = _collect_one(
+        session_factory,
+        source_config,
+        _registered_panel(tmp_path),
+        "Platform Engineer",
+        "current frozen description",
+    )
+    _set_capture_time(session_factory, previous.collection.run.id, previous_time)
+    _set_capture_time(session_factory, current.collection.run.id, current_time)
+
+    service = RadarBuildService(session_factory)
+    first = service.build(panel_manifest, cutoff)
+    first_run_id = UUID(str(first["run_id"]))
+    persisted_copy = service.show(first_run_id)
+
+    with session_factory.begin() as session:
+        posting = session.scalar(select(JobPosting).where(JobPosting.external_id == "posting-1"))
+        assert posting is not None
+        posting.title_raw = "Mutable projection changed after capture"
+
+    redundant = _collect_one(
+        session_factory,
+        source_config,
+        _registered_panel(tmp_path),
+        "Redundant later title",
+        "this observation is not selected",
+    )
+    _set_capture_time(
+        session_factory, redundant.collection.run.id, previous_time + timedelta(days=1)
+    )
+    unchanged = service.build(panel_manifest, cutoff)
+    assert unchanged["run_id"] == first["run_id"]
+    assert unchanged["input_digest"] == first["input_digest"]
+    assert service.show(first_run_id) == persisted_copy
+    assert persisted_copy is not None
+    previous_classifications = persisted_copy["windows"]["previous"]["classifications"]
+    assert previous_classifications[0]["title"] == "Platform Engineer"
+    assert "previous frozen description" in previous_classifications[0]["description"]
+
+    monkeypatch.setattr(radar_aggregate, "AGGREGATION_ALGORITHM_VERSION", "fixture-next")
+    new_version = service.build(panel_manifest, cutoff)
+    assert new_version["input_digest"] == first["input_digest"]
+    assert new_version["run_id"] != first["run_id"]
+    assert new_version["versions"]["aggregation_algorithm"] == "fixture-next"
+    assert service.show(first_run_id) == persisted_copy
+
+    newly_filled = _collect_one(
+        session_factory,
+        source_config,
+        _registered_panel(tmp_path),
+        "Backend Engineer",
+        "new selected slot",
+    )
+    _set_capture_time(
+        session_factory, newly_filled.collection.run.id, previous_time + timedelta(days=8)
+    )
+    changed = service.build(panel_manifest, cutoff)
+    assert changed["input_digest"] != new_version["input_digest"]
+    assert changed["run_id"] != new_version["run_id"]
+    with session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(RadarBuild)) == 3
+
+
+def test_radar_cli_build_show_and_manifest_errors_against_postgres(
+    session_factory: sessionmaker[Session], tmp_path: Path
+) -> None:
+    _register_panel(session_factory, tmp_path)
+    manifest_path = tmp_path / "panel.yaml"
+    cutoff = "2026-01-01T00:00:00Z"
+    runner = CliRunner()
+    build_args = [
+        "radar",
+        "build",
+        "--panel-manifest",
+        str(manifest_path),
+        "--cutoff-utc",
+        cutoff,
+    ]
+
+    first = runner.invoke(app, build_args)
+    assert first.exit_code == 0
+    assert '"status": "insufficient"' in first.stdout
+    persisted_payload = first.stdout
+    run_id = str(json.loads(first.stdout)["run_id"])
+
+    repeated = runner.invoke(app, build_args)
+    assert repeated.exit_code == 0
+    assert repeated.stdout == persisted_payload
+    shown = runner.invoke(app, ["radar", "show", "--run-id", run_id])
+    assert shown.exit_code == 0
+    assert shown.stdout == persisted_payload
+
+    unknown = runner.invoke(app, ["radar", "show", "--run-id", str(UUID(int=999))])
+    assert unknown.exit_code == 4
+
+    unregistered_path = tmp_path / "unregistered.yaml"
+    unregistered_path.write_text(
+        "panel_version: not-registered\nsources:\n  - source_key: capture-board\n"
+        "    company_key: capture-co\n    source_kind: greenhouse\n",
+        encoding="utf-8",
+    )
+    unregistered = runner.invoke(
+        app,
+        [
+            "radar",
+            "build",
+            "--panel-manifest",
+            str(unregistered_path),
+            "--cutoff-utc",
+            cutoff,
+        ],
+    )
+    assert unregistered.exit_code == 2
+
+    changed_path = tmp_path / "changed.yaml"
+    changed_path.write_text(
+        "panel_version: capture-v1\nsources:\n  - source_key: capture-board\n"
+        "    company_key: changed-company\n    source_kind: greenhouse\n",
+        encoding="utf-8",
+    )
+    changed = runner.invoke(
+        app,
+        [
+            "radar",
+            "build",
+            "--panel-manifest",
+            str(changed_path),
+            "--cutoff-utc",
+            cutoff,
+        ],
+    )
+    assert changed.exit_code == 2
+
+
+def test_radar_build_rolls_back_a_failure_after_staging_immutable_result(
+    session_factory: sessionmaker[Session], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, _ = _register_panel(session_factory, tmp_path)
+    manifest_path = str(tmp_path / "panel.yaml")
+    original_insert = RadarBuildRepository.insert
+
+    def insert_then_raise(
+        repository: RadarBuildRepository,
+        *,
+        key: str,
+        panel: RadarPanelInput,
+        cutoff: datetime,
+        input_digest: str,
+        payload: dict[str, object],
+    ) -> RadarBuild:
+        original_insert(
+            repository,
+            key=key,
+            panel=panel,
+            cutoff=cutoff,
+            input_digest=input_digest,
+            payload=payload,
+        )
+        raise RuntimeError("injected after JSON result flush")
+
+    monkeypatch.setattr(RadarBuildRepository, "insert", insert_then_raise)
+    with pytest.raises(RuntimeError, match="injected after JSON result flush"):
+        RadarBuildService(session_factory).build(manifest_path, datetime(2026, 1, 1, tzinfo=UTC))
+
+    with session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(RadarBuild)) == 0
+
+
+def test_concurrent_identical_radar_builds_return_one_committed_result(
+    session_factory: sessionmaker[Session],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, _ = _register_panel(session_factory, tmp_path)
+    manifest_path = str(tmp_path / "panel.yaml")
+    cutoff = datetime(2026, 1, 1, tzinfo=UTC)
+    original_insert = RadarBuildRepository.insert
+    barrier = Barrier(2)
+    lock = Lock()
+    staged_count = 0
+
+    def synchronized_insert(
+        repository: RadarBuildRepository,
+        *,
+        key: str,
+        panel: RadarPanelInput,
+        cutoff: datetime,
+        input_digest: str,
+        payload: dict[str, object],
+    ) -> RadarBuild:
+        nonlocal staged_count
+        with lock:
+            should_wait = staged_count < 2
+            staged_count += 1
+        if should_wait:
+            barrier.wait(timeout=15)
+        return original_insert(
+            repository,
+            key=key,
+            panel=panel,
+            cutoff=cutoff,
+            input_digest=input_digest,
+            payload=payload,
+        )
+
+    monkeypatch.setattr(RadarBuildRepository, "insert", synchronized_insert)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(RadarBuildService(session_factory).build, manifest_path, cutoff)
+            for _ in range(2)
+        ]
+        results = [future.result(timeout=45) for future in futures]
+
+    assert results[0] == results[1]
+    with session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(RadarBuild)) == 1
+
+
+def _registered_panel(tmp_path: Path) -> RadarPanelManifest:
+    return RadarPanelManifest.load(
+        tmp_path / "panel.yaml",
+        SourcesConfig(
+            sources=[
+                GreenhouseSourceConfig(
+                    key="capture-board",
+                    kind="greenhouse",
+                    company_name="Capture Company",
+                    board_token="capture-token",
+                )
+            ]
+        ),
+    )
+
+
+def _set_capture_time(
+    session_factory: sessionmaker[Session], run_id: str, finished_at: datetime
+) -> None:
+    with session_factory.begin() as session:
+        run = session.get(CollectionRunModel, UUID(run_id))
+        assert run is not None
+        run.started_at = finished_at - timedelta(seconds=1)
+        run.finished_at = finished_at
+        for observation in session.scalars(
+            select(RadarScanObservation).where(RadarScanObservation.run_id == UUID(run_id))
+        ):
+            observation.observed_at = finished_at
 
 
 def _register_panel(

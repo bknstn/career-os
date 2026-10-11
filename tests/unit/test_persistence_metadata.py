@@ -15,6 +15,7 @@ from career_os.persistence.models import (
     JobLocation,
     JobPosting,
     JobSkill,
+    RadarBuild,
     RadarPanelVersion,
     RadarScanObservation,
     Source,
@@ -32,6 +33,7 @@ def test_initial_metadata_contains_only_the_planned_tables() -> None:
         "job_compensation",
         "radar_panel_versions",
         "radar_scan_observations",
+        "radar_builds",
     }
 
 
@@ -62,6 +64,20 @@ def test_radar_capture_metadata_keeps_panel_identity_and_observations_independen
     } == {("run_id", "collection_runs.id")}
     assert list(observations.primary_key.columns.keys()) == ["run_id", "external_id"]
     assert {"title", "description", "observed_at"} <= set(observations.c.keys())
+
+
+def test_radar_build_metadata_stores_one_atomic_json_result_per_input_key() -> None:
+    builds = RadarBuild.__table__
+
+    assert isinstance(builds.c.payload.type, JSONB)
+    assert builds.c.payload.nullable is False
+    assert builds.c.panel_version.foreign_keys
+    assert {
+        constraint.name
+        for constraint in builds.constraints
+        if isinstance(constraint, UniqueConstraint)
+    } == {"uq_radar_builds_idempotence_key"}
+    assert {"input_digest", "cutoff_utc", "panel_digest"} <= set(builds.c.keys())
 
 
 def test_numeric_columns_preserve_decimal_values() -> None:

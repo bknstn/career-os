@@ -48,6 +48,7 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
         assert {
             "radar_panel_versions",
             "radar_scan_observations",
+            "radar_builds",
         } <= set(inspector.get_table_names())
         radar_run_columns = {column["name"] for column in inspector.get_columns("collection_runs")}
         assert {
@@ -85,7 +86,7 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
         command.downgrade(alembic_config, "20260821_0003")
         downgraded_inspector = inspect(engine)
         assert not (
-            {"radar_panel_versions", "radar_scan_observations"}
+            {"radar_panel_versions", "radar_scan_observations", "radar_builds"}
             & set(downgraded_inspector.get_table_names())
         )
         assert not (
@@ -105,7 +106,7 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
             assert legacy_run.status == "succeeded"
         command.upgrade(alembic_config, "head")
         reupgraded_inspector = inspect(engine)
-        assert {"radar_panel_versions", "radar_scan_observations"} <= set(
+        assert {"radar_panel_versions", "radar_scan_observations", "radar_builds"} <= set(
             reupgraded_inspector.get_table_names()
         )
         assert {
