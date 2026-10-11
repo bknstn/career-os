@@ -90,6 +90,7 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["jobs", "list", "--help"],
     ):
         assert runner.invoke(app, arguments).exit_code == 0
+    assert "--radar-panel-manifest" in runner.invoke(app, ["collect", "--help"]).output
 
 
 def test_operations_status_emits_json_and_strict_fails_for_stale_enabled_source(
@@ -787,7 +788,10 @@ def test_collect_output_includes_terminal_diagnostics(monkeypatch) -> None:
     def no_database_session(_session_factory: object):
         yield object()
 
-    async def fake_collect_selected(**_kwargs: object) -> list[dict[str, object]]:
+    captured: dict[str, object] = {}
+
+    async def fake_collect_selected(**kwargs: object) -> list[dict[str, object]]:
+        captured.update(kwargs)
         return [
             {
                 "source_key": "example",
@@ -821,6 +825,49 @@ def test_collect_output_includes_terminal_diagnostics(monkeypatch) -> None:
     assert result.exit_code == 0
     assert '"incomplete_reason": "malformed item"' in result.output
     assert '"error_summary": null' in result.output
+    assert captured["radar_panel"] is None
+
+
+def test_collect_rejects_selected_source_outside_panel_before_database(
+    monkeypatch, tmp_path
+) -> None:
+    panel_path = tmp_path / "panel.yaml"
+    panel_path.write_text(
+        "panel_version: radar-v1\nsources:\n  - source_key: included\n"
+        "    company_key: example\n    source_kind: greenhouse\n",
+        encoding="utf-8",
+    )
+    source_config = SourcesConfig(
+        sources=[
+            _source("included", enabled=True),
+            LeverSourceConfig(key="outside", kind="lever", company_name="Outside", site="outside"),
+        ]
+    )
+
+    monkeypatch.setattr(
+        "career_os.cli.load_settings",
+        lambda: SimpleNamespace(enable_workable_public=False),
+    )
+    monkeypatch.setattr(
+        "career_os.cli._load_and_validate_sources",
+        lambda _path, **_kwargs: source_config,
+    )
+    monkeypatch.setattr(
+        "career_os.cli._database_session_factory",
+        lambda _settings: pytest.fail("panel selection must validate before DB setup"),
+    )
+    monkeypatch.setattr(
+        "career_os.cli._collect_selected",
+        lambda **_kwargs: pytest.fail("panel selection must validate before collection"),
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["collect", "--source", "outside", "--radar-panel-manifest", str(panel_path)],
+    )
+
+    assert result.exit_code == 2
+    assert "outside the Radar panel" in result.output
 
 
 def test_inspection_payloads_include_joined_source_identity_and_diagnostics() -> None:

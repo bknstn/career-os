@@ -12,6 +12,7 @@ from career_os.application.collect import (
     CollectionRunStore,
     CollectionService,
     CollectionStateTransitionError,
+    RadarPanelIdentity,
 )
 from career_os.application.lifecycle import (
     LifecycleAction,
@@ -74,6 +75,7 @@ __all__ = [
     "LifecycleMutationPort",
     "LifecycleResult",
     "LifecycleService",
+    "RadarPanelIdentity",
     "SkillEnrichmentService",
     "WorkablePublicIngestionService",
     "ashby_candidate",

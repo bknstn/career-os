@@ -16,9 +16,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.application.collect import CollectionRun, CollectionRunStatus
+from career_os.config.radar_panel import RadarPanelManifest
 from career_os.config.sources import SourceConfig, SourcesConfig
 from career_os.db import session_scope
-from career_os.domain.canonical import CANONICAL_CONTENT_FIELDS, CanonicalJobCandidate, JsonValue
+from career_os.domain.canonical import (
+    CANONICAL_CONTENT_FIELDS,
+    CanonicalJobCandidate,
+    JsonValue,
+    content_hash,
+)
 from career_os.domain.skills import SkillEvidence
 from career_os.domain.versions import NO_ENRICHMENT_NORMALIZER_VERSION
 from career_os.persistence.models import (
@@ -28,6 +34,8 @@ from career_os.persistence.models import (
     JobPosting,
     JobSkill,
     JobVersion,
+    RadarPanelVersion,
+    RadarScanObservation,
     Source,
 )
 
@@ -78,6 +86,10 @@ class LifecycleReconciliationConflictError(PersistenceError):
 
 class SourceConfigurationConflictError(PersistenceError):
     """A source key would rewrite an immutable persisted source identity."""
+
+
+class RadarPanelVersionConflictError(PersistenceError):
+    """A panel version was reused with different immutable manifest/config inputs."""
 
 
 class JobNotFoundError(PersistenceError):
@@ -170,6 +182,162 @@ class SourceConfigurationRepository:
             )
         source.config = source_config_json
         source.enabled = source_config.enabled
+
+
+@dataclass(slots=True)
+class RadarPanelVersionRepository:
+    """Register an immutable panel identity, comparing concurrent inserts safely."""
+
+    session: Session
+
+    def assert_frozen(self, manifest: RadarPanelManifest) -> RadarPanelVersion:
+        """Require a previously registered version with identical immutable inputs."""
+        existing = self.session.scalar(
+            select(RadarPanelVersion)
+            .where(RadarPanelVersion.panel_version == manifest.panel_version)
+            .with_for_update()
+        )
+        if existing is None:
+            raise RadarPanelVersionConflictError(
+                "Radar panel version must be registered before collection starts"
+            )
+        return self._assert_identical(existing, manifest)
+
+    def register(self, manifest: RadarPanelManifest) -> RadarPanelVersion:
+        """Insert one panel version or prove the existing version is byte-stable."""
+        statement = (
+            select(RadarPanelVersion)
+            .where(RadarPanelVersion.panel_version == manifest.panel_version)
+            .with_for_update()
+        )
+        existing = self.session.scalar(statement)
+        if existing is not None:
+            return self._assert_identical(existing, manifest)
+
+        record = RadarPanelVersion(
+            panel_version=manifest.panel_version,
+            manifest_digest=manifest.manifest_digest,
+            panel_digest=manifest.panel_digest,
+            canonical_manifest=manifest.canonical_manifest,
+            source_config_digests=dict(manifest.source_config_digests),
+        )
+        try:
+            with self.session.begin_nested():
+                self.session.add(record)
+                self.session.flush()
+        except IntegrityError:
+            existing = self.session.scalar(statement)
+            if existing is None:
+                raise
+            return self._assert_identical(existing, manifest)
+        return record
+
+    @staticmethod
+    def _assert_identical(
+        existing: RadarPanelVersion, manifest: RadarPanelManifest
+    ) -> RadarPanelVersion:
+        if (
+            existing.manifest_digest != manifest.manifest_digest
+            or existing.panel_digest != manifest.panel_digest
+            or existing.canonical_manifest != manifest.canonical_manifest
+            or existing.source_config_digests != dict(manifest.source_config_digests)
+        ):
+            raise RadarPanelVersionConflictError(
+                "Radar panel version is already frozen with different manifest or source config"
+            )
+        return existing
+
+
+@dataclass(slots=True)
+class RadarScanObservationRepository:
+    """Persist only complete scan inputs against their verified frozen panel header."""
+
+    session: Session
+
+    def capture_complete(
+        self, *, run: CollectionRun, candidates: tuple[CanonicalJobCandidate, ...]
+    ) -> None:
+        """Insert exact title/description inputs for one complete panel scan."""
+        if run.radar_panel_version is None:
+            if any(
+                value is not None for value in (run.radar_manifest_digest, run.radar_panel_digest)
+            ):
+                raise CollectionRunPersistenceConflictError(
+                    "Radar scan has incomplete panel provenance"
+                )
+            return
+        if run.status is not CollectionRunStatus.SUCCEEDED:
+            return
+        if run.finished_at is None:
+            raise CollectionRunPersistenceConflictError(
+                "a complete Radar scan requires a finished_at timestamp"
+            )
+
+        header_statement = (
+            select(CollectionRunModel, Source)
+            .join(Source, CollectionRunModel.source_id == Source.id)
+            .where(CollectionRunModel.id == _run_id_as_uuid(run.id))
+            .with_for_update(of=CollectionRunModel)
+        )
+        header_row = self.session.execute(header_statement).one_or_none()
+        if header_row is None:
+            raise CollectionRunPersistenceConflictError("Radar scan run header was not found")
+        persisted_run, source = header_row
+        if (
+            persisted_run.status != CollectionRunStatus.RUNNING.value
+            or source.key != run.source_key
+            or source.kind != run.source_kind
+            or persisted_run.radar_panel_version != run.radar_panel_version
+            or persisted_run.radar_manifest_digest != run.radar_manifest_digest
+            or persisted_run.radar_panel_digest != run.radar_panel_digest
+        ):
+            raise CollectionRunPersistenceConflictError(
+                "Radar observations do not match their running panel source header"
+            )
+
+        frozen_panel = self.session.get(RadarPanelVersion, run.radar_panel_version)
+        if frozen_panel is None or (
+            frozen_panel.manifest_digest != run.radar_manifest_digest
+            or frozen_panel.panel_digest != run.radar_panel_digest
+        ):
+            raise RadarPanelVersionConflictError(
+                "Radar scan provenance does not match its frozen panel version"
+            )
+        panel_sources = frozen_panel.canonical_manifest.get("sources")
+        if not isinstance(panel_sources, list) or not any(
+            isinstance(entry, dict)
+            and entry.get("source_key") == run.source_key
+            and entry.get("source_kind") == run.source_kind
+            for entry in panel_sources
+        ):
+            raise SourceIdentityConflictError(
+                f"Radar scan source is outside its frozen panel: {run.source_key}"
+            )
+        if run.source_key not in frozen_panel.source_config_digests:
+            raise RadarPanelVersionConflictError(
+                "Radar panel has no source config digest for the scan source"
+            )
+
+        seen_external_ids: set[str] = set()
+        observations: list[RadarScanObservation] = []
+        for candidate in candidates:
+            if candidate.source_key != run.source_key or candidate.source_kind != run.source_kind:
+                raise SourceIdentityConflictError(
+                    "Radar candidate source identity does not match its scan header"
+                )
+            if candidate.external_id in seen_external_ids:
+                raise PersistenceError("complete Radar scan contains duplicate source posting IDs")
+            seen_external_ids.add(candidate.external_id)
+            observations.append(
+                RadarScanObservation(
+                    run_id=_run_id_as_uuid(run.id),
+                    external_id=candidate.external_id,
+                    observed_at=run.finished_at,
+                    title=candidate.title_raw,
+                    description=candidate.description_text,
+                )
+            )
+        self.session.add_all(observations)
 
 
 @dataclass(slots=True)
@@ -380,6 +548,8 @@ class SqlAlchemyCollectionRunStore:
     session_factory: SessionFactory
     normalizer_version: str
     taxonomy_version: str
+    radar_panel: RadarPanelManifest | None = None
+    source_config: SourceConfig | None = None
 
     def __post_init__(self) -> None:
         for field_name in ("normalizer_version", "taxonomy_version"):
@@ -393,11 +563,20 @@ class SqlAlchemyCollectionRunStore:
         if run.status is not CollectionRunStatus.RUNNING:
             raise CollectionRunPersistenceConflictError("a collection run create must be running")
         self._assert_persistable_counts(run)
+        self._assert_panel_start_identity(run)
         try:
             with session_scope(self.session_factory) as session:
                 source = _source_for_identity(
                     session, source_key=run.source_key, source_kind=run.source_kind
                 )
+                if self.source_config is not None and source.company_name != (
+                    self.source_config.company_name
+                ):
+                    raise SourceIdentityConflictError(
+                        f"configured source company does not match run: {run.source_key}"
+                    )
+                if self.radar_panel is not None:
+                    RadarPanelVersionRepository(session).assert_frozen(self.radar_panel)
                 session.add(
                     CollectionRunModel(
                         id=_run_id_as_uuid(run.id),
@@ -408,6 +587,9 @@ class SqlAlchemyCollectionRunStore:
                         **_persisted_run_counts(run),
                         normalizer_version=self.normalizer_version,
                         taxonomy_version=self.taxonomy_version,
+                        radar_panel_version=run.radar_panel_version,
+                        radar_manifest_digest=run.radar_manifest_digest,
+                        radar_panel_digest=run.radar_panel_digest,
                         error_summary=run.error_summary,
                         incomplete_reason=run.incomplete_reason,
                     )
@@ -417,6 +599,53 @@ class SqlAlchemyCollectionRunStore:
             raise CollectionRunPersistenceConflictError(
                 "collection run already exists or violates a persistence constraint"
             ) from error
+
+    def _assert_panel_start_identity(self, run: CollectionRun) -> None:
+        """Validate panel membership and the exact typed source config before fetch."""
+        if self.radar_panel is None:
+            if any(
+                value is not None
+                for value in (
+                    run.radar_panel_version,
+                    run.radar_manifest_digest,
+                    run.radar_panel_digest,
+                )
+            ):
+                raise RadarPanelVersionConflictError(
+                    "collection run panel provenance has no validated manifest"
+                )
+            return
+        if self.source_config is None:
+            raise RadarPanelVersionConflictError(
+                "panel collection requires its typed source configuration"
+            )
+        if (
+            run.radar_panel_version != self.radar_panel.panel_version
+            or run.radar_manifest_digest != self.radar_panel.manifest_digest
+            or run.radar_panel_digest != self.radar_panel.panel_digest
+        ):
+            raise RadarPanelVersionConflictError(
+                "collection run provenance does not match its validated panel manifest"
+            )
+        entry = next(
+            (source for source in self.radar_panel.sources if source.source_key == run.source_key),
+            None,
+        )
+        if (
+            entry is None
+            or entry.source_kind != run.source_kind
+            or self.source_config.key != run.source_key
+            or self.source_config.kind != run.source_kind
+        ):
+            raise SourceIdentityConflictError(
+                f"configured source does not match frozen Radar panel: {run.source_key}"
+            )
+        expected_digest = self.radar_panel.source_config_digests.get(run.source_key)
+        actual_digest = content_hash(self.source_config.model_dump(mode="json"))
+        if expected_digest is None or actual_digest != expected_digest:
+            raise RadarPanelVersionConflictError(
+                f"source config drifted from frozen Radar panel: {run.source_key}"
+            )
 
     def update(self, run: CollectionRun) -> None:
         """Commit exactly one running-to-terminal transition using a compare-and-set."""
@@ -444,6 +673,9 @@ class SqlAlchemyCollectionRunStore:
                     CollectionRunModel.id == _run_id_as_uuid(run.id),
                     CollectionRunModel.source_id == source.id,
                     CollectionRunModel.status == CollectionRunStatus.RUNNING.value,
+                    CollectionRunModel.radar_panel_version == run.radar_panel_version,
+                    CollectionRunModel.radar_manifest_digest == run.radar_manifest_digest,
+                    CollectionRunModel.radar_panel_digest == run.radar_panel_digest,
                 )
                 .values(
                     status=run.status.value,
@@ -471,8 +703,18 @@ class CanonicalJobRepository:
 
     session: Session
 
-    def upsert(self, candidate: CanonicalJobCandidate) -> JobUpsertResult:
-        """Persist one candidate without committing the caller-owned transaction."""
+    def upsert(
+        self,
+        candidate: CanonicalJobCandidate,
+        *,
+        allow_reappearing_version: bool = False,
+    ) -> JobUpsertResult:
+        """Persist one candidate without committing the caller-owned transaction.
+
+        Legacy callers retain the strict no-reversion rule. Radar capture may
+        opt in because its independent scan-observation table records each new
+        occurrence while ``job_versions`` remains unique by content hash.
+        """
         source = _source_for_identity(
             self.session,
             source_key=candidate.source_key,
@@ -481,8 +723,12 @@ class CanonicalJobRepository:
         )
         job = self._locked_job(source_id=source.id, external_id=candidate.external_id)
         if job is None:
-            return self._insert_or_resolve_race(source, candidate)
-        return self._update_existing(job, candidate)
+            return self._insert_or_resolve_race(
+                source, candidate, allow_reappearing_version=allow_reappearing_version
+            )
+        return self._update_existing(
+            job, candidate, allow_reappearing_version=allow_reappearing_version
+        )
 
     def _locked_job(self, *, source_id: UUID, external_id: str) -> JobPosting | None:
         statement: Select[tuple[JobPosting]] = (
@@ -493,7 +739,11 @@ class CanonicalJobRepository:
         return self.session.scalar(statement)
 
     def _insert_or_resolve_race(
-        self, source: Source, candidate: CanonicalJobCandidate
+        self,
+        source: Source,
+        candidate: CanonicalJobCandidate,
+        *,
+        allow_reappearing_version: bool,
     ) -> JobUpsertResult:
         job: JobPosting | None = None
         try:
@@ -511,7 +761,9 @@ class CanonicalJobRepository:
             job = self._locked_job(source_id=source.id, external_id=candidate.external_id)
             if job is None:
                 raise
-            return self._update_existing(job, candidate)
+            return self._update_existing(
+                job, candidate, allow_reappearing_version=allow_reappearing_version
+            )
         assert job is not None
         return JobUpsertResult(
             action=JobUpsertAction.INSERTED,
@@ -521,7 +773,11 @@ class CanonicalJobRepository:
         )
 
     def _update_existing(
-        self, job: JobPosting, candidate: CanonicalJobCandidate
+        self,
+        job: JobPosting,
+        candidate: CanonicalJobCandidate,
+        *,
+        allow_reappearing_version: bool = False,
     ) -> JobUpsertResult:
         reactivated = job.status == "inactive"
         if reactivated:
@@ -569,7 +825,7 @@ class CanonicalJobRepository:
                 JobVersion.content_hash == candidate.content_hash,
             )
         )
-        if prior_version is not None:
+        if prior_version is not None and not allow_reappearing_version:
             raise CanonicalVersionConflictError(
                 "candidate reverts to an already-recorded canonical content version"
             )
@@ -577,7 +833,8 @@ class CanonicalJobRepository:
             job.status = "active"
             job.inactive_at = None
         self._apply_candidate_content(job, candidate)
-        self._add_version(job, candidate, changed_fields=changed_fields)
+        if prior_version is None:
+            self._add_version(job, candidate, changed_fields=changed_fields)
         self.session.flush()
         return JobUpsertResult(
             action=JobUpsertAction.UPDATED,

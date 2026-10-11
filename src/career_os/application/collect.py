@@ -60,6 +60,28 @@ class CollectionRunStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class RadarPanelIdentity:
+    """Immutable panel provenance copied onto each opted-in source run."""
+
+    panel_version: str
+    manifest_digest: str
+    panel_digest: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "panel_version", _require_nonblank(self.panel_version, field_name="panel_version")
+        )
+        for field_name in ("manifest_digest", "panel_digest"):
+            digest = getattr(self, field_name)
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(character not in "0123456789abcdef" for character in digest)
+            ):
+                raise ValueError(f"{field_name} must be a lowercase SHA-256 digest")
+
+
+@dataclass(frozen=True, slots=True)
 class CollectionRun:
     """A source-neutral run-state snapshot persisted through an injected port."""
 
@@ -72,6 +94,9 @@ class CollectionRun:
     counts: RunCounts = field(default_factory=RunCounts)
     incomplete_reason: str | None = None
     error_summary: str | None = None
+    radar_panel_version: str | None = None
+    radar_manifest_digest: str | None = None
+    radar_panel_digest: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, CollectionRunStatus):
@@ -89,6 +114,20 @@ class CollectionRun:
             "source_kind",
             _require_nonblank(self.source_kind, field_name="source_kind"),
         )
+        panel_identity = (
+            self.radar_panel_version,
+            self.radar_manifest_digest,
+            self.radar_panel_digest,
+        )
+        if any(value is not None for value in panel_identity):
+            if not all(value is not None for value in panel_identity):
+                raise ValueError("Radar panel run provenance must be complete")
+            identity = RadarPanelIdentity(
+                panel_version=self.radar_panel_version or "",
+                manifest_digest=self.radar_manifest_digest or "",
+                panel_digest=self.radar_panel_digest or "",
+            )
+            object.__setattr__(self, "radar_panel_version", identity.panel_version)
         object.__setattr__(
             self,
             "started_at",
@@ -130,6 +169,7 @@ class CollectionRun:
         source_key: str,
         source_kind: str,
         started_at: datetime,
+        radar_panel: RadarPanelIdentity | None = None,
     ) -> CollectionRun:
         """Create the sole valid initial state for a collection attempt."""
         return cls(
@@ -138,6 +178,9 @@ class CollectionRun:
             source_kind=source_kind,
             status=CollectionRunStatus.RUNNING,
             started_at=started_at,
+            radar_panel_version=radar_panel.panel_version if radar_panel else None,
+            radar_manifest_digest=radar_panel.manifest_digest if radar_panel else None,
+            radar_panel_digest=radar_panel.panel_digest if radar_panel else None,
         )
 
     def finish(
@@ -278,7 +321,13 @@ class CollectionService:
     terminal_run_processor: TerminalRunProcessor | None = None
     outcome_safeguard: ScanOutcomeSafeguard | None = None
 
-    async def collect(self, *, source_key: str, adapter: SourceAdapter) -> CollectionResult:
+    async def collect(
+        self,
+        *,
+        source_key: str,
+        adapter: SourceAdapter,
+        radar_panel: RadarPanelIdentity | None = None,
+    ) -> CollectionResult:
         """Collect one source, returning partial data but raising for failed scans."""
         started_at = _as_utc(self.clock(), field_name="started_at")
         run = CollectionRun.start(
@@ -286,6 +335,7 @@ class CollectionService:
             source_key=source_key,
             source_kind=adapter.kind,
             started_at=started_at,
+            radar_panel=radar_panel,
         )
         context = FetchContext(
             run_id=run.id,

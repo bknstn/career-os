@@ -42,6 +42,16 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
 
         inspector = inspect(engine)
         assert set(inspector.get_table_names()) >= CAREER_OS_TABLE_NAMES
+        assert {
+            "radar_panel_versions",
+            "radar_scan_observations",
+        } <= set(inspector.get_table_names())
+        radar_run_columns = {column["name"] for column in inspector.get_columns("collection_runs")}
+        assert {
+            "radar_panel_version",
+            "radar_manifest_digest",
+            "radar_panel_digest",
+        } <= radar_run_columns
         enrichment_marker = next(
             column
             for column in inspector.get_columns("job_postings")
@@ -68,6 +78,31 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
         job_skills_primary_key = inspector.get_pk_constraint("job_skills")
         assert job_skills_primary_key["name"] == "pk_job_skills"
         assert job_skills_primary_key["constrained_columns"] == ["id"]
+
+        command.downgrade(alembic_config, "20260821_0003")
+        downgraded_inspector = inspect(engine)
+        assert not (
+            {"radar_panel_versions", "radar_scan_observations"}
+            & set(downgraded_inspector.get_table_names())
+        )
+        assert not (
+            {
+                "radar_panel_version",
+                "radar_manifest_digest",
+                "radar_panel_digest",
+            }
+            & {column["name"] for column in downgraded_inspector.get_columns("collection_runs")}
+        )
+        command.upgrade(alembic_config, "head")
+        reupgraded_inspector = inspect(engine)
+        assert {"radar_panel_versions", "radar_scan_observations"} <= set(
+            reupgraded_inspector.get_table_names()
+        )
+        assert {
+            "radar_panel_version",
+            "radar_manifest_digest",
+            "radar_panel_digest",
+        } <= {column["name"] for column in reupgraded_inspector.get_columns("collection_runs")}
     finally:
         try:
             if upgraded:

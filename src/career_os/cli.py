@@ -58,6 +58,7 @@ from career_os.config.compensation_supplements import (
 )
 from career_os.config.markets import load_market_filters
 from career_os.config.profiles import load_profile
+from career_os.config.radar_panel import RadarPanelManifest
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -86,6 +87,8 @@ from career_os.normalization.skills import SkillExtractor
 from career_os.persistence import (
     InspectionRepository,
     PersistenceError,
+    RadarPanelVersionConflictError,
+    RadarPanelVersionRepository,
     SourceConfigurationRepository,
 )
 from career_os.persistence.operations import OperationalStatusRepository
@@ -132,6 +135,13 @@ _ENRICH_TAXONOMY_OPTION = typer.Option(
     DEFAULT_SKILL_TAXONOMY_CONFIG, "--taxonomy", exists=False, dir_okay=False
 )
 _SOURCE_OPTION = typer.Option([], "--source", help="Collect only this configured source key.")
+_RADAR_PANEL_MANIFEST_OPTION = typer.Option(
+    None,
+    "--radar-panel-manifest",
+    exists=False,
+    dir_okay=False,
+    help="Opt in to immutable Career Radar panel scan evidence.",
+)
 _STRICT_OPTION = typer.Option(
     False,
     "--strict",
@@ -473,6 +483,7 @@ def collect(
     config: Path = _CONFIG_OPTION,
     source: list[str] = _SOURCE_OPTION,
     strict: bool = _STRICT_OPTION,
+    radar_panel_manifest: Path | None = _RADAR_PANEL_MANIFEST_OPTION,
 ) -> None:
     """Collect all enabled sources, or explicitly named sources, into PostgreSQL."""
     try:
@@ -481,8 +492,17 @@ def collect(
             config, enable_workable_public=settings.enable_workable_public
         )
         selected_sources = _selected_sources(sources_config, source)
+        radar_panel = (
+            RadarPanelManifest.load(radar_panel_manifest, sources_config)
+            if radar_panel_manifest is not None
+            else None
+        )
+        if radar_panel is not None:
+            radar_panel.require_sources(selected_sources)
         session_factory = _database_session_factory(settings)
         with session_scope(session_factory) as session:
+            if radar_panel is not None:
+                RadarPanelVersionRepository(session).register(radar_panel)
             SourceConfigurationRepository(session).sync(sources_config)
         logger = configure_logging(level=settings.log_level)
         registry = adapter_registry(enable_workable_public=settings.enable_workable_public)
@@ -494,9 +514,12 @@ def collect(
                 logger=logger,
                 request_timeout_seconds=settings.request_timeout_seconds,
                 operational_policy=_operational_policy(settings),
+                radar_panel=radar_panel,
             )
         )
     except (ConfigurationError, AdapterRegistryError) as error:
+        _emit_error(error, exit_code=2)
+    except RadarPanelVersionConflictError as error:
         _emit_error(error, exit_code=2)
     except (DatabaseConfigurationError, IngestionError, PersistenceError, SQLAlchemyError) as error:
         _emit_error(error, exit_code=1)
@@ -664,6 +687,7 @@ async def _collect_selected(
     logger: Any,
     request_timeout_seconds: float,
     operational_policy: CollectionOperationalPolicy | None = None,
+    radar_panel: RadarPanelManifest | None = None,
 ) -> list[dict[str, object]]:
     policy = operational_policy or CollectionOperationalPolicy()
     outcomes: list[dict[str, object]] = []
@@ -676,6 +700,7 @@ async def _collect_selected(
                     logger=logger,
                     request_timeout_seconds=request_timeout_seconds,
                     operational_policy=policy,
+                    radar_panel=radar_panel,
                 ).collect(source_config=source_config, adapter=adapter)
             elif isinstance(source_config, LeverSourceConfig):
                 result = await LeverIngestionService(
@@ -683,6 +708,7 @@ async def _collect_selected(
                     logger=logger,
                     request_timeout_seconds=request_timeout_seconds,
                     operational_policy=policy,
+                    radar_panel=radar_panel,
                 ).collect(source_config=source_config, adapter=adapter)
             elif isinstance(source_config, AshbySourceConfig):
                 result = await AshbyIngestionService(
@@ -690,6 +716,7 @@ async def _collect_selected(
                     logger=logger,
                     request_timeout_seconds=request_timeout_seconds,
                     operational_policy=policy,
+                    radar_panel=radar_panel,
                 ).collect(source_config=source_config, adapter=adapter)
             elif isinstance(source_config, WorkablePublicSourceConfig):
                 result = await WorkablePublicIngestionService(
@@ -697,6 +724,7 @@ async def _collect_selected(
                     logger=logger,
                     request_timeout_seconds=request_timeout_seconds,
                     operational_policy=policy,
+                    radar_panel=radar_panel,
                 ).collect(source_config=source_config, adapter=adapter)
             else:  # Registry coverage is validated before selection.
                 raise IngestionError(

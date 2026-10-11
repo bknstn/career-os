@@ -20,9 +20,11 @@ from career_os.application.collect import (
     CollectionRun,
     CollectionRunStatus,
     CollectionService,
+    RadarPanelIdentity,
 )
 from career_os.application.lifecycle import LifecycleAction, LifecycleResult
 from career_os.application.operations import CollectionOperationalPolicy, utcnow
+from career_os.config.radar_panel import RadarPanelManifest
 from career_os.config.sources import (
     AshbySourceConfig,
     GreenhouseSourceConfig,
@@ -41,6 +43,7 @@ from career_os.persistence.operations import (
 from career_os.persistence.repositories import (
     CanonicalJobRepository,
     JobUpsertAction,
+    RadarScanObservationRepository,
     SourceLifecycleRepository,
     SqlAlchemyCollectionRunStore,
 )
@@ -112,6 +115,7 @@ class _TerminalIngestionProcessor[ProcessorConfigT: SourceConfig]:
         inserted = updated = unchanged = 0
         with session_scope(self.session_factory) as session:
             jobs = CanonicalJobRepository(session)
+            candidates: list[CanonicalJobCandidate] = []
             for posting in postings:
                 try:
                     candidate = self.candidate_factory(self.source_config, posting)
@@ -119,7 +123,11 @@ class _TerminalIngestionProcessor[ProcessorConfigT: SourceConfig]:
                     raise CollectionProcessingError(
                         "canonical candidate mapping failed", normalization_errors=1
                     ) from error
-                result = jobs.upsert(candidate)
+                candidates.append(candidate)
+                result = jobs.upsert(
+                    candidate,
+                    allow_reappearing_version=run.radar_panel_version is not None,
+                )
                 if result.action is JobUpsertAction.INSERTED:
                     inserted += 1
                 elif result.action is JobUpsertAction.UPDATED:
@@ -131,6 +139,10 @@ class _TerminalIngestionProcessor[ProcessorConfigT: SourceConfig]:
                 counts=_counts_with_processing(
                     run.counts, inserted=inserted, updated=updated, unchanged=unchanged
                 ),
+            )
+            RadarScanObservationRepository(session).capture_complete(
+                run=counted_run,
+                candidates=tuple(candidates),
             )
             self.run_store.update_in_session(session, counted_run)
             inactivated = 0
@@ -166,22 +178,34 @@ class IngestionService[ServiceConfigT: SourceConfig]:
     )
 
     async def collect(
-        self, *, source_config: ServiceConfigT, adapter: SourceAdapter
+        self,
+        *,
+        source_config: ServiceConfigT,
+        adapter: SourceAdapter,
+        radar_panel: RadarPanelManifest | None = None,
     ) -> IngestionResult:
         coordinator = SourceCollectionCoordinator(
             session_factory=self.session_factory,
             policy=self.operational_policy,
         )
         with coordinator.hold(source_config.key, now=utcnow()):
-            return await self._collect_locked(source_config=source_config, adapter=adapter)
+            return await self._collect_locked(
+                source_config=source_config, adapter=adapter, radar_panel=radar_panel
+            )
 
     async def _collect_locked(
-        self, *, source_config: ServiceConfigT, adapter: SourceAdapter
+        self,
+        *,
+        source_config: ServiceConfigT,
+        adapter: SourceAdapter,
+        radar_panel: RadarPanelManifest | None,
     ) -> IngestionResult:
         run_store = SqlAlchemyCollectionRunStore(
             session_factory=self.session_factory,
             normalizer_version=self.normalizer_version,
             taxonomy_version=self.taxonomy_version,
+            radar_panel=radar_panel,
+            source_config=source_config,
         )
         collector = CollectionService(
             run_store=run_store,
@@ -200,7 +224,20 @@ class IngestionService[ServiceConfigT: SourceConfig]:
             ),
         )
         try:
-            collection = await collector.collect(source_key=source_config.key, adapter=adapter)
+            panel_identity = (
+                RadarPanelIdentity(
+                    panel_version=radar_panel.panel_version,
+                    manifest_digest=radar_panel.manifest_digest,
+                    panel_digest=radar_panel.panel_digest,
+                )
+                if radar_panel is not None
+                else None
+            )
+            collection = await collector.collect(
+                source_key=source_config.key,
+                adapter=adapter,
+                radar_panel=panel_identity,
+            )
             collection_failed = False
         except CollectionFailedError as error:
             collection = error.result
@@ -550,6 +587,7 @@ class GreenhouseIngestionService:
     operational_policy: CollectionOperationalPolicy = field(
         default_factory=CollectionOperationalPolicy
     )
+    radar_panel: RadarPanelManifest | None = None
 
     async def collect(
         self, *, source_config: GreenhouseSourceConfig, adapter: SourceAdapter
@@ -562,7 +600,7 @@ class GreenhouseIngestionService:
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
             operational_policy=self.operational_policy,
-        ).collect(source_config=source_config, adapter=adapter)
+        ).collect(source_config=source_config, adapter=adapter, radar_panel=self.radar_panel)
 
 
 @dataclass(slots=True)
@@ -578,6 +616,7 @@ class LeverIngestionService:
     operational_policy: CollectionOperationalPolicy = field(
         default_factory=CollectionOperationalPolicy
     )
+    radar_panel: RadarPanelManifest | None = None
 
     async def collect(
         self, *, source_config: LeverSourceConfig, adapter: SourceAdapter
@@ -590,7 +629,7 @@ class LeverIngestionService:
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
             operational_policy=self.operational_policy,
-        ).collect(source_config=source_config, adapter=adapter)
+        ).collect(source_config=source_config, adapter=adapter, radar_panel=self.radar_panel)
 
 
 @dataclass(slots=True)
@@ -606,6 +645,7 @@ class AshbyIngestionService:
     operational_policy: CollectionOperationalPolicy = field(
         default_factory=CollectionOperationalPolicy
     )
+    radar_panel: RadarPanelManifest | None = None
 
     async def collect(
         self, *, source_config: AshbySourceConfig, adapter: SourceAdapter
@@ -618,7 +658,7 @@ class AshbyIngestionService:
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
             operational_policy=self.operational_policy,
-        ).collect(source_config=source_config, adapter=adapter)
+        ).collect(source_config=source_config, adapter=adapter, radar_panel=self.radar_panel)
 
 
 @dataclass(slots=True)
@@ -632,6 +672,7 @@ class WorkablePublicIngestionService:
     operational_policy: CollectionOperationalPolicy = field(
         default_factory=CollectionOperationalPolicy
     )
+    radar_panel: RadarPanelManifest | None = None
 
     async def collect(
         self, *, source_config: WorkablePublicSourceConfig, adapter: SourceAdapter
@@ -644,4 +685,4 @@ class WorkablePublicIngestionService:
             taxonomy_version=self.taxonomy_version,
             candidate_factory=self.candidate_factory,
             operational_policy=self.operational_policy,
-        ).collect(source_config=source_config, adapter=adapter)
+        ).collect(source_config=source_config, adapter=adapter, radar_panel=self.radar_panel)
