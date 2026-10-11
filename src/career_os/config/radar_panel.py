@@ -1,0 +1,181 @@
+"""Validated, content-addressed Career Radar collection panel manifests."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from types import MappingProxyType
+
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+
+from career_os.config.sources import ConfigurationError, SourceConfig, SourcesConfig
+from career_os.domain.canonical import content_hash
+
+
+class _PanelSourceDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    source_key: str = Field(min_length=1)
+    company_key: str = Field(min_length=1)
+    source_kind: str = Field(min_length=1)
+
+
+class _PanelDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    panel_version: str = Field(min_length=1)
+    sources: list[_PanelSourceDocument] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def source_keys_are_unique(self) -> _PanelDocument:
+        keys = [source.source_key for source in self.sources]
+        duplicates = sorted({key for key in keys if keys.count(key) > 1})
+        if duplicates:
+            raise ValueError(f"duplicate source_key value(s): {', '.join(duplicates)}")
+        return self
+
+
+@dataclass(frozen=True, slots=True)
+class RadarPanelSource:
+    """One stable company/source identity in a versioned collection panel."""
+
+    source_key: str
+    company_key: str
+    source_kind: str
+
+
+@dataclass(frozen=True, slots=True)
+class RadarPanelManifest:
+    """A validated panel with immutable semantic digests, independent of YAML layout."""
+
+    panel_version: str
+    sources: tuple[RadarPanelSource, ...]
+    source_config_digests: Mapping[str, str]
+    manifest_digest: str
+    panel_digest: str
+
+    @property
+    def canonical_manifest(self) -> dict[str, object]:
+        """Return a fresh JSON-ready canonical representation of the panel file."""
+        return {
+            "panel_version": self.panel_version,
+            "sources": [
+                {
+                    "company_key": source.company_key,
+                    "source_key": source.source_key,
+                    "source_kind": source.source_kind,
+                }
+                for source in self.sources
+            ],
+        }
+
+    @classmethod
+    def load(cls, path: str | Path, sources_config: SourcesConfig) -> RadarPanelManifest:
+        """Load, validate, and digest a manifest against every declared typed source."""
+        manifest_path = Path(path)
+        try:
+            text = manifest_path.read_text(encoding="utf-8")
+        except FileNotFoundError as error:
+            raise ConfigurationError(
+                f"Radar panel manifest does not exist: {manifest_path}"
+            ) from error
+        except OSError as error:
+            raise ConfigurationError(
+                f"Could not read Radar panel manifest: {manifest_path}"
+            ) from error
+
+        try:
+            payload = yaml.safe_load(text)
+        except yaml.YAMLError as error:
+            raise ConfigurationError(
+                f"Malformed YAML in Radar panel manifest: {manifest_path}"
+            ) from error
+        if not isinstance(payload, dict):
+            raise ConfigurationError(
+                "Radar panel manifest must contain a mapping at the document root"
+            )
+        try:
+            document = _PanelDocument.model_validate(payload)
+        except ValidationError as error:
+            details = "; ".join(
+                f"{'.'.join(str(part) for part in item['loc']) or 'root'}: {item['msg']}"
+                for item in error.errors()
+            )
+            raise ConfigurationError(f"Invalid Radar panel manifest: {details}") from error
+
+        configured_sources = {source.key: source for source in sources_config.sources}
+        declared_sources = tuple(
+            sorted(
+                (
+                    RadarPanelSource(
+                        source_key=entry.source_key,
+                        company_key=entry.company_key,
+                        source_kind=entry.source_kind,
+                    )
+                    for entry in document.sources
+                ),
+                key=lambda source: source.source_key,
+            )
+        )
+        source_config_digests: dict[str, str] = {}
+        for panel_source in declared_sources:
+            source_config = configured_sources.get(panel_source.source_key)
+            if source_config is None:
+                raise ConfigurationError(
+                    f"Radar panel source is not configured: {panel_source.source_key}"
+                )
+            if source_config.kind != panel_source.source_kind:
+                raise ConfigurationError(
+                    "Radar panel source kind does not match configuration: "
+                    f"{panel_source.source_key}"
+                )
+            source_config_digests[panel_source.source_key] = content_hash(
+                source_config.model_dump(mode="json")
+            )
+
+        canonical_manifest = {
+            "panel_version": document.panel_version,
+            "sources": [
+                {
+                    "company_key": source.company_key,
+                    "source_key": source.source_key,
+                    "source_kind": source.source_kind,
+                }
+                for source in declared_sources
+            ],
+        }
+        manifest_bytes = json.dumps(
+            canonical_manifest,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
+        immutable_source_digests = MappingProxyType(dict(sorted(source_config_digests.items())))
+        panel_digest = content_hash(
+            {
+                "manifest_digest": manifest_digest,
+                "source_config_digests": dict(immutable_source_digests),
+            }
+        )
+        return cls(
+            panel_version=document.panel_version,
+            sources=declared_sources,
+            source_config_digests=immutable_source_digests,
+            manifest_digest=manifest_digest,
+            panel_digest=panel_digest,
+        )
+
+    def require_sources(self, sources: tuple[SourceConfig, ...]) -> None:
+        """Fail if an explicit collection selection contains a source outside this panel."""
+        panel_keys = {source.source_key for source in self.sources}
+        outside = sorted({source.key for source in sources} - panel_keys)
+        if outside:
+            raise ConfigurationError(
+                "selected source key(s) are outside the Radar panel: " + ", ".join(outside)
+            )
