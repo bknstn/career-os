@@ -76,6 +76,29 @@ def test_panel_digest_covers_typed_config_for_every_declared_source(tmp_path: Pa
     )
 
 
+def test_semantic_manifest_identity_load_does_not_require_current_source_config(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "panel.yaml"
+    manifest_path.write_text(
+        "panel_version: frozen-v1\nsources:\n  - source_key: retired-board\n"
+        "    company_key: company\n    source_kind: greenhouse\n",
+        encoding="utf-8",
+    )
+
+    identity = RadarPanelManifest.load_identity(manifest_path)
+
+    assert identity.panel_version == "frozen-v1"
+    assert identity.sources[0].source_key == "retired-board"
+    assert identity.canonical_manifest["sources"] == [
+        {
+            "company_key": "company",
+            "source_key": "retired-board",
+            "source_kind": "greenhouse",
+        }
+    ]
+
+
 @pytest.mark.parametrize(
     ("document", "message"),
     [

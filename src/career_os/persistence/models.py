@@ -211,6 +211,41 @@ class RadarScanObservation(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class RadarBuild(Base):
+    """One immutable, replayable roles-only Radar result."""
+
+    __tablename__ = "radar_builds"
+    __table_args__ = (
+        CheckConstraint(
+            "idempotence_key ~ '^[0-9a-f]{64}$'",
+            name="ck_radar_builds_idempotence_key",
+        ),
+        CheckConstraint(
+            "input_digest ~ '^[0-9a-f]{64}$'",
+            name="ck_radar_builds_input_digest",
+        ),
+        UniqueConstraint("idempotence_key", name="uq_radar_builds_idempotence_key"),
+        Index("ix_radar_builds_panel_version_cutoff", "panel_version", "cutoff_utc"),
+        PrimaryKeyConstraint("id", name="pk_radar_builds"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    idempotence_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    panel_version: Mapped[str] = mapped_column(
+        ForeignKey("radar_panel_versions.panel_version"), nullable=False
+    )
+    panel_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    cutoff_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+
 class JobPosting(AuditTimestampMixin, Base):
     """A canonical job posting and its latest observed source payload."""
 

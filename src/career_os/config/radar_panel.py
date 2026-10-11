@@ -73,18 +73,16 @@ class RadarPanelSource:
 
 
 @dataclass(frozen=True, slots=True)
-class RadarPanelManifest:
-    """A validated panel with immutable semantic digests, independent of YAML layout."""
+class RadarPanelManifestIdentity:
+    """Semantic identity of a manifest, independent of mutable source config."""
 
     panel_version: str
     sources: tuple[RadarPanelSource, ...]
-    source_config_digests: Mapping[str, str]
     manifest_digest: str
-    panel_digest: str
 
     @property
     def canonical_manifest(self) -> dict[str, object]:
-        """Return a fresh JSON-ready canonical representation of the panel file."""
+        """Return a fresh canonical JSON representation of the manifest."""
         return {
             "panel_version": self.panel_version,
             "sources": [
@@ -97,9 +95,29 @@ class RadarPanelManifest:
             ],
         }
 
+
+@dataclass(frozen=True, slots=True)
+class RadarPanelManifest:
+    """A validated panel with immutable semantic digests, independent of YAML layout."""
+
+    panel_version: str
+    sources: tuple[RadarPanelSource, ...]
+    source_config_digests: Mapping[str, str]
+    manifest_digest: str
+    panel_digest: str
+
+    @property
+    def canonical_manifest(self) -> dict[str, object]:
+        """Return a fresh JSON-ready canonical representation of the panel file."""
+        return RadarPanelManifestIdentity(
+            panel_version=self.panel_version,
+            sources=self.sources,
+            manifest_digest=self.manifest_digest,
+        ).canonical_manifest
+
     @classmethod
-    def load(cls, path: str | Path, sources_config: SourcesConfig) -> RadarPanelManifest:
-        """Load, validate, and digest a manifest against every declared typed source."""
+    def load_identity(cls, path: str | Path) -> RadarPanelManifestIdentity:
+        """Load and validate semantic manifest fields without source configuration."""
         manifest_path = Path(path)
         try:
             text = manifest_path.read_text(encoding="utf-8")
@@ -135,8 +153,7 @@ class RadarPanelManifest:
             )
             raise ConfigurationError(f"Invalid Radar panel manifest: {details}") from error
 
-        configured_sources = {source.key: source for source in sources_config.sources}
-        declared_sources = tuple(
+        sources = tuple(
             sorted(
                 (
                     RadarPanelSource(
@@ -149,8 +166,38 @@ class RadarPanelManifest:
                 key=lambda source: source.source_key,
             )
         )
+        canonical_manifest = {
+            "panel_version": document.panel_version,
+            "sources": [
+                {
+                    "company_key": source.company_key,
+                    "source_key": source.source_key,
+                    "source_kind": source.source_kind,
+                }
+                for source in sources
+            ],
+        }
+        manifest_bytes = json.dumps(
+            canonical_manifest,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        return RadarPanelManifestIdentity(
+            panel_version=document.panel_version,
+            sources=sources,
+            manifest_digest=hashlib.sha256(manifest_bytes).hexdigest(),
+        )
+
+    @classmethod
+    def load(cls, path: str | Path, sources_config: SourcesConfig) -> RadarPanelManifest:
+        """Load, validate, and digest a manifest against every declared typed source."""
+        identity = cls.load_identity(path)
+
+        configured_sources = {source.key: source for source in sources_config.sources}
         source_config_digests: dict[str, str] = {}
-        for panel_source in declared_sources:
+        for panel_source in identity.sources:
             source_config = configured_sources.get(panel_source.source_key)
             if source_config is None:
                 raise ConfigurationError(
@@ -165,37 +212,18 @@ class RadarPanelManifest:
                 source_config.model_dump(mode="json")
             )
 
-        canonical_manifest = {
-            "panel_version": document.panel_version,
-            "sources": [
-                {
-                    "company_key": source.company_key,
-                    "source_key": source.source_key,
-                    "source_kind": source.source_kind,
-                }
-                for source in declared_sources
-            ],
-        }
-        manifest_bytes = json.dumps(
-            canonical_manifest,
-            ensure_ascii=False,
-            allow_nan=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
-        manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
         immutable_source_digests = MappingProxyType(dict(sorted(source_config_digests.items())))
         panel_digest = content_hash(
             {
-                "manifest_digest": manifest_digest,
+                "manifest_digest": identity.manifest_digest,
                 "source_config_digests": dict(immutable_source_digests),
             }
         )
         return cls(
-            panel_version=document.panel_version,
-            sources=declared_sources,
+            panel_version=identity.panel_version,
+            sources=identity.sources,
             source_config_digests=immutable_source_digests,
-            manifest_digest=manifest_digest,
+            manifest_digest=identity.manifest_digest,
             panel_digest=panel_digest,
         )
 

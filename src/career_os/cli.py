@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from collections.abc import Iterable
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -47,6 +48,7 @@ from career_os.application.operations import (
     SourceCollectionUnavailableError,
 )
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
+from career_os.application.radar import RadarBuildPersistenceError, RadarBuildService
 from career_os.application.report import MarketReportService
 from career_os.config.career_profiles import load_career_profile
 from career_os.config.compensation_supplements import (
@@ -106,6 +108,9 @@ jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical j
 taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
 market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed market reports.")
 operations_app = typer.Typer(no_args_is_help=True, help="Inspect collection health and metrics.")
+radar_app = typer.Typer(
+    no_args_is_help=True, help="Build and inspect persisted role Radar results."
+)
 profile_app = typer.Typer(no_args_is_help=True, help="Validate H3 career profile evidence.")
 career_app = typer.Typer(no_args_is_help=True, help="Review one vacancy against H3 evidence.")
 compensation_app = typer.Typer(
@@ -120,6 +125,7 @@ app.add_typer(jobs_app, name="jobs")
 app.add_typer(taxonomy_app, name="taxonomy")
 app.add_typer(market_app, name="market")
 app.add_typer(operations_app, name="operations")
+app.add_typer(radar_app, name="radar")
 
 DEFAULT_SOURCES_CONFIG = Path("config/sources.yaml")
 DEFAULT_SKILL_TAXONOMY_CONFIG = Path("config/taxonomy/skills.v1.yaml")
@@ -146,6 +152,19 @@ _STRICT_OPTION = typer.Option(
     False,
     "--strict",
     help="Fail if any selected scan is partial or failed.",
+)
+_RADAR_MANIFEST_OPTION = typer.Option(
+    ...,
+    "--panel-manifest",
+    exists=False,
+    dir_okay=False,
+    help="Registered semantic panel manifest used to capture the fixed role sample.",
+)
+_RADAR_CUTOFF_OPTION = typer.Option(..., "--cutoff-utc")
+_RADAR_RUN_ID_OPTION = typer.Option(..., "--run-id")
+_RFC3339_CUTOFF = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?"
+    r"(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$"
 )
 
 
@@ -532,6 +551,57 @@ def collect(
         raise typer.Exit(code=1)
     if all_failed:
         raise typer.Exit(code=1)
+
+
+@radar_app.command("build")
+def radar_build(
+    panel_manifest: Path = _RADAR_MANIFEST_OPTION,
+    cutoff_utc: str = _RADAR_CUTOFF_OPTION,
+) -> None:
+    """Build or return the immutable roles-only result for a saved panel."""
+    try:
+        cutoff = _parse_radar_cutoff(cutoff_utc)
+    except ValueError as error:
+        _emit_error(error, exit_code=2)
+    try:
+        session_factory = _database_session_factory(load_settings())
+        result = RadarBuildService(session_factory).build(str(panel_manifest), cutoff)
+    except (ConfigurationError, RadarPanelVersionConflictError) as error:
+        _emit_error(error, exit_code=2)
+    except (
+        DatabaseConfigurationError,
+        RadarBuildPersistenceError,
+        PersistenceError,
+        SQLAlchemyError,
+        OverflowError,
+        ValueError,
+    ) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo(result)
+
+
+@radar_app.command("show")
+def radar_show(run_id: UUID = _RADAR_RUN_ID_OPTION) -> None:
+    """Print a saved Radar JSON result without consulting mutable job rows."""
+    try:
+        session_factory = _database_session_factory(load_settings())
+        result = RadarBuildService(session_factory).show(run_id)
+    except (DatabaseConfigurationError, SQLAlchemyError, PersistenceError) as error:
+        _emit_error(error, exit_code=1)
+    if result is None:
+        _emit_error(ValueError(f"Radar run was not found: {run_id}"), exit_code=4)
+    _json_echo(result)
+
+
+def _parse_radar_cutoff(value: str) -> datetime:
+    """Parse an RFC3339 instant with explicit offset and normalize it to UTC."""
+    if not _RFC3339_CUTOFF.fullmatch(value):
+        raise ValueError("cutoff must be RFC3339 with an explicit UTC offset")
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+        return parsed.astimezone(UTC)
+    except (OverflowError, ValueError) as error:
+        raise ValueError("cutoff is not a valid RFC3339 timestamp") from error
 
 
 @app.command("enrich")

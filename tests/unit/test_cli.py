@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.exc import OperationalError
@@ -83,6 +83,9 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["market", "report", "--help"],
         ["operations", "--help"],
         ["operations", "status", "--help"],
+        ["radar", "--help"],
+        ["radar", "build", "--help"],
+        ["radar", "show", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -91,6 +94,82 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
     ):
         assert runner.invoke(app, arguments).exit_code == 0
     assert "--radar-panel-manifest" in runner.invoke(app, ["collect", "--help"]).output
+
+
+def test_radar_cutoff_requires_rfc3339_offset_and_normalizes_to_utc() -> None:
+    assert cli._parse_radar_cutoff("2026-10-11T02:00:00+02:00") == datetime(
+        2026, 10, 11, tzinfo=UTC
+    )
+    for invalid in (
+        "2026-10-11T00:00:00",
+        "2026-10-11T00:00:00+01:60",
+        "2026-10-11T00:00:00+24:00",
+        "2026-10-11T00:00:00Zextra",
+    ):
+        with pytest.raises(ValueError):
+            cli._parse_radar_cutoff(invalid)
+
+
+def test_radar_build_rejects_invalid_offset_before_database(monkeypatch) -> None:
+    def unexpected_database(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("invalid cutoff must fail before database initialization")
+
+    monkeypatch.setattr(cli, "_database_session_factory", unexpected_database)
+    result = CliRunner().invoke(
+        app,
+        [
+            "radar",
+            "build",
+            "--panel-manifest",
+            "unused.yaml",
+            "--cutoff-utc",
+            "2026-10-11T00:00:00+01:60",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "RFC3339" in result.output
+
+
+def test_radar_show_missing_run_uses_exit_code_four(monkeypatch) -> None:
+    class _MissingRadarService:
+        def __init__(self, _session_factory: object) -> None:
+            pass
+
+        def show(self, _run_id: UUID) -> None:
+            return None
+
+    monkeypatch.setattr(cli, "RadarBuildService", _MissingRadarService)
+    monkeypatch.setattr(cli, "load_settings", lambda: SimpleNamespace())
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: object())
+    result = CliRunner().invoke(app, ["radar", "show", "--run-id", str(uuid4())])
+    assert result.exit_code == 4
+    assert "not found" in result.output
+
+
+def test_radar_build_maps_computation_errors_to_exit_code_one(monkeypatch) -> None:
+    class _FailingRadarService:
+        def __init__(self, _session_factory: object) -> None:
+            pass
+
+        def build(self, _manifest_path: str, _cutoff: datetime) -> dict[str, object]:
+            raise ValueError("frozen evidence is invalid")
+
+    monkeypatch.setattr(cli, "RadarBuildService", _FailingRadarService)
+    monkeypatch.setattr(cli, "load_settings", lambda: SimpleNamespace())
+    monkeypatch.setattr(cli, "_database_session_factory", lambda _settings: object())
+    result = CliRunner().invoke(
+        app,
+        [
+            "radar",
+            "build",
+            "--panel-manifest",
+            "panel.yaml",
+            "--cutoff-utc",
+            "2026-10-11T00:00:00Z",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "frozen evidence is invalid" in result.output
 
 
 def test_operations_status_emits_json_and_strict_fails_for_stale_enabled_source(
