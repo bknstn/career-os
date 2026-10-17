@@ -176,26 +176,43 @@
   }
 
   const LABELS = {
-    technical_engineering: "Техническая инженерия",
+    technical_engineering: "Инженерные роли",
     engineering_management: "Инженерное руководство",
     solutions_architecture: "Архитектура решений",
-    nontechnical: "Нетехническая роль",
+    nontechnical: "Нетехнические роли",
     unknown: "Не распознано",
-    backend_engineering: "Backend engineering",
-    frontend_engineering: "Frontend engineering",
-    fullstack_engineering: "Full-stack engineering",
-    data_engineering: "Data engineering",
-    product_engineering: "Product engineering",
-    platform_infrastructure_engineering: "Platform и инфраструктура",
-    machine_learning_engineering: "Machine-learning engineering",
-    ai_engineering: "AI engineering",
-    ai_product_engineering: "AI product engineering",
+    backend_engineering: "Серверная разработка",
+    frontend_engineering: "Разработка интерфейсов",
+    fullstack_engineering: "Full-stack разработка",
+    data_engineering: "Инженерия данных",
+    product_engineering: "Продуктовая разработка",
+    platform_infrastructure_engineering: "Платформа и инфраструктура",
+    machine_learning_engineering: "Инженерия машинного обучения",
+    ai_engineering: "Инженерия ИИ",
+    ai_product_engineering: "Продуктовая инженерия ИИ",
+  };
+  const SPECIALTY_STATES = {
+    resolved: "Распознана",
+    missing: "Не указана в названии",
+    unsupported: "Вне текущей таксономии",
+    ambiguous: "Неоднозначная",
+    not_assessed: "Не оценивалась",
+    not_applicable: "Не применяется",
+  };
+  const JOB_STATES = {
+    active: "Активна в сохранённом срезе",
+    inactive: "Неактивна в сохранённом срезе",
   };
 
   function displayLabel(value, fallback = "Не распознано") {
-    if (value && typeof value === "object") return String(value.label || LABELS[value.id] || value.id || fallback);
+    if (value && typeof value === "object") return String(LABELS[value.id] || value.label || value.id || fallback);
     if (value === null || value === undefined || value === "") return fallback;
     return LABELS[String(value)] || String(value);
+  }
+
+  function displayState(value, dictionary) {
+    if (!value) return "не указано";
+    return dictionary[String(value)] || String(value);
   }
 
   function baseCoverageDescription(data) {
@@ -379,7 +396,7 @@
     const rows = Array.isArray(items) ? items.slice(0, 6) : [];
     const maxCount = Math.max(1, ...rows.map((item) => Number(item.count) || 0), Number(unknownCount) || 0);
     for (const item of rows) {
-      const label = String(item.label || "Без названия");
+      const label = displayLabel({ id: item.id, label: item.label }, "Без названия");
       const row = element("button", "distribution-row");
       row.type = "button";
       row.setAttribute("aria-label", `Открыть вакансии: ${label}, ${formatNumber(item.count)}`);
@@ -508,7 +525,7 @@
     const tags = element("div", "job-meta");
     if (job.occupation) tags.append(text("span", "tag tag-accent", displayLabel(job.occupation)));
     if (job.specialty) tags.append(text("span", "tag tag-blue", displayLabel(job.specialty)));
-    if (job.status) tags.append(text("span", "tag tag-muted", String(job.status)));
+    if (job.status) tags.append(text("span", "tag tag-muted", displayState(job.status, JOB_STATES)));
     if (Array.isArray(job.skills)) {
       for (const skill of job.skills.slice(0, 4)) tags.append(text("span", "tag", skill.label || skill.id));
     }
@@ -677,7 +694,8 @@
     for (const option of options) {
       const id = option && (option.id ?? option.key);
       if (id === null || id === undefined) continue;
-      const item = element("option", "", `${option.label || option.company_name || option.name || option.key || id}${option.count !== undefined ? ` (${formatNumber(option.count)})` : ""}`);
+      const optionLabel = LABELS[String(id)] || option.label || option.company_name || option.name || option.key || id;
+      const item = element("option", "", `${optionLabel}${option.count !== undefined ? ` (${formatNumber(option.count)})` : ""}`);
       item.value = String(id);
       select.append(item);
     }
@@ -772,7 +790,7 @@
     const params = requestParams(route);
     const selected = isOccupation ? (data.occupations || []).find((item) => String(item.id) === params.get("occupation"))
       : isSkill ? (data.skills || []).find((item) => String(item.id) === params.get("skill")) : null;
-    const headingTitle = isOccupation ? (selected && selected.label || "Вакансии по роли")
+    const headingTitle = isOccupation ? (selected ? displayLabel(selected) : "Вакансии по роли")
       : isSkill ? (selected && selected.label || "Вакансии с упоминанием навыка") : "Поиск по вакансиям";
     const headingCopy = isOccupation
       ? "Результат классификации по правилам Career Radar. Совпадение роли не означает, что она подтверждена работодателем."
@@ -886,6 +904,10 @@
     if (seq !== renderSequence) return;
     const job = detail.job && typeof detail.job === "object" ? detail.job : detail;
     const summary = job.summary && typeof job.summary === "object" ? job.summary : job;
+    const description = typeof detail.description === "string" ? detail.description
+      : typeof job.description === "string" ? job.description : null;
+    const roleEvidence = Array.isArray(detail.role_evidence) ? detail.role_evidence : job.role_evidence;
+    const skillEvidence = Array.isArray(detail.skill_evidence) ? detail.skill_evidence : job.skill_evidence;
     const title = summary.title || "Название не указано";
     updateNav("explore", "Вакансия");
     const back = buttonLink("#/explore", "← К списку", "button");
@@ -902,27 +924,25 @@
     const metaTags = element("div", "job-meta");
     if (summary.occupation) metaTags.append(text("span", "tag tag-accent", displayLabel(summary.occupation)));
     if (summary.specialty) metaTags.append(text("span", "tag tag-blue", displayLabel(summary.specialty)));
-    if (summary.status) metaTags.append(text("span", "tag tag-muted", String(summary.status)));
+    if (summary.status) metaTags.append(text("span", "tag tag-muted", displayState(summary.status, JOB_STATES)));
 
     const layout = element("div", "detail-layout");
     const main = element("section", "panel");
     const desc = element("section", "detail-section");
     desc.append(text("h2", "", "Описание вакансии"));
-    desc.append(text("p", "", typeof job.description === "string" ? job.description : "Полный текст описания недоступен."));
+    desc.append(text("p", "", description === null ? "Полный текст описания недоступен." : description));
     main.append(desc);
-    const roleEvidence = evidenceSection("Основание распознавания роли", job.role_evidence);
-    if (roleEvidence) main.append(roleEvidence);
-    const skillEvidence = evidenceSection("Найденные упоминания навыков", job.skill_evidence);
-    if (skillEvidence) main.append(skillEvidence);
+    main.append(evidenceSection("Основание распознавания роли", roleEvidence));
+    main.append(evidenceSection("Найденные упоминания навыков", skillEvidence));
     const side = element("aside", "stack detail-side");
     const meta = panel("Сведения о наблюдении", "Сохранённые поля источника");
     const metaBody = meta.body;
     const values = [
       ["Источник", summary.source_key || "не указан"],
       ["Последнее наблюдение", formatDate(summary.last_seen_at_utc)],
-      ["Состояние", summary.status || "не указано"],
+      ["Состояние", displayState(summary.status, JOB_STATES)],
       ["Специализация", displayLabel(summary.specialty, "не распознана")],
-      ["Статус специализации", summary.specialty_state || "не указан"],
+      ["Статус специализации", displayState(summary.specialty_state, SPECIALTY_STATES)],
       ["Навыки в выдаче", formatNumber(Array.isArray(summary.skills) ? summary.skills.length : 0)],
     ];
     for (const [key, value] of values) {
