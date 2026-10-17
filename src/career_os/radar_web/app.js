@@ -20,11 +20,15 @@
   const ISSUE_COPY = {
     source_stale: "Некоторые источники давно не проходили успешное полное сканирование.",
     occupation_unknown_above_threshold: "Доля нераспознанных ролей в исходной панели выше порога сопоставимости.",
+    occupation_unknown_above_reference: "Доля нераспознанных ролей в исходной панели выше контрольного уровня.",
     description_missing: "У части вакансий нет описания, поэтому распознавание навыков неполное.",
   };
   const HISTORY_COPY = {
     missing_history: "Нет подходящих неизменяемых наблюдений для выбранного периода.",
     panel_not_registered: "Состав источников ещё не зафиксирован для исторического сравнения.",
+    panel_source_mismatch: "Исторические данные не совпадают с источниками в текущем составе панели.",
+    panel_manifest_unavailable: "Не удалось подтвердить зафиксированный состав источников для сравнения.",
+    source_outside_panel: "Выбранный источник не входит в зафиксированную историческую панель.",
     missing_history_tables: "В сохранённых данных пока нет таблиц для сравнения сканов.",
     missing_history_columns: "В сохранённых данных пока нет полей для проверки истории.",
     coverage_below_threshold: "Мало сопоставимых сканов, чтобы сравнение прошло проверку полноты.",
@@ -35,6 +39,19 @@
     category_sample_below_threshold: "Для этой категории пока мало парных наблюдений.",
     zero_denominator: "Невозможно рассчитать долю: в одном из периодов нет объявлений для сравнения.",
     panel_identity_mismatch: "Состав или настройки источников изменились, поэтому периоды несопоставимы.",
+    history_present: "Для выбранного окна нет парных успешных сканов.",
+    overall_coverage: "Общее покрытие парными сканами ниже порога для сравнения.",
+    board_coverage: "Часть источников представлена слишком редко для сопоставления.",
+    occupation_unknown_threshold: "Нераспознанных ролей слишком много для надёжного сравнения ролей.",
+    specialty_unresolved_threshold: "Специализации распознаны недостаточно уверенно для сравнения.",
+    description_coverage_threshold: "Недостаточно описаний для сравнения навыков.",
+    sample_threshold: "Для этой метрики пока мало вакансий или компаний в парных окнах.",
+    positive_denominator: "Нельзя сравнить долю без объявлений в обоих периодах.",
+  };
+  const LIMITATION_COPY = {
+    "Current results describe saved inventory, not the full external labor market.": "Срез отражает сохранённые объявления, а не весь внешний рынок труда.",
+    "Unknown occupations and missing descriptions remain visible in coverage fields.": "Нераспознанные роли и вакансии без описаний остаются видимыми в показателях покрытия.",
+    "Historical comparisons are null/insufficient until their own matched-panel, coverage, and sample gates pass.": "Исторические сравнения остаются пустыми, пока не проходят собственные проверки панели, покрытия и размера выборки.",
   };
 
   function issueMessage(code) {
@@ -182,8 +199,8 @@
   }
 
   function baseCoverageDescription(data) {
-    const coverage = data.quality && data.quality.coverage;
-    if (!coverage || typeof coverage !== "object") return "";
+    const quality = data.quality;
+    if (!quality || typeof quality !== "object") return "";
     const found = new Map();
     const visit = (value) => {
       if (!value || typeof value !== "object") return;
@@ -192,7 +209,7 @@
         else if (item && typeof item === "object") visit(item);
       }
     };
-    visit(coverage);
+    visit(quality);
     const unknown = found.get("base_unknown_occupation_count") ?? found.get("base_unknown_count");
     const missingDescription = found.get("base_missing_description_count");
     const total = found.get("base_source_cohort_posting_count") ?? found.get("base_posting_count") ?? found.get("base_count");
@@ -313,7 +330,7 @@
 
   function snapshotBanner(data) {
     const quality = data.quality || {};
-    const warning = quality.state && !["ok", "fresh", "complete", "good"].includes(String(quality.state).toLowerCase());
+    const warning = quality.state && !["ok", "fresh", "complete", "good", "ready"].includes(String(quality.state).toLowerCase());
     const banner = element("section", `snapshot-banner${warning ? " warning" : ""}`);
     const copy = element("div", "snapshot-copy");
     append(copy,
@@ -987,7 +1004,9 @@
     const limitsFromApi = Array.isArray(methodology.limitations) ? methodology.limitations : null;
     for (const [index, item] of (limitsFromApi || knownLimitText).entries()) {
       const row = element("div", "limit-item");
-      append(row, text("span", "limit-number", String(index + 1)), text("span", "", typeof item === "string" ? item : item.text || item.description || JSON.stringify(item)));
+      const raw = typeof item === "string" ? item : item.text || item.description || "";
+      const translated = LIMITATION_COPY[raw] || (limitsFromApi ? "Дополнительное ограничение полноты данных; подробности указаны в версии методологии." : raw);
+      append(row, text("span", "limit-number", String(index + 1)), text("span", "", translated));
       limits.append(row);
     }
     side.body.append(limits);
