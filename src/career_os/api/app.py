@@ -14,11 +14,13 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
+from career_os.api.radar_mvp import create_radar_mvp_router
 from career_os.api.schemas import (
     ErrorResponse,
     JobCompensationResponse,
@@ -73,6 +75,7 @@ SessionFactoryProvider = Callable[[], SessionFactory]
 TaxonomyProvider = Callable[[], SkillTaxonomy]
 OperationalPolicyProvider = Callable[[], CollectionOperationalPolicy]
 _DEFAULT_TAXONOMY_PATH = Path(__file__).resolve().parents[3] / "config/taxonomy/skills.v1.yaml"
+_RADAR_WEB_PATH = Path(__file__).resolve().parents[1] / "radar_web"
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +92,7 @@ def _default_session_factory_provider() -> SessionFactory:
     return create_session_factory(create_database_engine(load_settings()))
 
 
+@lru_cache(maxsize=1)
 def _default_taxonomy_provider() -> SkillTaxonomy:
     return load_skill_taxonomy(_DEFAULT_TAXONOMY_PATH)
 
@@ -412,6 +416,19 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
             if isinstance(error, ValueError):
                 raise HTTPException(status_code=422, detail=str(error)) from error
             raise HTTPException(status_code=409, detail=str(error)) from error
+
+    app.include_router(
+        create_radar_mvp_router(
+            session_factory_provider=deps.session_factory_provider,
+            taxonomy_provider=deps.taxonomy_provider,
+            policy_provider=policy_provider,
+        )
+    )
+    app.mount(
+        "/radar",
+        StaticFiles(directory=_RADAR_WEB_PATH, html=True, check_dir=False),
+        name="career-radar-ui",
+    )
 
     return app
 

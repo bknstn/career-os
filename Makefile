@@ -1,4 +1,4 @@
-.PHONY: format format-check lint typecheck test pre-commit check db-up db-down db-logs db-status migration-up migration-down migration-current
+.PHONY: format format-check lint typecheck test pre-commit check db-up db-down db-logs db-status migration-up migration-down migration-current radar radar-refresh
 
 format:
 	uv run ruff format .
@@ -40,3 +40,12 @@ migration-down:
 
 migration-current:
 	uv run alembic current
+
+radar:
+	PYTHONDONTWRITEBYTECODE=1 uv run python -B -m career_os.api.radar_server
+
+radar-refresh:
+	@set -a; if [ -f .env.radar.local ]; then . ./.env.radar.local; fi; set +a; \
+	PYTHONDONTWRITEBYTECODE=1 uv run career-os collect \
+		--config config/sources.market-iteration.yaml \
+		--radar-panel-manifest config/radar/panel.mvp.v1.yaml

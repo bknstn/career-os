@@ -50,6 +50,9 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
         "/v1/jobs/{job_id}",
         "/v1/market-reports",
         "/v1/target-universe-reports",
+        "/radar/api/snapshot",
+        "/radar/api/jobs/{job_id}",
+        "/radar/api/methodology",
     }
     job_detail_schema = schema["components"]["schemas"]["JobDetailResponse"]
     serialized = str(job_detail_schema)
@@ -63,6 +66,63 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
     target_universe_operation = str(schema["paths"]["/v1/target-universe-reports"])
     assert "TargetUniverseReportResponse" in target_universe_operation
     assert "MarketReportResponse" not in target_universe_operation
+
+
+def test_radar_invalid_identifiers_are_rejected_before_database_access() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise AssertionError("invalid Radar filters must be rejected before database access")
+
+    taxonomy = load_skill_taxonomy(
+        Path(__file__).resolve().parents[2] / "config/taxonomy/skills.v1.yaml"
+    )
+    client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=unavailable,
+                taxonomy_provider=lambda: taxonomy,
+            )
+        )
+    )
+
+    for params in (
+        {"occupation": "not_an_occupation"},
+        {"skill": "not_a_skill"},
+        {"period_days": 31},
+    ):
+        response = client.get("/radar/api/snapshot", params=params)
+        assert response.status_code == 422
+        assert response.json() == {"detail": "invalid Radar filters"}
+    assert calls == 0
+
+
+def test_radar_period_query_strings_are_parsed_before_database_access() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise DatabaseConfigurationError("private DSN")
+
+    taxonomy = load_skill_taxonomy(
+        Path(__file__).resolve().parents[2] / "config/taxonomy/skills.v1.yaml"
+    )
+    client = TestClient(
+        create_app(
+            ApiDependencies(
+                session_factory_provider=unavailable,
+                taxonomy_provider=lambda: taxonomy,
+            )
+        )
+    )
+    for period in (30, 90, 180):
+        response = client.get("/radar/api/snapshot", params={"period_days": str(period)})
+        assert response.status_code == 503
+        assert response.json() == {"detail": "database unavailable"}
+    assert calls == 3
 
 
 def test_prometheus_metrics_are_low_cardinality_and_escape_source_labels() -> None:

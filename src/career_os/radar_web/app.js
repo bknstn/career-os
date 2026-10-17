@@ -688,9 +688,11 @@
     const select = element("select");
     select.name = name;
     select.id = `radar-filter-${name}`;
-    const first = element("option", "", placeholder);
-    first.value = "";
-    select.append(first);
+    if (placeholder !== null) {
+      const first = element("option", "", placeholder);
+      first.value = "";
+      select.append(first);
+    }
     for (const option of options) {
       const id = option && (option.id ?? option.key);
       if (id === null || id === undefined) continue;
@@ -738,7 +740,7 @@
     grid.append(selectField("Источник", "source", sourceOptions, params.get("source"), "Все источники"));
     const period = selectField("Окно истории", "period_days", [
       { id: "30", label: "30 дней" }, { id: "90", label: "90 дней" }, { id: "180", label: "180 дней" },
-    ], params.get("period_days") || "90", "90 дней");
+    ], params.get("period_days") || "90", null);
     grid.append(period);
     const submitWrap = element("div", "field filter-submit");
     const submit = element("button", "button button-primary", "Применить фильтры");
@@ -902,6 +904,7 @@
   async function renderJobDetail(id, seq) {
     const detail = await getJson(`jobs/${encodeURIComponent(id)}`);
     if (seq !== renderSequence) return;
+    root.replaceChildren();
     const job = detail.job && typeof detail.job === "object" ? detail.job : detail;
     const summary = job.summary && typeof job.summary === "object" ? job.summary : job;
     const description = typeof detail.description === "string" ? detail.description
@@ -985,6 +988,7 @@
   async function renderMethodology(seq) {
     const methodology = await getJson("methodology");
     if (seq !== renderSequence) return;
+    root.replaceChildren();
     updateNav("methodology", "Методология");
     root.append(pageHeading("МЕТОДОЛОГИЯ", methodology.title || "Как устроены данные", "Здесь описаны единица наблюдения, правила чтения сводок и границы доступных доказательств."));
     const grid = element("div", "methodology-grid");
@@ -1070,7 +1074,10 @@
     }
   }
 
-  window.addEventListener("hashchange", renderRoute);
+  window.addEventListener("hashchange", () => {
+    window.scrollTo(0, 0);
+    renderRoute();
+  });
   refreshButton.addEventListener("click", renderRoute);
   skipLink.addEventListener("click", (event) => {
     event.preventDefault();
