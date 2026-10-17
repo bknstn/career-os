@@ -1,0 +1,62 @@
+panel_version: career-radar-mvp-v1
+sources:
+  - source_key: aerovect-ashby
+    company_key: aerovect
+    source_kind: ashby
+  - source_key: affirm-greenhouse
+    company_key: affirm
+    source_kind: greenhouse
+  - source_key: chattermill-ashby
+    company_key: chattermill
+    source_kind: ashby
+  - source_key: checkly-ashby
+    company_key: checkly
+    source_kind: ashby
+  - source_key: first-connect-insurance-greenhouse
+    company_key: first-connect-insurance
+    source_kind: greenhouse
+  - source_key: gitlab-greenhouse
+    company_key: gitlab
+    source_kind: greenhouse
+  - source_key: hauler-hero-ashby
+    company_key: hauler-hero
+    source_kind: ashby
+  - source_key: hostinger-ashby
+    company_key: hostinger
+    source_kind: ashby
+  - source_key: kalepa-greenhouse
+    company_key: kalepa
+    source_kind: greenhouse
+  - source_key: kestra-ashby
+    company_key: kestra
+    source_kind: ashby
+  - source_key: mesh-greenhouse
+    company_key: mesh
+    source_kind: greenhouse
+  - source_key: n8n-ashby
+    company_key: n8n
+    source_kind: ashby
+  - source_key: p2p-org-ashby
+    company_key: p2p-org
+    source_kind: ashby
+  - source_key: saas-group-greenhouse
+    company_key: saas-group
+    source_kind: greenhouse
+  - source_key: se-ranking-greenhouse
+    company_key: se-ranking
+    source_kind: greenhouse
+  - source_key: solidgate-ashby
+    company_key: solidgate
+    source_kind: ashby
+  - source_key: synthesia-ashby
+    company_key: synthesia
+    source_kind: ashby
+  - source_key: wundergraph-ashby
+    company_key: wundergraph
+    source_kind: ashby
+  - source_key: xebia-cee-greenhouse
+    company_key: xebia-cee
+    source_kind: greenhouse
+  - source_key: zeely-ashby
+    company_key: zeely
+    source_kind: ashby

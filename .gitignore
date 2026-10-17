@@ -20,6 +20,10 @@ venv/
 .env
 .env.*
 !.env.example
+.env.radar.local
+
+# Career Radar local operational state (DSN and durable pre-migration backups)
+.local/radar/
 
 # IDEs and operating-system files
 .idea/
