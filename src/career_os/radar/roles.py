@@ -193,7 +193,33 @@ def validate_role_taxonomy(taxonomy: RoleTaxonomy) -> None:
 
 
 ROLE_TAXONOMY: Final = RoleTaxonomy(version="1.0.0", families=FAMILIES)
-CLASSIFIER_VERSION: Final = "1.0.0"
+CLASSIFIER_VERSION: Final = "1.1.0"
+
+_CLOSED_NONTECHNICAL_ROLE_HEADS: Final[tuple[re.Pattern[str], ...]] = tuple(
+    re.compile(
+        rf"^\s*(?P<head>{head})(?=\s*$|\s*(?:,|\||[-\u2010\u2011\u2012\u2013\u2014\u2015\u2212]|\())",
+        re.I,
+    )
+    for head in (
+        r"Test\s+Driver",
+        r"Senior\s+Recruiter",
+        r"Senior\s+Partner\s+Manager",
+        r"Strategic\s+Account\s+Executive",
+        r"AI\s+Product\s+Manager",
+        r"Product\s+Manager\s+II",
+        r"Product\s+Counsel",
+        r"Staff\s+Product\s+Marketing\s+Manager",
+        r"Marketing\s+Analytics\s+Director",
+        r"Head\s+of\s+SEO",
+        r"Head\s+of\s+Marketing",
+        r"Events\s+Manager",
+        r"SMM&Comms\s+Specialist",
+        r"Manager,\s+Scaled\s+Customer\s+Success",
+        r"Senior\s+Finance\s+Analyst",
+        r"Senior\s+Staff\s+Accountant",
+        r"Business\s+Development\s+Manager",
+    )
+)
 
 _TECHNICAL_ROLE_HEAD: Final = re.compile(
     r"\b(?:software\s+)?(?:engineer|developer|programmer|architect)\b|"
@@ -221,6 +247,16 @@ _ENGINEERING_MANAGEMENT: Final = re.compile(
     r"\bengineering\s+(?:director|head|vp|vice\s+president)\b",
     re.I,
 )
+_MANAGER_SOFTWARE_ENGINEERING: Final = re.compile(
+    r"^\s*(?P<head>Manager,\s+Software\s+Engineering)"
+    r"(?=\s*$|\s*(?:,|\||[-\u2010\u2011\u2012\u2013\u2014\u2015\u2212]|\())",
+    re.I,
+)
+_ENGINEER_MANAGER: Final = re.compile(
+    r"^\s*(?P<head>Engineer\s+Manager)"
+    r"(?=\s*$|\s*(?:,|\||[-\u2010\u2011\u2012\u2013\u2014\u2015\u2212]|\())",
+    re.I,
+)
 _AI_PRODUCT: Final = re.compile(
     r"\b(?:ai|artificial\s+intelligence)\s+product\s+(?:software\s+)?engineer\b",
     re.I,
@@ -246,7 +282,7 @@ _ROLE_PATTERNS: Final[dict[RoleFamily, tuple[tuple[str, re.Pattern[str]], ...]]]
     ),
     RoleFamily.FULLSTACK_ENGINEERING: (
         ("fullstack_engineer", re.compile(r"\bfull\s*stack\s+(?:software\s+)?engineer\b", re.I)),
-        ("fullstack_developer", re.compile(r"\bfull\s*stack\s+developer\b", re.I)),
+        ("fullstack_developer", re.compile(r"\bfull(?:\s*-\s*|\s*)stack\s+developer\b", re.I)),
     ),
     RoleFamily.DATA_ENGINEERING: (
         ("data_engineer", re.compile(r"\bdata\s+(?:software\s+)?engineer\b", re.I)),
@@ -289,13 +325,17 @@ _ROLE_PATTERNS: Final[dict[RoleFamily, tuple[tuple[str, re.Pattern[str]], ...]]]
         ("solutions_architect", re.compile(r"\bsolutions?\s+architect\b", re.I)),
         ("solutions_engineer", re.compile(r"\bsolutions?\s+engineer\b", re.I)),
     ),
-    RoleFamily.ENGINEERING_MANAGEMENT: (("engineering_management", _ENGINEERING_MANAGEMENT),),
+    RoleFamily.ENGINEERING_MANAGEMENT: (
+        ("manager_software_engineering", _MANAGER_SOFTWARE_ENGINEERING),
+        ("engineer_manager", _ENGINEER_MANAGER),
+        ("engineering_management", _ENGINEERING_MANAGEMENT),
+    ),
 }
 
 _ROLE_TERMS: Final[tuple[tuple[RoleFamily, re.Pattern[str]], ...]] = (
     (RoleFamily.BACKEND_ENGINEERING, re.compile(r"\bback\s*end\b", re.I)),
     (RoleFamily.FRONTEND_ENGINEERING, re.compile(r"\bfront\s*end\b", re.I)),
-    (RoleFamily.FULLSTACK_ENGINEERING, re.compile(r"\bfull\s*stack\b", re.I)),
+    (RoleFamily.FULLSTACK_ENGINEERING, re.compile(r"\bfull(?:\s*-\s*|\s*)stack\b", re.I)),
     (RoleFamily.DATA_ENGINEERING, re.compile(r"\bdata\b", re.I)),
     (RoleFamily.PRODUCT_ENGINEERING, re.compile(r"\bproduct\b", re.I)),
     (RoleFamily.PLATFORM_INFRASTRUCTURE_ENGINEERING, re.compile(r"\bplatform\b", re.I)),
@@ -328,7 +368,7 @@ _CONTEXT_PATTERNS: Final[tuple[tuple[RoleContext, re.Pattern[str]], ...]] = (
     (RoleContext.PRODUCT, re.compile(r"\bproduct\b", re.I)),
     (RoleContext.BACKEND, re.compile(r"\bback\s*end\b", re.I)),
     (RoleContext.FRONTEND, re.compile(r"\bfront\s*end\b", re.I)),
-    (RoleContext.FULLSTACK, re.compile(r"\bfull\s*stack\b", re.I)),
+    (RoleContext.FULLSTACK, re.compile(r"\bfull(?:\s*-\s*|\s*)stack\b", re.I)),
     (RoleContext.DATA, re.compile(r"\bdata\b", re.I)),
     (RoleContext.PLATFORM, re.compile(r"\b(?:platform|devops|sre)\b", re.I)),
     (RoleContext.CLOUD, re.compile(r"\bcloud\b", re.I)),
@@ -450,8 +490,45 @@ def classify_role(
             evidence,
         )
 
+    closed_head = next(
+        (
+            match
+            for pattern in _CLOSED_NONTECHNICAL_ROLE_HEADS
+            if (match := pattern.match(title_text))
+        ),
+        None,
+    )
+    if closed_head is not None:
+        head_text = closed_head.group("head")
+        assert head_text is not None
+        evidence.append(
+            _make_evidence(
+                EvidenceAxis.SCOPE,
+                EvidenceSource.TITLE,
+                "closed_nontechnical_role_head",
+                head_text,
+            )
+        )
+        seniority, seniority_evidence = _seniority(head_text, is_management=False)
+        evidence.extend(seniority_evidence)
+        return _make_result(
+            taxonomy,
+            None,
+            ClassificationStatus.OUT_OF_SCOPE,
+            RoleScope.OUT_OF_SCOPE,
+            seniority,
+            title_text,
+            description_text,
+            evidence,
+            include_title_manager_evidence=False,
+        )
+
     out_match = _OUT_OF_SCOPE_HEAD.search(title_text)
-    explicit_management = _ENGINEERING_MANAGEMENT.search(title_text)
+    explicit_management = (
+        _MANAGER_SOFTWARE_ENGINEERING.search(title_text)
+        or _ENGINEER_MANAGER.search(title_text)
+        or _ENGINEERING_MANAGEMENT.search(title_text)
+    )
     technical_head = _TECHNICAL_ROLE_HEAD.search(title_text)
     if out_match is not None and technical_head is None and explicit_management is None:
         evidence.append(
@@ -774,6 +851,8 @@ def _make_result(
     title: str,
     description: str,
     evidence: list[ClassificationEvidence],
+    *,
+    include_title_manager_evidence: bool = True,
 ) -> RoleClassification:
     contexts: list[RoleContext] = []
     for context, pattern in _CONTEXT_PATTERNS:
@@ -789,9 +868,15 @@ def _make_result(
                 )
             )
 
-    manager_title = re.search(
-        r"\bengineering\s+manager\b|\bmanager\s+of\s+engineering\b", title, re.I
+    manager_title = (
+        re.search(r"\bengineering\s+manager\b|\bmanager\s+of\s+engineering\b", title, re.I)
+        if include_title_manager_evidence
+        else None
     )
+    if manager_title is None and include_title_manager_evidence:
+        manager_title = _MANAGER_SOFTWARE_ENGINEERING.search(title) or _ENGINEER_MANAGER.search(
+            title
+        )
     if manager_title is not None:
         managerial_function: bool | None = True
         evidence.append(
@@ -799,7 +884,7 @@ def _make_result(
                 EvidenceAxis.MANAGERIAL_FUNCTION,
                 EvidenceSource.TITLE,
                 "engineering_manager_title",
-                manager_title.group(0),
+                manager_title.groupdict().get("head") or manager_title.group(0),
             )
         )
     else:
