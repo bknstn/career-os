@@ -429,27 +429,33 @@
       expand.type = "button";
       expand.setAttribute("aria-expanded", showAllSources ? "true" : "false");
       expand.setAttribute("aria-controls", "radar-sources-list");
-      expand.addEventListener("click", () => {
-        showAllSources = !showAllSources;
-        renderRoute();
-      });
     }
     const view = panel("Источники", "Свежесть последнего успешного полного скана", expand);
     const list = element("div", "source-list");
     list.id = "radar-sources-list";
-    const visibleItems = showAllSources ? items : items.slice(0, 7);
-    for (const source of visibleItems) {
-      const row = element("div", "source-row");
-      const identity = element("div");
-      append(identity,
-        text("div", "source-name", source.company_name || source.key || "Источник"),
-        text("div", "source-detail", shortDate(source.last_success_at_utc))
-      );
-      const status = sourceStatus(source);
-      append(row, identity, text("span", status.style, status.label));
-      list.append(row);
-    }
-    if (!visibleItems.length) list.append(text("p", "mini-note", "В ответе пока нет списка источников."));
+    const renderRows = () => {
+      list.replaceChildren();
+      const visibleItems = showAllSources ? items : items.slice(0, 7);
+      for (const source of visibleItems) {
+        const row = element("div", "source-row");
+        const identity = element("div");
+        append(identity,
+          text("div", "source-name", source.company_name || source.key || "Источник"),
+          text("div", "source-detail", shortDate(source.last_success_at_utc))
+        );
+        const status = sourceStatus(source);
+        append(row, identity, text("span", status.style, status.label));
+        list.append(row);
+      }
+      if (!visibleItems.length) list.append(text("p", "mini-note", "В ответе пока нет списка источников."));
+    };
+    renderRows();
+    if (expand) expand.addEventListener("click", () => {
+      showAllSources = !showAllSources;
+      expand.textContent = showAllSources ? "Свернуть" : `Показать все ${formatNumber(items.length)}`;
+      expand.setAttribute("aria-expanded", showAllSources ? "true" : "false");
+      renderRows();
+    });
     view.body.append(list);
     view.box.append(view.body);
     return view.box;
