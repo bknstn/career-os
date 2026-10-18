@@ -18,8 +18,7 @@ from career_os.radar.aggregate import (
     RadarPanelInput,
     RadarScanInput,
 )
-from career_os.radar.role_contract import adapt_classification
-from career_os.radar.roles import classify_role
+from career_os.radar.mvp_roles import classify_mvp_role
 
 ROOT = Path(__file__).resolve().parents[2]
 _NAMESPACE = UUID("9e62bc8e-6e12-4d3d-8157-2e79d7a4f458")
@@ -103,7 +102,7 @@ def _history_fixture(period_days=30, descriptions=None, title=None):
 
     def analyze(title: str, description: str):
         return (
-            adapt_classification(title, classify_role(title, description)),
+            classify_mvp_role(title, description),
             extractor.extract(title=title, description=description),
         )
 
@@ -244,3 +243,29 @@ def test_specialty_history_respects_a_conflicting_occupation_filter() -> None:
     assert result["previous_count"] == result["current_count"] == 0
     assert result["status"] == "insufficient"
     assert result["delta_pp"] is None
+
+
+def test_history_uses_the_same_extended_title_classifier_as_current_inventory() -> None:
+    arguments = _history_fixture(title="Junior HR Specialist")
+    arguments["selected_occupation"] = "nontechnical"
+    arguments["selected_skill"] = "python"
+    result = compare_mvp_history(**arguments)
+    assert result["status"] == "provisional"
+    assert result["previous_count"] == result["current_count"] == 100
+    assert result["provenance"]["role_classifier_version"] == "3.0.0"
+
+    arguments["scans"] = ()
+    missing = compare_mvp_history(**arguments)
+    assert missing["previous_count"] is missing["current_count"] is None
+    assert missing["provenance"]["role_classifier_version"] == "3.0.0"
+
+
+def test_history_fingerprint_includes_role_classifier_version(monkeypatch) -> None:
+    arguments = _history_fixture()
+    initial = compare_mvp_history(**arguments)
+    assert initial["provenance"] == compare_mvp_history(**arguments)["provenance"]
+    monkeypatch.setattr(
+        "career_os.application.radar_mvp_history.MVP_ROLE_CLASSIFIER_VERSION", "3.1.0"
+    )
+    revised = compare_mvp_history(**arguments)
+    assert initial["provenance"]["input_digest"] != revised["provenance"]["input_digest"]

@@ -8,7 +8,7 @@
   const savedCount = document.getElementById("saved-count");
   const refreshButton = document.getElementById("refresh-button");
   const skipLink = document.querySelector(".skip-link");
-  const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  const dateFormatter = new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Europe/Warsaw",
@@ -18,55 +18,50 @@
   let showAllSources = false;
 
   const ISSUE_COPY = {
-    source_stale: "Некоторые источники давно не проходили успешное полное сканирование.",
-    occupation_unknown_above_threshold: "Доля нераспознанных ролей в исходной панели выше порога сопоставимости.",
-    occupation_unknown_above_reference: "Доля нераспознанных ролей в исходной панели выше контрольного уровня.",
-    description_missing: "У части вакансий нет описания, поэтому распознавание навыков неполное.",
+    source_stale: "Some sources have not had a successful full scan recently.",
+    occupation_unknown_above_threshold: "The share of unclassified roles in the base panel exceeds the comparison threshold.",
+    occupation_unknown_above_reference: "The share of unclassified roles in the base panel exceeds the reference level.",
+    description_missing: "Some postings have no description, so skill recognition is incomplete.",
   };
   const HISTORY_COPY = {
-    missing_history: "Нет подходящих неизменяемых наблюдений для выбранного периода.",
-    panel_not_registered: "Состав источников ещё не зафиксирован для исторического сравнения.",
-    panel_source_mismatch: "Исторические данные не совпадают с источниками в текущем составе панели.",
-    panel_manifest_unavailable: "Не удалось подтвердить зафиксированный состав источников для сравнения.",
-    source_outside_panel: "Выбранный источник не входит в зафиксированную историческую панель.",
-    missing_history_tables: "В сохранённых данных пока нет таблиц для сравнения сканов.",
-    missing_history_columns: "В сохранённых данных пока нет полей для проверки истории.",
-    coverage_below_threshold: "Мало сопоставимых сканов, чтобы сравнение прошло проверку полноты.",
-    board_coverage_below_threshold: "Часть источников представлена слишком редко для сопоставления.",
-    occupation_unknown_above_threshold: "Нераспознанных ролей слишком много для надёжного сравнения ролей.",
-    specialty_unresolved_above_threshold: "Специализации распознаны недостаточно уверенно для сравнения.",
-    description_coverage_below_threshold: "Недостаточно описаний для сопоставления упоминаний навыков.",
-    category_sample_below_threshold: "Для этой категории пока мало парных наблюдений.",
-    zero_denominator: "Невозможно рассчитать долю: в одном из периодов нет объявлений для сравнения.",
-    panel_identity_mismatch: "Состав или настройки источников изменились, поэтому периоды несопоставимы.",
-    history_present: "Для выбранного окна нет парных успешных сканов.",
-    overall_coverage: "Общее покрытие парными сканами ниже порога для сравнения.",
-    board_coverage: "Часть источников представлена слишком редко для сопоставления.",
-    occupation_unknown_threshold: "Нераспознанных ролей слишком много для надёжного сравнения ролей.",
-    specialty_unresolved_threshold: "Специализации распознаны недостаточно уверенно для сравнения.",
-    description_coverage_threshold: "Недостаточно описаний для сравнения навыков.",
-    sample_threshold: "Для этой метрики пока мало вакансий или компаний в парных окнах.",
-    positive_denominator: "Нельзя сравнить долю без объявлений в обоих периодах.",
-  };
-  const LIMITATION_COPY = {
-    "Current results describe saved inventory, not the full external labor market.": "Срез отражает сохранённые объявления, а не весь внешний рынок труда.",
-    "Unknown occupations and missing descriptions remain visible in coverage fields.": "Нераспознанные роли и вакансии без описаний остаются видимыми в показателях покрытия.",
-    "Historical comparisons are null/insufficient until their own matched-panel, coverage, and sample gates pass.": "Исторические сравнения остаются пустыми, пока не проходят собственные проверки панели, покрытия и размера выборки.",
+    missing_history: "No eligible immutable observations are available for this period.",
+    panel_not_registered: "The source panel has not been registered for historical comparison.",
+    panel_source_mismatch: "Historical data does not match the registered source panel.",
+    panel_manifest_unavailable: "The registered source panel could not be verified.",
+    source_outside_panel: "The selected source is outside the registered historical panel.",
+    missing_history_tables: "The saved data does not yet include tables for scan comparisons.",
+    missing_history_columns: "The saved data does not yet include the fields needed to verify history.",
+    coverage_below_threshold: "Too few comparable scans are available to meet the coverage requirement.",
+    board_coverage_below_threshold: "Some sources have too few observations for comparison.",
+    occupation_unknown_above_threshold: "Too many roles remain unclassified for a reliable role comparison.",
+    specialty_unresolved_above_threshold: "Too many specialties remain unresolved for comparison.",
+    description_coverage_below_threshold: "Too few descriptions are available to compare skill mentions.",
+    category_sample_below_threshold: "Too few paired observations are available for this category.",
+    zero_denominator: "A share cannot be calculated because one period has no comparable postings.",
+    panel_identity_mismatch: "The source panel or its settings changed, so the periods are not comparable.",
+    history_present: "No paired successful scans are available for this window.",
+    overall_coverage: "Overall paired-scan coverage is below the comparison threshold.",
+    board_coverage: "Some sources have too few observations for comparison.",
+    occupation_unknown_threshold: "Too many roles remain unclassified for a reliable role comparison.",
+    specialty_unresolved_threshold: "Too many specialties remain unresolved for comparison.",
+    description_coverage_threshold: "Too few descriptions are available to compare skills.",
+    sample_threshold: "Too few postings or companies are available in the paired windows for this metric.",
+    positive_denominator: "A share comparison requires postings in both periods.",
   };
 
   function issueMessage(code) {
-    return ISSUE_COPY[String(code)] || "Есть ограничения полноты данных; подробности описаны в методологии.";
+    return ISSUE_COPY[String(code)] || "Data coverage is limited; see the methodology for details.";
   }
 
   function historyReasonMessage(reason) {
-    return HISTORY_COPY[String(reason)] || "Недостаточно сопоставимых данных для этого исторического сравнения.";
+    return HISTORY_COPY[String(reason)] || "Not enough comparable data is available for this historical comparison.";
   }
 
   function historyStatusLabel(status, direction = "") {
-    if (direction === "uncertain" || status === "uncertain") return "Пока неопределённо";
-    if (status === "insufficient") return "Недостаточно данных";
-    if (status === "available" || status === "provisional" || status === "sufficient") return "Сравнение доступно";
-    return "История не подтверждена";
+    if (direction === "uncertain" || status === "uncertain") return "Uncertain";
+    if (status === "insufficient") return "Not enough data";
+    if (status === "available" || status === "provisional" || status === "sufficient") return "Comparison available";
+    return "History unverified";
   }
 
   function element(tag, className = "", value = undefined) {
@@ -116,8 +111,8 @@
     } else {
       const saved = {
         id,
-        title: String(job.title || "Название не указано"),
-        company_name: String(job.company_name || "Компания не указана"),
+        title: String(job.title || "Untitled posting"),
+        company_name: String(job.company_name || "Company not specified"),
         source_key: String(job.source_key || ""),
         source_url: String(job.source_url || ""),
         apply_url: String(job.apply_url || ""),
@@ -158,60 +153,60 @@
   }
 
   function formatDate(value) {
-    if (!value) return "дата неизвестна";
+    if (!value) return "Date unknown";
     const date = new Date(value);
-    return Number.isNaN(date.valueOf()) ? "дата неизвестна" : dateFormatter.format(date);
+    return Number.isNaN(date.valueOf()) ? "Date unknown" : dateFormatter.format(date);
   }
 
   function formatNumber(value) {
     if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
-    return new Intl.NumberFormat("ru-RU").format(Number(value));
+    return new Intl.NumberFormat("en-GB").format(Number(value));
   }
 
   function formatPercent(value) {
     if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
     const numeric = Number(value);
     const percentage = Math.abs(numeric) <= 1 ? numeric * 100 : numeric;
-    return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(percentage)}%`;
+    return `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(percentage)}%`;
   }
 
   const LABELS = {
-    technical_engineering: "Инженерные роли",
-    engineering_management: "Инженерное руководство",
-    solutions_architecture: "Архитектура решений",
-    nontechnical: "Нетехнические роли",
-    unknown: "Не распознано",
-    backend_engineering: "Серверная разработка",
-    frontend_engineering: "Разработка интерфейсов",
-    fullstack_engineering: "Full-stack разработка",
-    data_engineering: "Инженерия данных",
-    product_engineering: "Продуктовая разработка",
-    platform_infrastructure_engineering: "Платформа и инфраструктура",
-    machine_learning_engineering: "Инженерия машинного обучения",
-    ai_engineering: "Инженерия ИИ",
-    ai_product_engineering: "Продуктовая инженерия ИИ",
+    technical_engineering: "Engineering roles",
+    engineering_management: "Engineering management",
+    solutions_architecture: "Solutions architecture",
+    nontechnical: "Nontechnical roles",
+    unknown: "Unclassified",
+    backend_engineering: "Backend engineering",
+    frontend_engineering: "Frontend engineering",
+    fullstack_engineering: "Full-stack engineering",
+    data_engineering: "Data engineering",
+    product_engineering: "Product engineering",
+    platform_infrastructure_engineering: "Platform and infrastructure",
+    machine_learning_engineering: "Machine learning engineering",
+    ai_engineering: "AI engineering",
+    ai_product_engineering: "AI product engineering",
   };
   const SPECIALTY_STATES = {
-    resolved: "Распознана",
-    missing: "Не указана в названии",
-    unsupported: "Вне текущей таксономии",
-    ambiguous: "Неоднозначная",
-    not_assessed: "Не оценивалась",
-    not_applicable: "Не применяется",
+    resolved: "Identified",
+    missing: "Not identified",
+    unsupported: "Outside the current taxonomy",
+    ambiguous: "Ambiguous",
+    not_assessed: "Not assessed",
+    not_applicable: "Not applicable",
   };
   const JOB_STATES = {
-    active: "Активна в сохранённом срезе",
-    inactive: "Неактивна в сохранённом срезе",
+    active: "Active in saved snapshot",
+    inactive: "Inactive in saved snapshot",
   };
 
-  function displayLabel(value, fallback = "Не распознано") {
+  function displayLabel(value, fallback = "Unclassified") {
     if (value && typeof value === "object") return String(LABELS[value.id] || value.label || value.id || fallback);
     if (value === null || value === undefined || value === "") return fallback;
     return LABELS[String(value)] || String(value);
   }
 
   function displayState(value, dictionary) {
-    if (!value) return "не указано";
+    if (!value) return "Not specified";
     return dictionary[String(value)] || String(value);
   }
 
@@ -234,23 +229,23 @@
     const missingShare = found.get("base_missing_description_share");
     if (unknown === undefined && missingDescription === undefined && total === undefined && share === undefined && missingShare === undefined) return "";
     const unknownShare = share !== undefined ? formatPercent(share)
-      : total ? formatPercent(unknown === undefined ? null : unknown / total) : "доля не указана";
+      : total ? formatPercent(unknown === undefined ? null : unknown / total) : "Share unknown";
     const parts = [];
     if (unknown !== undefined || share !== undefined) {
-      parts.push(`${unknown === undefined ? "число неизвестно" : `${formatNumber(unknown)} ролей не распознано`} (${unknownShare})`);
+      parts.push(`${unknown === undefined ? "Count unknown" : `${formatNumber(unknown)} unclassified ${unknown === 1 ? "role" : "roles"}`} (${unknownShare})`);
     }
     if (missingDescription !== undefined || missingShare !== undefined) {
       const descriptionShare = missingShare !== undefined ? formatPercent(missingShare)
-        : total ? formatPercent(missingDescription / total) : "доля не указана";
-      parts.push(`${missingDescription === undefined ? "число неизвестно" : `${formatNumber(missingDescription)} без описания`} (${descriptionShare})`);
+        : total ? formatPercent(missingDescription / total) : "Share unknown";
+      parts.push(`${missingDescription === undefined ? "Count unknown" : `${formatNumber(missingDescription)} without a description`} (${descriptionShare})`);
     }
-    const totalText = total === undefined ? "в исходной панели" : `из ${formatNumber(total)} вакансий исходной панели`;
-    return `Базовая панель: ${parts.join("; ")} ${totalText}; фильтры выдачи не меняют эту оценку.`;
+    const totalText = total === undefined ? "in the base panel" : `out of ${formatNumber(total)} base-panel postings`;
+    return `Base panel: ${parts.join("; ")} ${totalText}; result filters do not change this assessment.`;
   }
 
   function shortDate(value) {
-    if (!value) return "последний успешный скан неизвестен";
-    return `скан: ${formatDate(value)}`;
+    if (!value) return "Last successful scan unknown";
+    return `Scan: ${formatDate(value)}`;
   }
 
   function safeExternalLink(raw) {
@@ -286,9 +281,9 @@
     }
     if (!response.ok) {
       const detail = payload && (payload.detail || payload.message);
-      throw new Error(typeof detail === "string" ? detail : `Сервер ответил с кодом ${response.status}.`);
+      throw new Error(typeof detail === "string" ? detail : `The server returned status ${response.status}.`);
     }
-    if (!payload || typeof payload !== "object") throw new Error("Сервер вернул неожиданный ответ.");
+    if (!payload || typeof payload !== "object") throw new Error("The server returned an unexpected response.");
     return payload;
   }
 
@@ -300,7 +295,7 @@
     root.replaceChildren();
     const state = element("div", "loading-state");
     const inner = element("div");
-    append(inner, element("div", "loading-mark"), text("span", "", "Загружаем срез рынка…"));
+    append(inner, element("div", "loading-mark"), text("span", "", "Loading the saved snapshot…"));
     state.append(inner);
     root.append(state);
   }
@@ -310,9 +305,9 @@
     const wrap = element("section", "error-banner");
     const copy = element("div");
     append(copy,
-      text("strong", "", "Не удалось загрузить данные"),
-      text("p", "", error instanceof Error ? error.message : "Проверьте соединение с локальным приложением."));
-    const retry = element("button", "button button-small", "Повторить");
+      text("strong", "", "Could not load data"),
+      text("p", "", error instanceof Error ? error.message : "Check the connection to the local app."));
+    const retry = element("button", "button button-small", "Retry");
     retry.type = "button";
     retry.addEventListener("click", renderRoute);
     append(wrap, copy, retry);
@@ -355,16 +350,16 @@
       element("div")
     );
     const copyBody = copy.lastChild;
-    copyBody.append(text("div", "snapshot-title", "Сохранённый срез вакансий"));
-    const asOf = data.data_as_of_utc ? formatDate(data.data_as_of_utc) : "дата среза не указана";
+    copyBody.append(text("div", "snapshot-title", "Saved job snapshot"));
+    const asOf = data.data_as_of_utc ? formatDate(data.data_as_of_utc) : "Snapshot date unknown";
     const qualityNote = Array.isArray(quality.issues) && quality.issues.length
       ? [...new Set(quality.issues.map(issueMessage))].join(" · ")
-      : "Статус active отражает последнее сохранённое состояние, а не гарантию открытой вакансии.";
+      : "Active status reflects the last saved state; the posting may have since closed.";
     const baseCoverage = baseCoverageDescription(data);
-    copyBody.append(text("div", "snapshot-description", `Срез на ${asOf}. ${qualityNote}${baseCoverage ? ` ${baseCoverage}` : ""}`));
+    copyBody.append(text("div", "snapshot-description", `Snapshot as of ${asOf}. ${qualityNote}${baseCoverage ? ` ${baseCoverage}` : ""}`));
     const sources = Array.isArray(data.sources) ? data.sources : [];
     const staleCount = Number(quality.stale_source_count || sources.filter((source) => source.stale).length || 0);
-    const meta = text("div", "snapshot-meta", staleCount > 0 ? `${staleCount} источн. требуют внимания` : `Сформировано ${formatDate(data.generated_at_utc)}`);
+    const meta = text("div", "snapshot-meta", staleCount > 0 ? `${formatNumber(staleCount)} ${staleCount === 1 ? "source needs" : "sources need"} attention` : `Generated ${formatDate(data.generated_at_utc)}`);
     append(banner, copy, meta);
     return banner;
   }
@@ -389,17 +384,17 @@
   }
 
   function distributionPanel(title, items, total, routeType, denominatorLabel, unknownCount = null) {
-    const link = element("a", "panel-link", "Все вакансии →");
+    const link = element("a", "panel-link", "All jobs →");
     link.href = "#/explore";
     const view = panel(title, denominatorLabel, link);
     const list = element("div", "distribution-list");
     const rows = Array.isArray(items) ? items.slice(0, 6) : [];
     const maxCount = Math.max(1, ...rows.map((item) => Number(item.count) || 0), Number(unknownCount) || 0);
     for (const item of rows) {
-      const label = displayLabel({ id: item.id, label: item.label }, "Без названия");
+      const label = displayLabel({ id: item.id, label: item.label }, "Untitled");
       const row = element("button", "distribution-row");
       row.type = "button";
-      row.setAttribute("aria-label", `Открыть вакансии: ${label}, ${formatNumber(item.count)}`);
+      row.setAttribute("aria-label", `View jobs: ${label}, ${formatNumber(item.count)}`);
       append(row,
         text("span", "distribution-name", label),
         text("span", "distribution-value", `${formatNumber(item.count)} · ${formatPercent(item.share)}`)
@@ -419,13 +414,13 @@
       list.append(row);
     }
     const hasUnknown = Number.isFinite(Number(unknownCount)) && Number(unknownCount) > 0;
-    const hasUnknownItem = rows.some((item) => /unknown|unclassified|не распозн|неизвест/i.test(`${item.id || ""} ${item.label || ""}`));
+    const hasUnknownItem = rows.some((item) => /unknown|unclassified/i.test(`${item.id || ""} ${item.label || ""}`));
     if (hasUnknown && !hasUnknownItem && routeType === "occupation") {
       const row = element("button", "distribution-row unknown-row");
       row.type = "button";
-      row.setAttribute("aria-label", `Показать нераспознанные роли: ${formatNumber(unknownCount)}`);
+      row.setAttribute("aria-label", `View unclassified roles: ${formatNumber(unknownCount)}`);
       append(row,
-        text("span", "distribution-name", "Не распознано"),
+        text("span", "distribution-name", "Unclassified"),
         text("span", "distribution-value", `${formatNumber(unknownCount)} · ${formatPercent(Number(total) ? Number(unknownCount) / Number(total) : null)}`)
       );
       const track = element("span", "bar-track");
@@ -436,11 +431,11 @@
       row.addEventListener("click", () => navigate("explore", new URLSearchParams({ occupation: "unknown" })));
       list.append(row);
     }
-    if (!rows.length && !hasUnknown) list.append(text("div", "empty-inline", "Пока нет данных для этой сводки."));
+    if (!rows.length && !hasUnknown) list.append(text("div", "empty-inline", "No data is available for this summary yet."));
     view.body.append(list);
     view.body.append(text("p", "mini-note", routeType === "skill"
-      ? "Доля — вакансии, где навык буквально найден в тексте. Объявления без распознанного текста остаются в знаменателе; это не список требований или оценка спроса."
-      : "Метки — результаты правил классификатора. Нераспознанные названия остаются в срезе."));
+      ? "Shares count postings with a literal skill mention. Postings without recognized text stay in the denominator. Mentions do not establish requirements or demand."
+      : "Labels come from classifier rules. Unclassified postings stay in the snapshot."));
     view.box.append(view.body);
     return view.box;
   }
@@ -448,23 +443,23 @@
   function sourceStatus(source) {
     const status = String(source.status || "never").toLowerCase();
     if (source.stale || ["never", "failed", "no recent result", "no_recent_result"].includes(status) || !source.last_success_at_utc) {
-      const label = status === "never" || status.startsWith("no recent") || status === "no_recent_result" ? "нет успешного скана" : "устарел / ошибка";
+      const label = status === "never" || status.startsWith("no recent") || status === "no_recent_result" ? "No successful scan" : "Stale / failed";
       return { label, style: "status-pill status-error" };
     }
-    if (status === "partial") return { label: "частичный скан", style: "status-pill status-warning" };
-    if (status === "succeeded") return { label: "успешный скан", style: "status-pill" };
-    return { label: "статус не подтверждён", style: "status-pill status-warning" };
+    if (status === "partial") return { label: "Partial scan", style: "status-pill status-warning" };
+    if (status === "succeeded") return { label: "Successful scan", style: "status-pill" };
+    return { label: "Status unverified", style: "status-pill status-warning" };
   }
 
   function sourcesPanel(sources) {
     const items = Array.isArray(sources) ? sources : [];
-    const expand = items.length > 7 ? element("button", "panel-link source-toggle", showAllSources ? "Свернуть" : `Показать все ${formatNumber(items.length)}`) : null;
+    const expand = items.length > 7 ? element("button", "panel-link source-toggle", showAllSources ? "Show fewer" : `Show all ${formatNumber(items.length)}`) : null;
     if (expand) {
       expand.type = "button";
       expand.setAttribute("aria-expanded", showAllSources ? "true" : "false");
       expand.setAttribute("aria-controls", "radar-sources-list");
     }
-    const view = panel("Источники", "Свежесть последнего успешного полного скана", expand);
+    const view = panel("Sources", "Last successful full scan", expand);
     const list = element("div", "source-list");
     list.id = "radar-sources-list";
     const renderRows = () => {
@@ -474,19 +469,19 @@
         const row = element("div", "source-row");
         const identity = element("div");
         append(identity,
-          text("div", "source-name", source.company_name || source.key || "Источник"),
+          text("div", "source-name", source.company_name || source.key || "Source"),
           text("div", "source-detail", shortDate(source.last_success_at_utc))
         );
         const status = sourceStatus(source);
         append(row, identity, text("span", status.style, status.label));
         list.append(row);
       }
-      if (!visibleItems.length) list.append(text("p", "mini-note", "В ответе пока нет списка источников."));
+      if (!visibleItems.length) list.append(text("p", "mini-note", "No source list is available yet."));
     };
     renderRows();
     if (expand) expand.addEventListener("click", () => {
       showAllSources = !showAllSources;
-      expand.textContent = showAllSources ? "Свернуть" : `Показать все ${formatNumber(items.length)}`;
+      expand.textContent = showAllSources ? "Show fewer" : `Show all ${formatNumber(items.length)}`;
       expand.setAttribute("aria-expanded", showAllSources ? "true" : "false");
       renderRows();
     });
@@ -504,18 +499,18 @@
     const top = element("div", "job-topline");
     const identity = element("div");
     const title = element("h3", "job-title");
-    const titleLink = element("a", "", job.title || "Название не указано");
+    const titleLink = element("a", "", job.title || "Untitled posting");
     titleLink.href = detailHref(job);
     title.append(titleLink);
-    append(identity, title, text("div", "job-company", job.company_name || "Компания не указана"));
+    append(identity, title, text("div", "job-company", job.company_name || "Company not specified"));
     const actions = element("div", "job-actions");
     if (options.allowSave !== false) {
       const saved = isSaved(job.id);
       const button = element("button", "save-button", saved ? "♥" : "♡");
       button.type = "button";
       button.setAttribute("aria-pressed", saved ? "true" : "false");
-      button.setAttribute("aria-label", saved ? "Убрать из сохранённого" : "Сохранить вакансию");
-      button.title = saved ? "Убрать из сохранённого" : "Сохранить вакансию";
+      button.setAttribute("aria-label", saved ? "Remove saved job" : "Save job");
+      button.title = saved ? "Remove saved job" : "Save job";
       button.addEventListener("click", () => saveJob(job));
       actions.append(button);
     }
@@ -532,9 +527,9 @@
     if (tags.childElementCount) card.append(tags);
     if (job.description_excerpt) card.append(text("p", "job-excerpt", job.description_excerpt));
     const tail = element("div", "job-tail");
-    const seen = text("span", "", `Последний раз замечена ${formatDate(job.last_seen_at_utc)}`);
+    const seen = text("span", "", `Last observed ${formatDate(job.last_seen_at_utc)}`);
     append(tail, seen);
-    const sourceLink = externalAnchor(job.source_url, "Источник ↗", "");
+    const sourceLink = externalAnchor(job.source_url, "Source ↗", "");
     if (sourceLink) tail.append(sourceLink);
     card.append(tail);
     return card;
@@ -548,19 +543,19 @@
   }
 
   function trendPanel(history, metrics = [], route = null) {
-    const title = `Сравнение за ${formatNumber(history && history.period_days || 90)} дней`;
+    const title = `Comparison over ${formatNumber(history && history.period_days || 90)} days`;
     const tabs = element("div", "period-tabs");
     tabs.setAttribute("role", "group");
-    tabs.setAttribute("aria-label", "Период исторического сравнения");
+    tabs.setAttribute("aria-label", "Historical comparison period");
     const selectedPeriod = Number(history && history.period_days || route && route.params.get("period_days") || 90);
     for (const periodDays of [30, 90, 180]) {
-      const tab = element("button", "period-tab", `${periodDays} дн.`);
+      const tab = element("button", "period-tab", `${periodDays} days`);
       tab.type = "button";
       tab.setAttribute("aria-pressed", periodDays === selectedPeriod ? "true" : "false");
       tab.addEventListener("click", () => changePeriod(periodDays, route));
       tabs.append(tab);
     }
-    const view = panel(title, "Историческое сравнение показывается только при наличии сопоставимых сканов.", tabs);
+    const view = panel(title, "Historical comparisons require comparable scans.", tabs);
     const info = history || {};
     const state = String(info.status || "insufficient").toLowerCase();
     const reason = historyReasonMessage(info.reason);
@@ -579,27 +574,27 @@
     if (shown.length) {
       for (const item of shown) {
         const card = element("div", "history-card");
-        const metricLabel = `${item.label || displayLabel(item.id || item.level, "Метрика")}${item.previous_count !== null && item.previous_count !== undefined && item.current_count !== null && item.current_count !== undefined ? ` · ${formatNumber(item.previous_count)} → ${formatNumber(item.current_count)}` : ""}`;
+        const metricLabel = `${item.label || displayLabel(item.id || item.level, "Metric")}${item.previous_count !== null && item.previous_count !== undefined && item.current_count !== null && item.current_count !== undefined ? ` · ${formatNumber(item.previous_count)} → ${formatNumber(item.current_count)}` : ""}`;
         append(card,
           text("div", "history-period", metricLabel),
           text("div", "history-state", item.delta_pp === null || item.delta_pp === undefined
             ? historyStatusLabel(item.status, item.direction)
-            : `${Number(item.delta_pp) > 0 ? "+" : ""}${formatNumber(item.delta_pp)} п.п.`),
-          text("div", "history-reason", item.reason ? historyReasonMessage(item.reason) : item.direction === "uncertain" ? "Направление пока неопределённо." : `Текущая доля: ${formatPercent(item.current_share)}; предыдущая: ${formatPercent(item.previous_share)}.`)
+            : `${Number(item.delta_pp) > 0 ? "+" : ""}${formatNumber(item.delta_pp)} pp`),
+          text("div", "history-reason", item.reason ? historyReasonMessage(item.reason) : item.direction === "uncertain" ? "The direction is still uncertain." : `Current share: ${formatPercent(item.current_share)}; previous: ${formatPercent(item.previous_share)}.`)
         );
         cards.append(card);
       }
     } else {
       const card = element("div", "history-card");
       append(card,
-        text("div", "history-period", `Окно ${formatNumber(info.period_days || 90)} дней`),
+        text("div", "history-period", `Window: ${formatNumber(info.period_days || 90)} days`),
         text("div", "history-state", historyStatusLabel(state, info.direction)),
         text("div", "history-reason", reason)
       );
       cards.append(card);
     }
     view.body.append(cards);
-    view.body.append(text("div", "metric-note", "Сравнение строится по парным неизменяемым наблюдениям и проверкам качества. Пустая история не означает нулевой спрос."));
+    view.body.append(text("div", "metric-note", "Comparisons use paired immutable observations and quality checks. Missing history does not mean zero demand."));
     view.box.append(view.body);
     return view.box;
   }
@@ -615,18 +610,18 @@
     navigate(page, params);
   }
 
-  function jobsPanel(items, total, title = "Недавно замеченные вакансии", showAll = true) {
-    const link = showAll ? element("a", "panel-link", "Смотреть все →") : null;
+  function jobsPanel(items, total, title = "Recently observed jobs", showAll = true) {
+    const link = showAll ? element("a", "panel-link", "View all →") : null;
     if (link) link.href = "#/explore";
-    const view = panel(title, "Карточки отражают сохранённые описания и время последнего наблюдения.", link);
+    const view = panel(title, "Cards show saved descriptions and the last observation time.", link);
     const list = element("div", "job-list");
     const rows = Array.isArray(items) ? items : [];
     if (rows.length) for (const job of rows) list.append(jobCard(job));
-    else list.append(emptyState("⌕", "Вакансий пока нет", "После успешного сбора источников объявления появятся здесь. Неизвестные роли остаются видимыми в общей выдаче."));
+    else list.append(emptyState("⌕", "No jobs yet", "Postings will appear here after a successful collection. Unclassified roles remain visible in the results."));
     view.body.append(list);
     if (total !== null && total !== undefined) {
       const footer = element("div", "list-footer");
-      footer.append(text("span", "mini-note", `Всего в выбранном срезе: ${formatNumber(total)}`));
+      footer.append(text("span", "mini-note", `Total in this snapshot: ${formatNumber(total)}`));
       view.body.append(footer);
     }
     view.box.append(view.body);
@@ -636,24 +631,24 @@
   function renderOverview(data) {
     const summary = data.summary || {};
     append(root,
-      pageHeading("РАДАР РЫНКА", "Роли и навыки в реальных вакансиях", "Исследуйте объявления на собранных страницах компаний. Сводки показывают распознанные упоминания и сохраняют неизвестные случаи.", actionGroup(buttonLink("#/explore", "Все вакансии", "button"), buttonLink("#/explore?occupation=technical_engineering", "Технические роли", "button button-primary"))),
+      pageHeading("CAREER RADAR", "Roles and skills in real job postings", "Explore postings from collected company job boards. Summaries show detected mentions and keep unknown cases visible.", actionGroup(buttonLink("#/explore", "All jobs", "button"), buttonLink("#/explore?occupation=technical_engineering", "Engineering jobs", "button button-primary"))),
       snapshotBanner(data)
     );
     const stats = element("div", "stat-grid");
     append(stats,
-      statCard("Вакансии в срезе", summary.posting_count, "Сохранённые активные объявления", "▤"),
-      statCard("Компании", summary.company_count, `${formatNumber(summary.source_count)} источников в панели`, "⌂"),
-      statCard("Инженерные роли", summary.technical_engineering_count, "По правилам классификатора", "⌘"),
-      statCard("Роль не распознана", summary.unknown_occupation_count, `${formatNumber(summary.missing_description_count)} без описания`, "?"));
+      statCard("Jobs in the snapshot", summary.posting_count, "Saved active postings", "▤"),
+      statCard("Companies", summary.company_count, `${formatNumber(summary.source_count)} sources in the panel`, "⌂"),
+      statCard("Engineering roles", summary.technical_engineering_count, "Based on classifier rules", "⌘"),
+      statCard("Unclassified roles", summary.unknown_occupation_count, `${formatNumber(summary.missing_description_count)} without a description`, "?"));
     root.append(stats);
 
     const grid = element("div", "content-grid");
     const left = element("div", "stack");
     const right = element("div", "stack");
-    left.append(distributionPanel("Распределение по ролям", data.occupations, summary.posting_count, "occupation", "Доля от всех вакансий с учётом неизвестных", summary.unknown_occupation_count));
-    left.append(distributionPanel("Специализации", data.specialties, summary.technical_engineering_count, "specialty", "Доля от технических инженерных вакансий"));
-    left.append(distributionPanel("Частые упоминания навыков", data.skills, summary.posting_count, "skill", "Доля вакансий с найденным упоминанием"));
-    left.append(jobsPanel((data.jobs && data.jobs.items || []).slice(0, 5), data.jobs && data.jobs.total, "Свежие наблюдения"));
+    left.append(distributionPanel("Role distribution", data.occupations, summary.posting_count, "occupation", "Share of all postings, including unknown roles", summary.unknown_occupation_count));
+    left.append(distributionPanel("Specialties", data.specialties, summary.technical_engineering_count, "specialty", "Share of engineering postings"));
+    left.append(distributionPanel("Common skill mentions", data.skills, summary.posting_count, "skill", "Share of postings with a detected mention"));
+    left.append(jobsPanel((data.jobs && data.jobs.items || []).slice(0, 5), data.jobs && data.jobs.total, "Recent observations"));
     right.append(sourcesPanel(data.sources));
     right.append(trendPanel(data.history, data.history && data.history.metrics, routeFromHash()));
     grid.append(left, right);
@@ -703,7 +698,7 @@
     }
     select.value = currentValue || "";
     if (currentValue && select.value !== currentValue) {
-      const retained = element("option", "", `Текущий фильтр · ${LABELS[currentValue] || currentValue}`);
+      const retained = element("option", "", `Current filter · ${LABELS[currentValue] || currentValue}`);
       retained.value = currentValue;
       retained.selected = true;
       select.append(retained);
@@ -725,25 +720,25 @@
     queryInput.name = "q";
     queryInput.id = "radar-filter-query";
     queryInput.type = "search";
-    queryInput.placeholder = "Название, компания или текст описания";
+    queryInput.placeholder = "Title, company or description";
     queryInput.value = params.get("q") || "";
-    queryInput.setAttribute("aria-label", "Поиск по вакансиям");
-    const queryLabel = text("label", "", "Поиск");
+    queryInput.setAttribute("aria-label", "Search jobs");
+    const queryLabel = text("label", "", "Search");
     queryLabel.htmlFor = queryInput.id;
     append(queryField, queryLabel, queryInput);
     grid.append(queryField);
     const catalogs = data.filter_options || {};
-    grid.append(selectField("Роль", "occupation", catalogs.occupations || data.occupations || [], params.get("occupation"), "Все роли"));
-    grid.append(selectField("Специализация", "specialty", catalogs.specialties || data.specialties || [], params.get("specialty"), "Все специализации"));
-    grid.append(selectField("Навык", "skill", catalogs.skills || data.skills || [], params.get("skill"), "Любой навык"));
+    grid.append(selectField("Role", "occupation", catalogs.occupations || data.occupations || [], params.get("occupation"), "All roles"));
+    grid.append(selectField("Specialty", "specialty", catalogs.specialties || data.specialties || [], params.get("specialty"), "All specialties"));
+    grid.append(selectField("Skill", "skill", catalogs.skills || data.skills || [], params.get("skill"), "Any skill"));
     const sourceOptions = catalogs.sources || (data.sources || []).map((source) => ({ key: source.key, company_name: source.company_name }));
-    grid.append(selectField("Источник", "source", sourceOptions, params.get("source"), "Все источники"));
-    const period = selectField("Окно истории", "period_days", [
-      { id: "30", label: "30 дней" }, { id: "90", label: "90 дней" }, { id: "180", label: "180 дней" },
+    grid.append(selectField("Source", "source", sourceOptions, params.get("source"), "All sources"));
+    const period = selectField("History window", "period_days", [
+      { id: "30", label: "30 days" }, { id: "90", label: "90 days" }, { id: "180", label: "180 days" },
     ], params.get("period_days") || "90", null);
     grid.append(period);
     const submitWrap = element("div", "field filter-submit");
-    const submit = element("button", "button button-primary", "Применить фильтры");
+    const submit = element("button", "button button-primary", "Apply filters");
     submit.type = "submit";
     submitWrap.append(submit);
     grid.append(submitWrap);
@@ -756,17 +751,17 @@
     includeInactive.name = "include_inactive";
     includeInactive.value = "true";
     includeInactive.checked = params.get("include_inactive") === "true";
-    const includeLabel = element("label", "check-field", "Включить неактивные объявления");
+    const includeLabel = element("label", "check-field", "Include inactive postings");
     includeLabel.prepend(includeInactive);
     const enabledOnly = element("input");
     enabledOnly.type = "checkbox";
     enabledOnly.name = "enabled_only";
     enabledOnly.value = "true";
     enabledOnly.checked = params.get("enabled_only") !== "false";
-    const enabledLabel = element("label", "check-field", "Только включённые источники");
+    const enabledLabel = element("label", "check-field", "Enabled sources only");
     enabledLabel.prepend(enabledOnly);
     append(checks, includeLabel, element("span", "", "　"), enabledLabel);
-    const hint = text("span", "filter-status", "Период меняет только историческое сравнение, а не список сохранённых вакансий.");
+    const hint = text("span", "filter-status", "The period changes the historical comparison only, not the saved job inventory.");
     append(bottom, checks, hint);
     form.append(bottom);
     form.addEventListener("submit", (event) => {
@@ -792,12 +787,12 @@
     const params = requestParams(route);
     const selected = isOccupation ? (data.occupations || []).find((item) => String(item.id) === params.get("occupation"))
       : isSkill ? (data.skills || []).find((item) => String(item.id) === params.get("skill")) : null;
-    const headingTitle = isOccupation ? (selected ? displayLabel(selected) : "Вакансии по роли")
-      : isSkill ? (selected && selected.label || "Вакансии с упоминанием навыка") : "Поиск по вакансиям";
+    const headingTitle = isOccupation ? (selected ? displayLabel(selected) : "Jobs by role")
+      : isSkill ? (selected && selected.label || "Jobs mentioning this skill") : "Search jobs";
     const headingCopy = isOccupation
-      ? "Результат классификации по правилам Career Radar. Совпадение роли не означает, что она подтверждена работодателем."
-      : isSkill ? "Откройте объявления, где термин найден в заголовке или описании. Упоминание не подтверждает обязательность навыка." : "Фильтруйте сохранённые объявления и переходите к тексту вакансии и основаниям распознавания.";
-    append(root, pageHeading(isOccupation ? "РОЛЬ" : isSkill ? "НАВЫК" : "ИССЛЕДОВАНИЕ", headingTitle, headingCopy));
+      ? "Roles are assigned by Career Radar rules. A matching label is not confirmation from the employer."
+      : isSkill ? "Explore postings where the term appears in the title or description. A mention does not establish a required skill." : "Filter saved postings and inspect their original text and matching evidence.";
+    append(root, pageHeading(isOccupation ? "ROLE" : isSkill ? "SKILL" : "EXPLORE", headingTitle, headingCopy));
     root.append(snapshotBanner(data));
     root.append(buildFilterForm(data, route));
 
@@ -808,7 +803,7 @@
     const jobs = data.jobs || { items: [], total: 0, page: 1, page_size: 25, total_pages: 0 };
     const results = element("section");
     const resultsHeading = element("div", "results-header");
-    append(resultsHeading, text("h2", "", "Найденные объявления"), text("span", "results-count", `${formatNumber(jobs.total)} вакансий`));
+    append(resultsHeading, text("h2", "", "Matching postings"), text("span", "results-count", `${formatNumber(jobs.total)} ${Number(jobs.total) === 1 ? "job" : "jobs"}`));
     results.append(resultsHeading);
     if (Array.isArray(jobs.items) && jobs.items.length) {
       const list = element("div", "panel job-list");
@@ -816,13 +811,13 @@
       results.append(list);
       results.append(pagination(jobs));
     } else {
-      const none = emptyState("⌕", "Ничего не найдено", "Измените запрос или сбросьте часть фильтров. Неизвестные роли и описания без распознанных навыков не исключаются сами по себе.", buttonLink("#/explore", "Сбросить фильтры", "button"));
+      const none = emptyState("⌕", "No results", "Change your search or reset some filters. Unknown roles and descriptions without detected skills are not automatically excluded.", buttonLink("#/explore", "Reset filters", "button"));
       results.append(none);
     }
     mainStack.append(results);
-    sideStack.append(distributionPanel("Роли в текущем срезе", data.occupations, summary.posting_count, "occupation", "Доля от отфильтрованных вакансий", summary.unknown_occupation_count));
-    sideStack.append(distributionPanel("Специализации", data.specialties, summary.technical_engineering_count, "specialty", "Доля от выбранных инженерных вакансий"));
-    sideStack.append(distributionPanel("Упоминания навыков", data.skills, summary.posting_count, "skill", "Доля от отфильтрованных вакансий"));
+    sideStack.append(distributionPanel("Roles in this snapshot", data.occupations, summary.posting_count, "occupation", "Share of filtered postings", summary.unknown_occupation_count));
+    sideStack.append(distributionPanel("Specialties", data.specialties, summary.technical_engineering_count, "specialty", "Share of selected engineering postings"));
+    sideStack.append(distributionPanel("Skill mentions", data.skills, summary.posting_count, "skill", "Share of filtered postings"));
     sideStack.append(trendPanel(data.history, data.history && data.history.metrics, route));
     split.append(mainStack, sideStack);
     root.append(split);
@@ -834,13 +829,13 @@
     const wrap = element("div", "pagination panel");
     const start = Number(jobs.total) ? (page - 1) * (Number(jobs.page_size) || 25) + 1 : 0;
     const end = Math.min(Number(jobs.total) || 0, page * (Number(jobs.page_size) || 25));
-    wrap.append(text("span", "pagination-label", `${formatNumber(start)}–${formatNumber(end)} из ${formatNumber(jobs.total || 0)}`));
+    wrap.append(text("span", "pagination-label", `${formatNumber(start)}–${formatNumber(end)} of ${formatNumber(jobs.total || 0)}`));
     const actions = element("div", "pagination-actions");
-    const previous = element("button", "button button-small", "← Назад");
+    const previous = element("button", "button button-small", "← Previous");
     previous.type = "button";
     previous.disabled = page <= 1;
     previous.addEventListener("click", () => setPage(page - 1));
-    const next = element("button", "button button-small", "Дальше →");
+    const next = element("button", "button button-small", "Next →");
     next.type = "button";
     next.disabled = page >= totalPages;
     next.addEventListener("click", () => setPage(page + 1));
@@ -858,24 +853,24 @@
 
   function renderSaved() {
     const actions = actionGroup();
-    const explore = buttonLink("#/explore", "Найти вакансии", "button button-primary");
+    const explore = buttonLink("#/explore", "Find jobs", "button button-primary");
     actions.append(explore);
     append(root,
-      pageHeading("ВАШ СПИСОК", "Сохранённые вакансии", "Список хранится только в localStorage этого браузера. Вы можете вернуться к объявлениям из исследования.", actions),
+      pageHeading("YOUR SHORTLIST", "Saved jobs", "Your shortlist stays in this browser. Return to postings you want to explore further.", actions),
       snapshotInfoLocal()
     );
     if (!savedJobs.length) {
-      root.append(emptyState("♡", "Здесь появятся интересные позиции", "Нажмите на сердечко в карточке вакансии, чтобы добавить её в список для дальнейшего изучения.", buttonLink("#/explore", "Перейти к вакансиям", "button button-primary")));
+      root.append(emptyState("♡", "Your shortlist starts here", "Select the heart on a job card to save it for later.", buttonLink("#/explore", "Browse jobs", "button button-primary")));
       return;
     }
     const list = element("section", "panel job-list");
     for (const job of savedJobs) {
       const card = jobCard(job);
       const footer = card.querySelector(".job-tail");
-      if (footer) footer.prepend(text("span", "", `В списке с ${formatDate(job.saved_at)}`));
+      if (footer) footer.prepend(text("span", "", `Saved on ${formatDate(job.saved_at)}`));
       list.append(card);
     }
-    const clear = element("button", "button button-danger button-small", "Очистить список");
+    const clear = element("button", "button button-danger button-small", "Clear shortlist");
     clear.type = "button";
     clear.addEventListener("click", () => {
       savedJobs = [];
@@ -883,7 +878,7 @@
       renderRoute();
     });
     const tools = element("div", "filter-bottom");
-    append(tools, text("span", "filter-status", `${formatNumber(savedJobs.length)} вакансий · только в этом браузере`), clear);
+    append(tools, text("span", "filter-status", `${formatNumber(savedJobs.length)} ${savedJobs.length === 1 ? "job" : "jobs"} · in this browser only`), clear);
     list.append(tools);
     root.append(list);
   }
@@ -894,8 +889,8 @@
     const body = element("div");
     append(copy, text("span", "snapshot-symbol", "⌂"), body);
     append(body,
-      text("div", "snapshot-title", "Локальные данные пользователя"),
-      text("div", "snapshot-description", "Сохранённые вакансии не отправляются на сервер. Их карточки отражают значения в момент сохранения.")
+      text("div", "snapshot-title", "Your browser-local shortlist"),
+      text("div", "snapshot-description", "Saved jobs stay in your browser. Cards reflect the values recorded when you saved them.")
     );
     banner.append(copy);
     return banner;
@@ -911,18 +906,18 @@
       : typeof job.description === "string" ? job.description : null;
     const roleEvidence = Array.isArray(detail.role_evidence) ? detail.role_evidence : job.role_evidence;
     const skillEvidence = Array.isArray(detail.skill_evidence) ? detail.skill_evidence : job.skill_evidence;
-    const title = summary.title || "Название не указано";
-    updateNav("explore", "Вакансия");
-    const back = buttonLink("#/explore", "← К списку", "button");
-    const savedButton = element("button", "button", isSaved(summary.id || id) ? "♥ В сохранённом" : "♡ Сохранить");
+    const title = summary.title || "Untitled posting";
+    updateNav("explore", "Job posting");
+    const back = buttonLink("#/explore", "← Back to jobs", "button");
+    const savedButton = element("button", "button", isSaved(summary.id || id) ? "♥ Saved" : "♡ Save");
     savedButton.type = "button";
     savedButton.setAttribute("aria-pressed", isSaved(summary.id || id) ? "true" : "false");
     savedButton.addEventListener("click", () => saveJob({ ...summary, id: summary.id || id }));
-    append(root, pageHeading("ВАКАНСИЯ", title, summary.company_name || "Компания не указана", actionGroup(back, savedButton)));
+    append(root, pageHeading("JOB POSTING", title, summary.company_name || "Company not specified", actionGroup(back, savedButton)));
 
     const linkActions = element("div", "detail-links");
-    const source = externalAnchor(summary.source_url, "Открыть источник ↗", "button button-primary");
-    const apply = externalAnchor(summary.apply_url, "Откликнуться ↗", "button");
+    const source = externalAnchor(summary.source_url, "View source ↗", "button button-primary");
+    const apply = externalAnchor(summary.apply_url, "Apply ↗", "button");
     append(linkActions, source, apply);
     const metaTags = element("div", "job-meta");
     if (summary.occupation) metaTags.append(text("span", "tag tag-accent", displayLabel(summary.occupation)));
@@ -932,21 +927,21 @@
     const layout = element("div", "detail-layout");
     const main = element("section", "panel");
     const desc = element("section", "detail-section");
-    desc.append(text("h2", "", "Описание вакансии"));
-    desc.append(text("p", "", description === null ? "Полный текст описания недоступен." : description));
+    desc.append(text("h2", "", "Job description"));
+    desc.append(text("p", "", description === null ? "The full description is unavailable." : description));
     main.append(desc);
-    main.append(evidenceSection("Основание распознавания роли", roleEvidence));
-    main.append(evidenceSection("Найденные упоминания навыков", skillEvidence));
+    main.append(evidenceSection("Role classification evidence", roleEvidence));
+    main.append(evidenceSection("Detected skill mentions", skillEvidence));
     const side = element("aside", "stack detail-side");
-    const meta = panel("Сведения о наблюдении", "Сохранённые поля источника");
+    const meta = panel("Observation details", "Saved source fields");
     const metaBody = meta.body;
     const values = [
-      ["Источник", summary.source_key || "не указан"],
-      ["Последнее наблюдение", formatDate(summary.last_seen_at_utc)],
-      ["Состояние", displayState(summary.status, JOB_STATES)],
-      ["Специализация", displayLabel(summary.specialty, "не распознана")],
-      ["Статус специализации", displayState(summary.specialty_state, SPECIALTY_STATES)],
-      ["Навыки в выдаче", formatNumber(Array.isArray(summary.skills) ? summary.skills.length : 0)],
+      ["Source", summary.source_key || "Not specified"],
+      ["Last observed", formatDate(summary.last_seen_at_utc)],
+      ["Status", displayState(summary.status, JOB_STATES)],
+      ["Specialty", displayLabel(summary.specialty, "Not identified")],
+      ["Specialty status", displayState(summary.specialty_state, SPECIALTY_STATES)],
+      ["Detected skills", formatNumber(Array.isArray(summary.skills) ? summary.skills.length : 0)],
     ];
     for (const [key, value] of values) {
       const row = element("div", "key-value");
@@ -955,8 +950,8 @@
     }
     meta.box.append(metaBody);
     side.append(meta.box);
-    const note = panel("Как читать эту карточку", "");
-    note.body.append(text("p", "mini-note", "Классификация и навыки — автоматические совпадения правил с сохранённым текстом. Источник может уже изменить или закрыть вакансию."));
+    const note = panel("How to read this posting", "");
+    note.body.append(text("p", "mini-note", "Roles and skills come from automatic rule matches against saved text. The source may have since changed or closed the posting."));
     note.box.append(note.body);
     side.append(note.box);
     append(layout, main, side);
@@ -967,13 +962,13 @@
     const section = element("section", "detail-section");
     section.append(text("h2", "", title));
     if (!Array.isArray(evidence) || !evidence.length) {
-      section.append(text("p", "", "Точные совпадения для этого раздела не возвращены API."));
+      section.append(text("p", "", "No exact matches are available for this section."));
       return section;
     }
     const list = element("div", "evidence-list");
     for (const item of evidence) {
       const card = element("div", "evidence-item");
-      const matched = item.matched_text || item.text || item.skill_label || item.label || item.occupation_label || "Совпадение";
+      const matched = item.matched_text || item.text || item.skill_label || item.label || item.occupation_label || "Match";
       const rule = item.rule || item.rule_id || item.section || item.field || "";
       append(card,
         text("div", "evidence-main", matched),
@@ -989,22 +984,22 @@
     const methodology = await getJson("methodology");
     if (seq !== renderSequence) return;
     root.replaceChildren();
-    updateNav("methodology", "Методология");
-    root.append(pageHeading("МЕТОДОЛОГИЯ", methodology.title || "Как устроены данные", "Здесь описаны единица наблюдения, правила чтения сводок и границы доступных доказательств."));
+    updateNav("methodology", "Methodology");
+    root.append(pageHeading("METHODOLOGY", methodology.title || "How the data works", "Understand what is counted, how to read summaries and what the available evidence supports."));
     const grid = element("div", "methodology-grid");
-    const copyPanel = panel("Что показывает Career Radar", "Версия методологии: " + String(methodology.version || methodology.schema || "не указана"));
+    const copyPanel = panel("What Career Radar shows", "Methodology version: " + String(methodology.version || methodology.schema || "Not specified"));
     const copy = element("div", "methodology-copy");
     append(copy,
-      text("h2", "", "Текущий срез"),
-      text("p", "", "Единица учёта — вакансия источника. Объявления берутся из последнего сохранённого состояния включённых источников; active означает сохранённый статус, а не подтверждение, что вакансия всё ещё открыта."),
-      text("h3", "", "Роли и специализации"),
-      text("p", "", "Метки ролей — результат версионированных правил классификатора. Неизвестные и неоднозначные названия сохраняются в выборке. Доля роли считается от выбранных вакансий; доля специализации — от выбранных инженерных вакансий."),
-      text("h3", "", "Упоминания навыков"),
-      text("p", "", "Система ищет термины по сохранённым заголовку и описанию. Вакансия учитывает каждый навык один раз. Доля показывает, в какой части выбранных объявлений термин найден. Она не означает, что навык обязателен, востребован рынком или отсутствует, если не распознан."),
-      text("h3", "", "История"),
-      text("p", "", "Сравнение за 30, 90 или 180 дней требует парных неизменяемых сканов и прохождения проверки качества. Если evidence недостаточно, значения остаются пустыми с объяснением. Нулевая историческая доля не подставляется вместо отсутствующих данных."),
-      text("h3", "", "Свежесть и источники"),
-      text("p", "", "Дата последнего наблюдения вакансии и дата последнего успешного скана источника — разные вещи. Частичный или неудачный скан не подтверждает полноту обновления. Кнопка «Перечитать срез» заново загружает уже сохранённые данные приложения и не запускает сбор с сайтов компаний."));
+      text("h2", "", "Current snapshot"),
+      text("p", "", "The unit is one source posting. Jobs reflect the latest saved state of enabled sources. Active is a stored status, not confirmation that a job is still open."),
+      text("h3", "", "Roles and specialties"),
+      text("p", "", "Role labels come from versioned classifier rules. Unknown and ambiguous titles stay in the sample. Role shares use selected postings; specialty shares use selected engineering postings."),
+      text("h3", "", "Skill mentions"),
+      text("p", "", "Terms are matched against saved titles and descriptions. Each skill counts once per posting. The share shows how many selected postings mention the term. It does not establish a requirement, market demand or the absence of an unmentioned skill."),
+      text("h3", "", "History"),
+      text("p", "", "Comparisons over 30, 90 or 180 days require paired immutable scans and passing quality checks. When evidence is insufficient, values stay empty with an explanation. Missing history is never replaced with a measured zero."),
+      text("h3", "", "Freshness and sources"),
+      text("p", "", "A posting's last observation and a source's last successful scan are different timestamps. Partial or failed scans do not establish a complete refresh. Reload snapshot rereads saved app data without collecting from company sites."));
     const provenance = methodology.provenance || methodology.versions || {};
     const chips = element("div", "version-chips");
     for (const [key, value] of Object.entries(provenance)) {
@@ -1016,21 +1011,20 @@
     copyPanel.box.append(copyPanel.body);
     grid.append(copyPanel.box);
 
-    const side = panel("Ограничения интерпретации", "Проверьте перед выводами");
+    const side = panel("Interpretation limits", "Read before drawing conclusions");
     const limits = element("div");
     const knownLimitText = [
-      "Это панель собранных страниц компаний, а не весь рынок труда.",
-      "Заголовки и описания могут быть неполными, измениться или содержать шум.",
-      "Распознавание основано на правилах и может пропустить новые названия и синонимы.",
-      "Данные не учитывают число откликов, закрытие вакансии или реальные требования после найма.",
-      "Список сохранённых вакансий остаётся только в локальном браузере.",
+      "This is a panel of collected company job boards, not the entire labor market.",
+      "Titles and descriptions may be incomplete, change or contain noise.",
+      "Rule-based recognition may miss new titles and synonyms.",
+      "The data does not measure applicant counts, hiring outcomes or requirements confirmed after hiring.",
+      "Your saved shortlist stays in this browser.",
     ];
     const limitsFromApi = Array.isArray(methodology.limitations) ? methodology.limitations : null;
     for (const [index, item] of (limitsFromApi || knownLimitText).entries()) {
       const row = element("div", "limit-item");
       const raw = typeof item === "string" ? item : item.text || item.description || "";
-      const translated = LIMITATION_COPY[raw] || (limitsFromApi ? "Дополнительное ограничение полноты данных; подробности указаны в версии методологии." : raw);
-      append(row, text("span", "limit-number", String(index + 1)), text("span", "", translated));
+      append(row, text("span", "limit-number", String(index + 1)), text("span", "", raw));
       limits.append(row);
     }
     side.body.append(limits);
@@ -1047,7 +1041,7 @@
     loadingView();
     try {
       if (page === "saved") {
-        updateNav("saved", "Сохранённое");
+        updateNav("saved", "Saved");
         root.replaceChildren();
         renderSaved();
         return;
@@ -1061,7 +1055,7 @@
         return;
       }
       const isOverview = page === "overview";
-      updateNav(isOverview ? "overview" : "explore", isOverview ? "Обзор" : "Вакансии");
+      updateNav(isOverview ? "overview" : "explore", isOverview ? "Overview" : "Jobs");
       const snapshot = await getJson("snapshot", requestParams(route));
       if (seq !== renderSequence) return;
       root.replaceChildren();

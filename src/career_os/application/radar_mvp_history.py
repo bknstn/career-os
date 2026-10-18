@@ -13,6 +13,7 @@ from career_os.domain.canonical import content_hash
 from career_os.domain.skills import SkillEvidence
 from career_os.persistence.radar_mvp import RadarMvpSource
 from career_os.radar.aggregate import RadarObservationInput, RadarPanelInput, RadarScanInput
+from career_os.radar.mvp_roles import MVP_ROLE_CLASSIFIER_VERSION
 from career_os.radar.role_contract import RoleAssignment
 
 type PostingAnalysis = tuple[RoleAssignment, tuple[SkillEvidence, ...]]
@@ -897,6 +898,7 @@ def compare_mvp_history(
         {
             "metric_contract": MVP_HISTORY_CONTRACT_VERSION,
             "algorithm": MVP_HISTORY_ALGORITHM_VERSION,
+            "role_classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
             "panel_version": panel.panel_version,
             "panel_digest": panel.panel_digest,
             "selection": selection,
@@ -946,6 +948,7 @@ def compare_mvp_history(
             "matched_pair_mapping_digest": content_hash(matched_mapping),
         },
         "provenance": {
+            "role_classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
             "panel_version": panel.panel_version,
             "panel_digest": panel.panel_digest,
             "input_digest": history_input_digest,
@@ -1083,5 +1086,10 @@ def _empty_history(
             "matched_slots": None,
             "expected_slots": None,
         },
-        "provenance": {"panel_version": None, "panel_digest": None, "input_digest": None},
+        "provenance": {
+            "role_classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
+            "panel_version": None,
+            "panel_digest": None,
+            "input_digest": None,
+        },
     }

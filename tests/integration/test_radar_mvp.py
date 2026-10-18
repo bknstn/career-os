@@ -69,12 +69,17 @@ def test_radar_real_api_reextracts_exact_text_filters_paginates_and_remains_read
     with session_scope(session_factory) as session:
         job = session.get(JobPosting, JOB_IDS[0])
         assert job is not None
+        job.title_raw = "Junior HR Specialist"
         job.description_text = "Rust Rust <script>alert('text only')</script>"
         job.source_url = "javascript:alert(1)"
         job.apply_url = "https://name:password@example.test/private"
     detail_response = client.get(f"/radar/api/jobs/{JOB_IDS[0]}")
     assert detail_response.status_code == 200
     detail = detail_response.json()
+    assert detail["job"]["occupation"] == "nontechnical"
+    assert detail["provenance"]["classifier_version"] == "3.0.0"
+    assert detail["provenance"]["base_classifier_version"] == "1.1.0"
+    assert any(row["rule_id"] == "mvp_people_head" for row in detail["role_evidence"])
     assert detail["description"].startswith("Rust Rust <script>")
     assert detail["job"]["source_url"] is detail["job"]["apply_url"] is None
     assert {row["id"] for row in detail["skill_evidence"]} == {"rust"}
@@ -86,6 +91,20 @@ def test_radar_real_api_reextracts_exact_text_filters_paginates_and_remains_read
     assert next(row for row in changed["skills"] if row["id"] == "python")["count"] == 6
     rust = client.get("/radar/api/snapshot", params={"skill": "rust"}).json()
     assert [row["id"] for row in rust["jobs"]["items"]] == [str(JOB_IDS[0])]
+    assert rust["provenance"]["classifier_version"] == "3.0.0"
+    assert rust["history"]["provenance"]["role_classifier_version"] == "3.0.0"
+    assert (
+        client.get("/radar/api/snapshot", params={"skill": "rust", "occupation": "unknown"}).json()[
+            "jobs"
+        ]["items"]
+        == []
+    )
+    assert (
+        client.get(
+            "/radar/api/snapshot", params={"skill": "rust", "occupation": "nontechnical"}
+        ).json()["jobs"]["total"]
+        == 1
+    )
 
     with session_scope(session_factory) as session:
         source = session.get(Source, UUID(int=2))

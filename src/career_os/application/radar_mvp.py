@@ -26,13 +26,13 @@ from career_os.persistence.radar_mvp import (
     RadarMvpReadRepository,
     RadarMvpSource,
 )
+from career_os.radar.mvp_roles import MVP_ROLE_CLASSIFIER_VERSION, classify_mvp_role
 from career_os.radar.role_contract import (
     OCCUPATIONS,
     SPECIALTIES,
     RoleAssignment,
-    adapt_classification,
 )
-from career_os.radar.roles import ROLE_TAXONOMY, classify_role
+from career_os.radar.roles import ROLE_TAXONOMY
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _PANEL_PATH = _PROJECT_ROOT / "config/radar/panel.mvp.v1.yaml"
@@ -113,8 +113,7 @@ def _skill_evidence_cached(
 
 @lru_cache(maxsize=32_768)
 def _role_assignment_cached(title: str, description: str) -> RoleAssignment:
-    legacy = classify_role(title, description)
-    return adapt_classification(title, legacy)
+    return classify_mvp_role(title, description)
 
 
 def _safe_url(value: str | None) -> str | None:
@@ -332,6 +331,7 @@ class RadarMvpService:
         input_digest = content_hash(
             {
                 "schema": MVP_SCHEMA_VERSION,
+                "role_classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
                 "role_contract_version": ROLE_CONTRACT_VERSION,
                 "skill_taxonomy_digest": self._skill_digest,
                 "panel_manifest_digest": (
@@ -405,7 +405,8 @@ class RadarMvpService:
             },
             "history": history,
             "provenance": {
-                "classifier_version": LEGACY_CLASSIFIER_VERSION,
+                "classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
+                "base_classifier_version": LEGACY_CLASSIFIER_VERSION,
                 "role_contract_version": ROLE_CONTRACT_VERSION,
                 "skill_taxonomy_version": self._taxonomy.version,
                 "skill_taxonomy_digest": self._skill_digest,
@@ -456,7 +457,8 @@ class RadarMvpService:
             "role_evidence": role_evidence,
             "skill_evidence": skill_rows,
             "provenance": {
-                "classifier_version": LEGACY_CLASSIFIER_VERSION,
+                "classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
+                "base_classifier_version": LEGACY_CLASSIFIER_VERSION,
                 "role_contract_version": ROLE_CONTRACT_VERSION,
                 "skill_taxonomy_version": self._taxonomy.version,
                 "skill_taxonomy_digest": self._skill_digest,
@@ -468,6 +470,7 @@ class RadarMvpService:
                         "description": job.description,
                         "content_hash": job.content_hash,
                         "role_contract_version": ROLE_CONTRACT_VERSION,
+                        "role_classifier_version": MVP_ROLE_CLASSIFIER_VERSION,
                         "skill_taxonomy_digest": self._skill_digest,
                     }
                 ),
@@ -601,6 +604,7 @@ def radar_mvp_methodology(taxonomy: SkillTaxonomy) -> dict[str, object]:
         "schema": MVP_METHODOLOGY_SCHEMA_VERSION,
         "mode": "saved_inventory",
         "versions": {
+            "role_classifier": MVP_ROLE_CLASSIFIER_VERSION,
             "legacy_role_classifier": LEGACY_CLASSIFIER_VERSION,
             "role_contract": ROLE_CONTRACT_VERSION,
             "skill_taxonomy": taxonomy.version,
@@ -633,7 +637,8 @@ def radar_mvp_methodology(taxonomy: SkillTaxonomy) -> dict[str, object]:
             ),
             "role_labels": (
                 "Classifier labels are deterministic rule outputs, not ground truth or "
-                "an accuracy estimate."
+                "an accuracy estimate. MVP title-head fallbacks extend unrecognized occupations; "
+                "conflicts stay unresolved and a language alone never establishes a specialty."
             ),
             "freshness": (
                 "Stored active status does not guarantee freshness; source last-success "
