@@ -34,6 +34,13 @@ def test_initial_metadata_contains_only_the_planned_tables() -> None:
         "radar_panel_versions",
         "radar_scan_observations",
         "radar_builds",
+        "research_collection_runs",
+        "research_acquisition_attempts",
+        "research_candidates",
+        "research_documents",
+        "research_document_versions",
+        "research_claims",
+        "research_claim_reviews",
     }
 
 

@@ -1,0 +1,84 @@
+version: research-sources-v1
+sources:
+  - key: anthropic_economics
+    publisher: Anthropic Economic Research
+    enabled: true
+    allowed_hosts: [www.anthropic.com]
+    discovery_methods: [html_index, single_document]
+    discovery_urls:
+      - https://www.anthropic.com/research/team/economics
+      - https://www.anthropic.com/research/labor-market-impacts
+    candidate_document_urls:
+      - https://www.anthropic.com/research/labor-market-impacts
+  - key: openai_economic_research
+    publisher: OpenAI Economic Research
+    enabled: true
+    allowed_hosts: [openai.com]
+    discovery_methods: [html_index, single_document]
+    discovery_urls: [https://openai.com/signals/research/]
+    candidate_document_urls:
+      - https://openai.com/business/guides-and-resources/the-state-of-enterprise-ai-2025-report/
+      - https://openai.com/index/how-ai-is-expanding-what-people-do-at-work/
+  - key: linkedin_economic_graph
+    publisher: LinkedIn Economic Graph
+    enabled: true
+    allowed_hosts: [economicgraph.linkedin.com]
+    discovery_methods: [html_index, single_document]
+    discovery_urls: [https://economicgraph.linkedin.com/workforce-data/publications]
+    candidate_document_urls:
+      - https://economicgraph.linkedin.com/research/labor-market-report-2026
+      - https://economicgraph.linkedin.com/content/dam/me/economicgraph/en-us/PDF/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
+  - key: indeed_hiring_lab
+    publisher: Indeed Hiring Lab
+    enabled: true
+    allowed_hosts: [hiringlab.indeed.com]
+    discovery_methods: [html_index, single_document]
+    discovery_urls: [https://hiringlab.indeed.com/]
+    candidate_document_urls:
+      - https://hiringlab.indeed.com/2025/07/30/experience-requirements-have-tightened-amid-the-tech-hiring-freeze/
+  - key: mckinsey_state_of_ai
+    publisher: McKinsey State of AI
+    enabled: true
+    allowed_hosts: [www.mckinsey.com]
+    discovery_methods: [html_index]
+    discovery_urls:
+      - https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai
+  - key: deloitte_state_of_ai
+    publisher: Deloitte State of AI in the Enterprise
+    enabled: true
+    allowed_hosts: [www.deloitte.com]
+    discovery_methods: [html_index]
+    discovery_urls:
+      - https://www.deloitte.com/us/en/what-we-do/capabilities/applied-artificial-intelligence/content/state-of-ai-in-the-enterprise.html
+  - key: stanford_hai_ai_index
+    publisher: Stanford HAI AI Index
+    enabled: true
+    allowed_hosts: [hai.stanford.edu]
+    discovery_methods: [html_index]
+    discovery_urls: [https://hai.stanford.edu/ai-index]
+  - key: metr
+    publisher: METR
+    enabled: true
+    allowed_hosts: [metr.org]
+    discovery_methods: [html_index, single_document]
+    discovery_urls: [https://metr.org/blog/]
+    candidate_document_urls:
+      - https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/
+      - https://metr.org/blog/2026-02-24-uplift-update/
+      - https://metr.org/blog/2026-05-11-ai-usage-survey/
+  - key: world_economic_forum
+    publisher: World Economic Forum
+    enabled: false
+    allowed_hosts: [weforum.org]
+  - key: goldman_sachs
+    publisher: Goldman Sachs Global Investment Research
+    enabled: false
+    allowed_hosts: [goldmansachs.com]
+  - key: google_deepmind
+    publisher: Google DeepMind
+    enabled: false
+    allowed_hosts: [deepmind.google]
+  - key: bls
+    publisher: US Bureau of Labor Statistics
+    enabled: false
+    allowed_hosts: [bls.gov]

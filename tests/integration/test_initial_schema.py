@@ -50,6 +50,16 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
             "radar_scan_observations",
             "radar_builds",
         } <= set(inspector.get_table_names())
+        research_tables = {
+            "research_collection_runs",
+            "research_acquisition_attempts",
+            "research_candidates",
+            "research_documents",
+            "research_document_versions",
+            "research_claims",
+            "research_claim_reviews",
+        }
+        assert research_tables <= set(inspector.get_table_names())
         radar_run_columns = {column["name"] for column in inspector.get_columns("collection_runs")}
         assert {
             "radar_panel_version",
@@ -83,8 +93,21 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
         assert job_skills_primary_key["name"] == "pk_job_skills"
         assert job_skills_primary_key["constrained_columns"] == ["id"]
 
+        research_run_id = uuid4()
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO research_collection_runs "
+                    "(id, registry_version, registry_digest, registry_snapshot, trigger, status) "
+                    "VALUES (:id, 'test-v1', :digest, CAST(:snapshot AS jsonb), "
+                    "'manual', 'succeeded')"
+                ),
+                {"id": research_run_id, "digest": "a" * 64, "snapshot": '{"version":"test-v1"}'},
+            )
+
         command.downgrade(alembic_config, "20260821_0003")
         downgraded_inspector = inspect(engine)
+        assert not (research_tables & set(downgraded_inspector.get_table_names()))
         assert not (
             {"radar_panel_versions", "radar_scan_observations", "radar_builds"}
             & set(downgraded_inspector.get_table_names())
@@ -106,6 +129,15 @@ def test_initial_revision_upgrades_inspects_and_downgrades() -> None:
             assert legacy_run.status == "succeeded"
         command.upgrade(alembic_config, "head")
         reupgraded_inspector = inspect(engine)
+        assert research_tables <= set(reupgraded_inspector.get_table_names())
+        with engine.connect() as connection:
+            assert (
+                connection.scalar(
+                    text("SELECT count(*) FROM research_collection_runs WHERE id = :run_id"),
+                    {"run_id": research_run_id},
+                )
+                == 0
+            )
         assert {"radar_panel_versions", "radar_scan_observations", "radar_builds"} <= set(
             reupgraded_inspector.get_table_names()
         )

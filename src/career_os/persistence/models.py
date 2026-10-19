@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
+    Identity,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     PrimaryKeyConstraint,
     String,
@@ -239,6 +243,335 @@ class RadarBuild(Base):
     cutoff_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+
+class ResearchCollectionRun(Base):
+    """Immutable registry snapshot and outcome summary for one discovery run."""
+
+    __tablename__ = "research_collection_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running', 'succeeded', 'partial', 'failed')",
+            name="ck_research_collection_runs_status",
+        ),
+        CheckConstraint(
+            "registry_digest ~ '^[0-9a-f]{64}$'",
+            name="ck_research_collection_runs_registry_digest",
+        ),
+        CheckConstraint(
+            "trigger IN ('daily', 'manual', 'backfill')",
+            name="ck_research_collection_runs_trigger",
+        ),
+        CheckConstraint(
+            "finished_at IS NULL OR finished_at >= started_at",
+            name="ck_research_collection_runs_finished_after_started",
+        ),
+        PrimaryKeyConstraint("id", name="pk_research_collection_runs"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    registry_version: Mapped[str] = mapped_column(String, nullable=False)
+    registry_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    registry_snapshot: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    trigger: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    discovered: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    acquired: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    failed: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+
+
+class ResearchAcquisitionAttempt(Base):
+    """Visible result for one bounded source request, including failures."""
+
+    __tablename__ = "research_acquisition_attempts"
+    __table_args__ = (
+        CheckConstraint(
+            "outcome IN ('discovered', 'acquired', 'http_error', 'network_error', 'blocked', "
+            "'oversize', 'unsupported_content', 'parse_error')",
+            name="ck_research_acquisition_attempts_outcome",
+        ),
+        CheckConstraint("bytes_received >= 0", name="ck_research_acquisition_attempts_bytes"),
+        CheckConstraint(
+            "http_status IS NULL OR http_status BETWEEN 100 AND 599",
+            name="ck_research_acquisition_attempts_http_status",
+        ),
+        Index("ix_research_acquisition_attempts_run_source", "run_id", "source_key"),
+        PrimaryKeyConstraint("id", name="pk_research_acquisition_attempts"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "research_collection_runs.id", ondelete="CASCADE", name="fk_research_attempt_run"
+        ),
+        nullable=False,
+    )
+    source_key: Mapped[str] = mapped_column(String, nullable=False)
+    requested_url: Mapped[str] = mapped_column(Text, nullable=False)
+    outcome: Mapped[str] = mapped_column(String, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    bytes_received: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    error_code: Mapped[str | None] = mapped_column(String)
+
+
+class ResearchCandidate(Base):
+    """Discovered URL metadata kept separate from acquired evidence."""
+
+    __tablename__ = "research_candidates"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('discovered', 'acquired', 'ignored')",
+            name="ck_research_candidates_state",
+        ),
+        UniqueConstraint("source_key", "canonical_url", name="uq_research_candidates_source_url"),
+        Index("ix_research_candidates_state_seen", "state", "last_seen_at"),
+        PrimaryKeyConstraint("id", name="pk_research_candidates"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_key: Mapped[str] = mapped_column(String, nullable=False)
+    canonical_url: Mapped[str] = mapped_column(Text, nullable=False)
+    discovered_url: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(
+        String, default="discovered", server_default="discovered", nullable=False
+    )
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class ResearchDocument(Base):
+    """Stable canonical publication identity independent of any one body version."""
+
+    __tablename__ = "research_documents"
+    __table_args__ = (
+        UniqueConstraint("source_key", "canonical_url", name="uq_research_documents_source_url"),
+        PrimaryKeyConstraint("id", name="pk_research_documents"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_key: Mapped[str] = mapped_column(String, nullable=False)
+    canonical_url: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+
+class ResearchDocumentVersion(Base):
+    """Append-only original response bytes plus extraction and date provenance."""
+
+    __tablename__ = "research_document_versions"
+    __table_args__ = (
+        CheckConstraint(
+            "raw_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_research_document_versions_raw_digest",
+        ),
+        CheckConstraint(
+            "normalized_text_sha256 IS NULL OR normalized_text_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_research_document_versions_text_digest",
+        ),
+        CheckConstraint(
+            "media_type IN ('text/html', 'application/pdf')",
+            name="ck_research_document_versions_media_type",
+        ),
+        CheckConstraint(
+            "version_relation IN ('initial', 'equivalent_text', 'revision')",
+            name="ck_research_document_versions_relation",
+        ),
+        CheckConstraint(
+            "(version_relation = 'initial' AND previous_version_id IS NULL) OR "
+            "(version_relation <> 'initial' AND previous_version_id IS NOT NULL)",
+            name="ck_research_document_versions_previous_relation",
+        ),
+        CheckConstraint(
+            "octet_length(raw_body) BETWEEN 1 AND 52428800",
+            name="ck_research_document_versions_body_size",
+        ),
+        CheckConstraint(
+            "(publication_date_state = 'reported' AND publication_date IS NOT NULL) OR "
+            "(publication_date_state <> 'reported' AND publication_date IS NULL)",
+            name="ck_research_document_versions_publication_date_disclosure",
+        ),
+        CheckConstraint(
+            "publication_date_state IN ('reported', 'not_reported', 'not_applicable', 'unclear')",
+            name="ck_research_document_versions_publication_date_state",
+        ),
+        CheckConstraint(
+            "data_period_state IN ('reported', 'not_reported', 'not_applicable', 'unclear')",
+            name="ck_research_document_versions_period_state",
+        ),
+        CheckConstraint(
+            "(data_period_state = 'reported' AND "
+            "(data_period_start IS NOT NULL OR data_period_end IS NOT NULL)) OR "
+            "(data_period_state <> 'reported' AND "
+            "data_period_start IS NULL AND data_period_end IS NULL)",
+            name="ck_research_document_versions_period_disclosure",
+        ),
+        CheckConstraint(
+            "data_period_start IS NULL OR data_period_end IS NULL OR "
+            "data_period_start <= data_period_end",
+            name="ck_research_document_versions_period_order",
+        ),
+        Index("ix_research_document_versions_document_digest", "document_id", "raw_sha256"),
+        Index("ix_research_document_versions_document_retrieved", "document_id", "retrieved_at"),
+        UniqueConstraint(
+            "document_id", "version_number", name="uq_research_document_versions_number"
+        ),
+        PrimaryKeyConstraint("id", name="pk_research_document_versions"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "research_documents.id", ondelete="CASCADE", name="fk_research_version_document"
+        ),
+        nullable=False,
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    previous_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(
+            "research_document_versions.id",
+            ondelete="RESTRICT",
+            name="fk_research_version_previous",
+        )
+    )
+    discovered_url: Mapped[str] = mapped_column(Text, nullable=False)
+    retrieved_url: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    publication_date: Mapped[date | None] = mapped_column(Date)
+    publication_date_state: Mapped[str] = mapped_column(String, nullable=False)
+    data_period_start: Mapped[date | None] = mapped_column(Date)
+    data_period_end: Mapped[date | None] = mapped_column(Date)
+    data_period_state: Mapped[str] = mapped_column(String, nullable=False)
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    response_etag: Mapped[str | None] = mapped_column(String)
+    response_last_modified: Mapped[str | None] = mapped_column(String)
+    media_type: Mapped[str] = mapped_column(String, nullable=False)
+    raw_body: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    raw_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    normalized_text: Mapped[str | None] = mapped_column(Text)
+    normalized_text_sha256: Mapped[str | None] = mapped_column(String(64))
+    extraction_version: Mapped[str] = mapped_column(String, nullable=False)
+    extraction_regions: Mapped[list[dict[str, object]]] = mapped_column(JSONB, nullable=False)
+    extraction_error: Mapped[str | None] = mapped_column(Text)
+    version_relation: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class ResearchClaim(Base):
+    """Immutable structured annotation candidate bound to one body version."""
+
+    __tablename__ = "research_claims"
+    __table_args__ = (
+        CheckConstraint(
+            "question IN ('developer_tasks', 'experience_seniority', 'production_ai_skills')",
+            name="ck_research_claims_question",
+        ),
+        CheckConstraint(
+            "evidence_kind IN ('observed', 'survey', 'experiment', 'forecast', 'model_estimate', "
+            "'case_study', 'secondary_synthesis')",
+            name="ck_research_claims_evidence_kind",
+        ),
+        CheckConstraint(
+            "lineage_kind IN ('primary', 'replication', 'derivative', 'unknown')",
+            name="ck_research_claims_lineage_kind",
+        ),
+        CheckConstraint(
+            "idempotence_key ~ '^[0-9a-f]{64}$'",
+            name="ck_research_claims_idempotence_key",
+        ),
+        UniqueConstraint("idempotence_key", name="uq_research_claims_idempotence_key"),
+        Index("ix_research_claims_version_question", "document_version_id", "question"),
+        PrimaryKeyConstraint("id", name="pk_research_claims"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    document_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "research_document_versions.id",
+            ondelete="RESTRICT",
+            name="fk_research_claim_version",
+        ),
+        nullable=False,
+    )
+    idempotence_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    question: Mapped[str] = mapped_column(String, nullable=False)
+    statement: Mapped[str] = mapped_column(Text, nullable=False)
+    exact_quote: Mapped[str] = mapped_column(Text, nullable=False)
+    location: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    evidence_kind: Mapped[str] = mapped_column(String, nullable=False)
+    evidence_details: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    lineage_kind: Mapped[str] = mapped_column(String, nullable=False)
+    upstream_dataset_or_document: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+
+class ResearchClaimReview(Base):
+    """Append-only human review event for a claim or version transition."""
+
+    __tablename__ = "research_claim_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('candidate', 'accepted', 'rejected', 'revision_review_required', "
+            "'superseded', 'retracted')",
+            name="ck_research_claim_reviews_state",
+        ),
+        Index("ix_research_claim_reviews_claim_reviewed", "claim_id", "reviewed_at"),
+        UniqueConstraint("event_sequence", name="uq_research_claim_reviews_event_sequence"),
+        PrimaryKeyConstraint("id", name="pk_research_claim_reviews"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    event_sequence: Mapped[int] = mapped_column(BigInteger, Identity(always=False), nullable=False)
+    claim_id: Mapped[UUID] = mapped_column(
+        ForeignKey("research_claims.id", ondelete="RESTRICT", name="fk_research_review_claim"),
+        nullable=False,
+    )
+    state: Mapped[str] = mapped_column(String, nullable=False)
+    reviewer: Mapped[str] = mapped_column(String, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    target_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(
+            "research_document_versions.id",
+            ondelete="RESTRICT",
+            name="fk_research_review_target_version",
+        )
+    )
+    reviewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utcnow,
         server_default=text("CURRENT_TIMESTAMP"),
