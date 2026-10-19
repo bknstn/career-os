@@ -327,7 +327,12 @@
   function pageHeading(kicker, title, description, actions = null) {
     const heading = element("div", "page-heading");
     const copy = element("div");
-    append(copy, text("p", "eyebrow", kicker), text("h1", "", title));
+    const eyebrow = text("p", "eyebrow", kicker);
+    const prompt = element("span", "terminal-prompt");
+    prompt.setAttribute("aria-hidden", "true");
+    append(prompt, text("span", "", ">"), text("span", "terminal-cursor", "_"));
+    eyebrow.prepend(prompt);
+    append(copy, eyebrow, text("h1", "", title));
     if (description) copy.append(text("p", "", description));
     heading.append(copy);
     if (actions) heading.append(actions);
@@ -630,10 +635,12 @@
 
   function renderOverview(data) {
     const summary = data.summary || {};
-    append(root,
-      pageHeading("CAREER RADAR", "Roles and skills in real job postings", "Explore postings from collected company job boards. Summaries show detected mentions and keep unknown cases visible.", actionGroup(buttonLink("#/explore", "All jobs", "button"), buttonLink("#/explore?occupation=technical_engineering", "Engineering jobs", "button button-primary"))),
-      snapshotBanner(data)
-    );
+    const heading = pageHeading("CAREER RADAR", "Roles and skills in real job postings", "Explore postings from collected company job boards. Summaries show detected mentions and keep unknown cases visible.", actionGroup(buttonLink("#/explore", "All jobs", "button"), buttonLink("#/explore?occupation=technical_engineering", "Engineering jobs", "button button-primary")));
+    heading.classList.add("overview-heading");
+    const scope = element("div", "radar-scope");
+    scope.setAttribute("aria-hidden", "true");
+    heading.append(scope);
+    append(root, heading, snapshotBanner(data));
     const stats = element("div", "stat-grid");
     append(stats,
       statCard("Jobs in the snapshot", summary.posting_count, "Saved active postings", "▤"),
