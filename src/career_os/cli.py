@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import re
+import sys
 from collections.abc import Iterable
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -16,6 +17,7 @@ from typing import Any, Literal, cast
 from uuid import UUID
 
 import typer
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -51,6 +53,20 @@ from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.radar import RadarBuildPersistenceError, RadarBuildService
 from career_os.application.report import MarketReportService
 from career_os.application.research_collection import ResearchCollectionService
+from career_os.application.research_evidence import (
+    ResearchEvidenceService,
+    SqlResearchEvidenceReadStore,
+)
+from career_os.application.research_monitor import (
+    DEFAULT_RESEARCH_MONITOR_STATE_PATH,
+    ResearchMonitor,
+    ResearchMonitorError,
+)
+from career_os.application.research_workflow import (
+    ResearchWorkflowPayloadError,
+    parse_claim_drafts,
+    parse_monthly_review,
+)
 from career_os.config.career_profiles import load_career_profile
 from career_os.config.compensation_supplements import (
     append_compensation_record,
@@ -84,6 +100,7 @@ from career_os.db import (
 )
 from career_os.domain import SourceAdapter
 from career_os.domain.hybrid_results import HybridResult, QualityReviewInput
+from career_os.domain.research import ResearchClaimReviewState
 from career_os.domain.target_universe_results import TargetUniverseResult
 from career_os.logging import configure_logging, safe_exception
 from career_os.normalization.jobs import JOB_NORMALIZER_VERSION
@@ -95,9 +112,11 @@ from career_os.persistence import (
     RadarPanelVersionRepository,
     SourceConfigurationRepository,
 )
+from career_os.persistence.models import ResearchAcquisitionAttempt
 from career_os.persistence.operations import OperationalStatusRepository
 from career_os.persistence.report_queries import ReportEvidenceConsistencyError
 from career_os.persistence.repositories import JobInspection, RunInspection
+from career_os.persistence.research import ResearchRepository
 from career_os.reporting import render_eligibility_funnel, render_markdown_report
 from career_os.reporting.career_review import render_career_review
 from career_os.reporting.compensation import render_compensation_comparison
@@ -160,6 +179,28 @@ _RESEARCH_COLLECT_SOURCE_OPTION = typer.Option(
 _RESEARCH_TRIGGER_OPTION = typer.Option(
     "manual", "--trigger", help="Durable run purpose recorded with the registry snapshot."
 )
+_RESEARCH_DRAFT_FILE_ARGUMENT = typer.Argument(
+    ...,
+    help="Strict claim-draft JSON file; pass - to read the import payload from standard input.",
+)
+_RESEARCH_CLAIM_ID_ARGUMENT = typer.Argument(..., help="Persisted candidate claim UUID.")
+_RESEARCH_REVIEW_STATE_ARGUMENT = typer.Argument(...)
+_RESEARCH_DOCUMENT_ID_ARGUMENT = typer.Argument(...)
+_RESEARCH_TEXT_DIGEST_ARGUMENT = typer.Argument(...)
+_RESEARCH_BOOTSTRAP_OPTION = typer.Option(
+    False,
+    "--bootstrap",
+    help="On a first run only, write initial real-date weekly and monthly products.",
+)
+_RESEARCH_STATE_PATH_OPTION = typer.Option(
+    DEFAULT_RESEARCH_MONITOR_STATE_PATH,
+    "--state",
+    help="Monitor state path; defaults to the local Radar research state file.",
+)
+_RESEARCH_DISPOSITION_OPTION = typer.Option(..., "--disposition")
+_RESEARCH_REVIEWER_OPTION = typer.Option(..., "--reviewer")
+_RESEARCH_REASON_OPTION = typer.Option(..., "--reason")
+_RESEARCH_MONTHLY_REVIEW_ARGUMENT = typer.Argument(..., exists=True, dir_okay=False)
 _ENRICH_TAXONOMY_OPTION = typer.Option(
     DEFAULT_SKILL_TAXONOMY_CONFIG, "--taxonomy", exists=False, dir_okay=False
 )
@@ -274,6 +315,69 @@ def _load_and_validate_sources(
 def _database_session_factory(settings: Settings) -> sessionmaker[Session]:
     """Create a persistence factory from settings already loaded by a command."""
     return create_session_factory(create_database_engine(settings))
+
+
+def _research_snapshot(session_factory: sessionmaker[Session]) -> dict[str, object]:
+    """Read every research document and claim from one read-only database snapshot."""
+    with session_scope(session_factory) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        service = ResearchEvidenceService(SqlResearchEvidenceReadStore(session))
+        documents: list[dict[str, object]] = []
+        first_documents = service.documents(page=1, page_size=100)
+        documents.extend(cast(list[dict[str, object]], first_documents["items"]))
+        document_total = cast(int, first_documents["total"])
+        for page in range(2, (document_total + 99) // 100 + 1):
+            response = service.documents(page=page, page_size=100)
+            documents.extend(cast(list[dict[str, object]], response["items"]))
+
+        claims: list[dict[str, object]] = []
+        first_claims = service.claims(question=None, page=1, page_size=100)
+        claims.extend(cast(list[dict[str, object]], first_claims["items"]))
+        claim_total = cast(int, first_claims["total"])
+        for page in range(2, (claim_total + 99) // 100 + 1):
+            response = service.claims(question=None, page=page, page_size=100)
+            claims.extend(cast(list[dict[str, object]], response["items"]))
+        if len(documents) != document_total or len(claims) != claim_total:
+            raise RuntimeError("research snapshot pagination returned an incomplete result")
+    return {"documents": documents, "claims": claims}
+
+
+def _research_source_failures(
+    session_factory: sessionmaker[Session], run_id: UUID
+) -> list[dict[str, object]]:
+    """Return deduplicated safe failure facets for one collector run."""
+    with session_scope(session_factory) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        rows = session.execute(
+            select(
+                ResearchAcquisitionAttempt.source_key,
+                ResearchAcquisitionAttempt.outcome,
+                ResearchAcquisitionAttempt.error_code,
+                ResearchAcquisitionAttempt.http_status,
+            )
+            .where(
+                ResearchAcquisitionAttempt.run_id == run_id,
+                ResearchAcquisitionAttempt.outcome.notin_(("discovered", "acquired")),
+            )
+            .distinct()
+            .order_by(
+                ResearchAcquisitionAttempt.source_key,
+                ResearchAcquisitionAttempt.outcome,
+                ResearchAcquisitionAttempt.error_code,
+                ResearchAcquisitionAttempt.http_status,
+            )
+        ).mappings()
+        return [
+            {
+                "source_key": row["source_key"],
+                "outcome": row["outcome"],
+                "error_code": row["error_code"],
+                "http_status": row["http_status"],
+            }
+            for row in rows
+        ]
 
 
 def _operational_policy(settings: Settings) -> CollectionOperationalPolicy:
@@ -701,6 +805,243 @@ def research_collect(
     _json_echo(asdict(result))
     if result.status != "succeeded":
         raise typer.Exit(code=1)
+
+
+@research_app.command("import-claims")
+def research_import_claims(
+    draft_file: Path = _RESEARCH_DRAFT_FILE_ARGUMENT,
+) -> None:
+    """Import exact-quote annotations as unreviewed candidates in one transaction."""
+    try:
+        if str(draft_file) == "-":
+            binary_stream = getattr(sys.stdin, "buffer", None)
+            payload = (
+                binary_stream.read(8 * 1024 * 1024 + 1)
+                if binary_stream is not None
+                else sys.stdin.read(8 * 1024 * 1024 + 1).encode("utf-8")
+            )
+        else:
+            with draft_file.open("rb") as stream:
+                payload = stream.read(8 * 1024 * 1024 + 1)
+        drafts = parse_claim_drafts(payload)
+        registry = ResearchSourceRegistry.load(DEFAULT_RESEARCH_REGISTRY)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            with session_scope(session_factory) as session:
+                repository = ResearchRepository(session, registry)
+                claims = tuple(repository.insert_claim_candidate(draft) for draft in drafts)
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (OSError, ResearchWorkflowPayloadError, ResearchConfigurationError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(
+        {
+            "status": "candidate_only",
+            "candidate_count": len(claims),
+            "claim_ids": [str(claim.id) for claim in claims],
+            "accepted_claims_created": 0,
+            "next_step": "career-os research review-claim --help",
+        }
+    )
+
+
+@research_app.command("review-claim")
+def research_review_claim(
+    claim_id: UUID = _RESEARCH_CLAIM_ID_ARGUMENT,
+    state: Literal[
+        "accepted", "rejected", "superseded", "retracted"
+    ] = _RESEARCH_REVIEW_STATE_ARGUMENT,
+    reviewer: str = _RESEARCH_REVIEWER_OPTION,
+    reason: str = _RESEARCH_REASON_OPTION,
+) -> None:
+    """Append a review event; acceptance revalidates the stored quote and current version."""
+    if not reviewer.strip() or not reason.strip():
+        _emit_error(ValueError("reviewer and reason must be non-blank"), exit_code=2)
+    try:
+        registry = ResearchSourceRegistry.load(DEFAULT_RESEARCH_REGISTRY)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            with session_scope(session_factory) as session:
+                review = ResearchRepository(session, registry).append_claim_review(
+                    claim_id=claim_id,
+                    state=ResearchClaimReviewState(state),
+                    reviewer=reviewer,
+                    reason=reason,
+                )
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (ResearchConfigurationError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(
+        {
+            "claim_id": str(claim_id),
+            "review_id": str(review.id),
+            "state": review.state,
+            "reviewer": review.reviewer,
+            "reason": review.reason,
+        }
+    )
+
+
+@research_app.command("questions")
+def research_questions() -> None:
+    """Show the three research questions and current reviewed evidence posture."""
+    try:
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            with session_scope(session_factory) as session:
+                session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+                session.execute(text("SET TRANSACTION READ ONLY"))
+                result = ResearchEvidenceService(SqlResearchEvidenceReadStore(session)).questions()
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo(result)
+
+
+@research_app.command("monitor")
+def research_monitor(
+    bootstrap: bool = _RESEARCH_BOOTSTRAP_OPTION,
+    state_path: Path = _RESEARCH_STATE_PATH_OPTION,
+) -> None:
+    """Collect once, refresh the review queue, and emit due research products."""
+    try:
+        registry = ResearchSourceRegistry.load(DEFAULT_RESEARCH_REGISTRY)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+
+            def collect_daily() -> object:
+                result = ResearchCollectionService(session_factory, registry).collect(
+                    trigger="daily"
+                )
+                summary = asdict(result)
+                summary["source_failures"] = _research_source_failures(
+                    session_factory, result.run_id
+                )
+                return summary
+
+            result = ResearchMonitor(state_path).run(
+                collector=collect_daily,
+                snapshot_provider=lambda: _research_snapshot(session_factory),
+                bootstrap=bootstrap,
+            )
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (ResearchConfigurationError, ResearchMonitorError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(result.to_dict())
+
+
+@research_app.command("pending")
+def research_pending(
+    state_path: Path = _RESEARCH_STATE_PATH_OPTION,
+) -> None:
+    """List current extracted document versions that need an explicit disposition."""
+    try:
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            pending = ResearchMonitor(state_path).pending_versions(
+                snapshot_provider=lambda: _research_snapshot(session_factory)
+            )
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (ResearchMonitorError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo({"count": len(pending), "items": list(pending)})
+
+
+@research_app.command("review-version")
+def research_review_version(
+    document_id: UUID = _RESEARCH_DOCUMENT_ID_ARGUMENT,
+    normalized_text_sha256: str = _RESEARCH_TEXT_DIGEST_ARGUMENT,
+    disposition: Literal["reviewed", "no_claims"] = _RESEARCH_DISPOSITION_OPTION,
+    reviewer: str = _RESEARCH_REVIEWER_OPTION,
+    reason: str = _RESEARCH_REASON_OPTION,
+    state_path: Path = _RESEARCH_STATE_PATH_OPTION,
+) -> None:
+    """Record that one current text digest was inspected, including an explicit no-claim result."""
+    try:
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            snapshot = _research_snapshot(session_factory)
+            current = next(
+                (
+                    item
+                    for item in cast(list[dict[str, object]], snapshot["documents"])
+                    if item.get("id") == str(document_id)
+                    and cast(dict[str, object], item.get("latest_version") or {}).get(
+                        "normalized_text_sha256"
+                    )
+                    == normalized_text_sha256
+                ),
+                None,
+            )
+            if current is None:
+                raise ResearchMonitorError(
+                    "the document and digest do not identify its current normalized text"
+                )
+            record = ResearchMonitor(state_path).record_version_disposition(
+                document_id=str(document_id),
+                normalized_text_sha256=normalized_text_sha256,
+                disposition=disposition,
+                reviewer=reviewer,
+                reason=reason,
+            )
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (ResearchMonitorError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo({"document_id": str(document_id), "record": record})
+
+
+@research_app.command("monthly-review")
+def research_monthly_review(
+    review_file: Path = _RESEARCH_MONTHLY_REVIEW_ARGUMENT,
+    state_path: Path = _RESEARCH_STATE_PATH_OPTION,
+) -> None:
+    """Publish an explicit review of all three hypotheses against current accepted claims."""
+    try:
+        with review_file.open("rb") as stream:
+            payload = stream.read(1024 * 1024 + 1)
+        review = parse_monthly_review(payload)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            output = ResearchMonitor(state_path).publish_monthly_review(
+                review,
+                snapshot_provider=lambda: _research_snapshot(session_factory),
+            )
+        finally:
+            engine.dispose()
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    except (OSError, ResearchWorkflowPayloadError, ResearchMonitorError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    _json_echo({"status": "reviewed", "output": output})
 
 
 @radar_app.command("build")

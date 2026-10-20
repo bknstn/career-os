@@ -287,6 +287,23 @@
     return payload;
   }
 
+  async function getAllPages(path) {
+    const items = [];
+    let total = 0;
+    let page = 1;
+    do {
+      const params = new URLSearchParams({ page: String(page), page_size: "100" });
+      const response = await getJson(path, params);
+      const rows = Array.isArray(response.items) ? response.items : [];
+      total = Number(response.total || 0);
+      items.push(...rows);
+      if (!rows.length || items.length >= total) break;
+      page += 1;
+    } while (page < 10000);
+    if (items.length !== total) throw new Error("The research listing was incomplete; reload to retry.");
+    return items;
+  }
+
   function setBusy(busy) {
     root.setAttribute("aria-busy", busy ? "true" : "false");
   }
@@ -987,6 +1004,406 @@
     return section;
   }
 
+  const RESEARCH_SOURCES = {
+    anthropic_economics: "Anthropic Economic Research",
+    openai_economic_research: "OpenAI Economic Research",
+    linkedin_economic_graph: "LinkedIn Economic Graph",
+    indeed_hiring_lab: "Indeed Hiring Lab",
+    mckinsey_state_of_ai: "McKinsey State of AI",
+    deloitte_state_of_ai: "Deloitte State of AI",
+    stanford_hai_ai_index: "Stanford HAI AI Index",
+    metr: "METR",
+  };
+  const RESEARCH_METHODS = {
+    observed: "Observed data",
+    survey: "Survey",
+    experiment: "Experiment",
+    forecast: "Forecast",
+    model_estimate: "Model estimate",
+    case_study: "Case study",
+    secondary_synthesis: "Secondary synthesis",
+  };
+
+  function publisherLabel(sourceKey) {
+    return RESEARCH_SOURCES[String(sourceKey)] || String(sourceKey || "Research source");
+  }
+
+  function researchDocumentTitle(item) {
+    const version = item.latest_version || {};
+    const sourceTitle = String(version.title || "").trim();
+    if (sourceTitle && sourceTitle !== "Title not reported in source" && sourceTitle !== "StateofAI_Report_vF") {
+      return { title: sourceTitle, note: "" };
+    }
+    let filename = "Publication";
+    try {
+      const pathname = new URL(item.canonical_url).pathname;
+      filename = decodeURIComponent(pathname.split("/").filter(Boolean).pop() || "Publication");
+    } catch {
+      // Keep a neutral label when the stored URL cannot supply a filename.
+    }
+    return {
+      title: `${publisherLabel(item.source_key)} · ${filename}`,
+      note: "Source title not reported; label shown from the official URL filename.",
+    };
+  }
+
+  function researchDocumentCard(item) {
+    const card = element("article", "research-document");
+    const heading = researchDocumentTitle(item);
+    const titleLink = element("a", "research-document-title", heading.title);
+    const version = item.latest_version || {};
+    titleLink.href = `#/research/document/${encodeURIComponent(item.id)}/${encodeURIComponent(version.id || "")}`;
+    const meta = element("div", "research-meta");
+    append(meta,
+      text("span", "tag tag-accent", publisherLabel(item.source_key)),
+      text("span", "tag", version.media_type || "Media type unknown"),
+      text("span", "tag", `Retrieved ${formatDate(version.retrieved_at)}`),
+      text("span", "tag", version.publication_date && version.publication_date.value
+        ? `Published ${version.publication_date.value}` : "Publication date unknown")
+    );
+    const note = heading.note ? text("p", "research-note", heading.note) : null;
+    const error = version.extraction_error
+      ? text("p", "research-warning", `Text extraction unavailable: ${version.extraction_error}`)
+      : null;
+    const external = externalAnchor(item.canonical_url, "Official source ↗", "research-source-link");
+    append(card, titleLink, meta, note, error, external);
+    return card;
+  }
+
+  function researchClaimCard(claim, { current = null } = {}) {
+    const isCurrent = current === null ? claim.current_evidence === true : current;
+    const card = element("article", `research-claim${isCurrent ? " research-claim-current" : ""}`);
+    const top = element("div", "research-claim-top");
+    append(top,
+      text("span", `status-pill${isCurrent ? "" : " status-warning"}`, isCurrent ? "Accepted · current" : `${claim.review_state || "Candidate"} · not current`),
+      text("span", "research-claim-question", claim.question || "Question not specified")
+    );
+    const document = claim.document || {};
+    const version = claim.version || {};
+    const versionId = claim.document_version_id || version.id;
+    const title = researchDocumentTitle({ source_key: document.source_key, canonical_url: document.canonical_url, latest_version: version });
+    const source = externalAnchor(document.canonical_url, `${publisherLabel(document.source_key)} · ${title.title} ↗`, "research-citation-link");
+    const versionLink = versionId && document.id
+      ? buttonLink(`#/research/document/${encodeURIComponent(document.id)}/${encodeURIComponent(versionId)}`, "View quoted source version", "research-citation-link")
+      : null;
+    const quote = element("blockquote", "research-quote", claim.exact_quote || "Exact quote not reported.");
+    const location = claim.location || {};
+    const locator = location.page_number !== null && location.page_number !== undefined
+      ? `Page ${location.page_number}`
+      : location.section || "Text offset";
+    const method = RESEARCH_METHODS[claim.evidence_kind] || claim.evidence_kind || "Method not reported";
+    const detail = claim.evidence_details || {};
+    const facts = element("div", "research-facts");
+    const dataPeriod = detail.data_period || {};
+    const periodLabel = dataPeriod.start || dataPeriod.end
+      ? `${dataPeriod.start || "Start unknown"} to ${dataPeriod.end || "end unknown"}`
+      : `Data period ${missingReasonLabel(dataPeriod.state || detail.missing_reasons?.data_period)}`;
+    const metadata = [
+      ["metric_definition", "Metric"],
+      ["metric_value", "Value"],
+      ["geography", "Geography"],
+      ["sample_description", "Sample"],
+      ["sample_size", "Sample size"],
+      ["denominator", "Denominator"],
+      ["limitations", "Limitations"],
+    ];
+    const metadataValue = (key) => detail[key] === null || detail[key] === undefined
+      ? missingReasonLabel((detail.missing_reasons || {})[key])
+      : key === "sample_size" ? formatNumber(detail[key]) : detail[key];
+    for (const [label, value] of [
+      ["Method", method],
+      ["Locator", locator],
+      ...metadata.map(([key, label]) => [label, metadataValue(key)]),
+      ["Data period", periodLabel],
+      ["Lineage", claim.lineage_kind || "Unknown"],
+    ]) {
+      const row = element("div", "research-fact");
+      append(row, text("span", "research-fact-label", label), text("span", "research-fact-value", value));
+      facts.append(row);
+    }
+    const history = Array.isArray(claim.review_history) ? claim.review_history : [];
+    const trail = text("p", "research-note", history.length
+      ? `Review history: ${history.map((event) => `${event.state} by ${event.reviewer} (${event.reason})`).join(" · ")}`
+      : "No review event has been recorded.");
+    const publication = version.publication_date && version.publication_date.value
+      ? `Published ${version.publication_date.value}`
+      : `Publication date ${missingReasonLabel(version.publication_date && version.publication_date.state)}`;
+    const citationVersion = text("p", "research-note", `${publication} · retrieved ${formatDate(version.retrieved_at)} · version ${formatNumber(version.version_number)} (${version.version_relation || "initial"})`);
+    append(card,
+      top,
+      text("p", "research-claim-statement", claim.statement || "Claim statement unavailable."),
+      quote,
+      text("p", "research-locator", `${locator} · text offsets ${location.start_offset ?? "?"}–${location.end_offset ?? "?"}`),
+      facts,
+      source,
+      versionLink,
+      citationVersion,
+      trail
+    );
+    return card;
+  }
+
+  function missingReasonLabel(reason) {
+    return {
+      not_reported: "not reported",
+      not_applicable: "not applicable",
+      unclear: "unclear",
+      reported: "reported",
+      not_assessed: "not assessed",
+    }[String(reason || "")] || "unknown";
+  }
+
+  function researchQuestionCard(question, monthlyProduct) {
+    const card = element("article", "research-question");
+    const hypothesisId = {
+      developer_tasks: "developer_task_mix_change",
+      experience_seniority: "seniority_differentiation",
+      production_ai_skills: "production_ai_skills_shift",
+    }[question.id];
+    const hypothesis = (Array.isArray(monthlyProduct && monthlyProduct.hypotheses) ? monthlyProduct.hypotheses : [])
+      .find((item) => item.id === hypothesisId);
+    const statusValue = hypothesis && hypothesis.status;
+    const hasCurrentReview = hypothesis && hypothesis.review_state === "reviewed" && !hypothesis.requires_review;
+    const assessment = hasCurrentReview
+      ? String(statusValue || "insufficient")
+      : hypothesis && hypothesis.requires_review
+        ? `Review required · previously ${hypothesis.published_status || "reviewed"}`
+        : "Insufficient · no reviewed synthesis";
+    const note = hasCurrentReview && hypothesis.rationale
+      ? `${hypothesis.rationale} Reviewed by ${monthlyProduct.reviewer || "reviewer not reported"} on ${formatDate(monthlyProduct.reviewed_at)}.`
+      : hypothesis && hypothesis.requires_review
+        ? "Saved review is historical because one or more cited claims are no longer current."
+        : question.assessment_note || question.reading_note || "No synthesis has been reviewed.";
+    append(card,
+      text("div", "research-question-status", assessment),
+      text("h3", "", question.label || question.id),
+      text("p", "research-question-text", question.question || "Question text unavailable."),
+      text("p", "research-note", note),
+      text("p", "research-note", `Current accepted claims: ${formatNumber(question.current_evidence_claim_count)} · all annotations: ${formatNumber(question.all_claim_count)}`)
+    );
+    const context = question.context || {};
+    const links = element("div", "research-context-links");
+    for (const term of Array.isArray(context.skill_search_terms) ? context.skill_search_terms : []) {
+      links.append(text("span", "tag", `Job skill context: ${term}`));
+    }
+    for (const item of Array.isArray(context.job_radar_searches) ? context.job_radar_searches : []) {
+      const params = new URLSearchParams({ q: item.term || "" });
+      links.append(buttonLink(`#/explore?${params.toString()}`, `Search jobs: ${item.term || "related roles"}`, "button button-small"));
+    }
+    append(card, links);
+    return card;
+  }
+
+  async function renderResearch(seq) {
+    updateNav("research", "Research");
+    const [overview, questionResponse, documents, claims, products] = await Promise.all([
+      getJson("research/overview"),
+      getJson("research/questions"),
+      getAllPages("research/documents"),
+      getAllPages("research/claims"),
+      getJson("research/products"),
+    ]);
+    if (seq !== renderSequence) return;
+    root.replaceChildren();
+    const claimsOverview = overview.claims || {};
+    const documentOverview = overview.documents || {};
+    const currentClaims = claims.filter((item) => item.current_evidence === true);
+    const candidateClaims = claims.filter((item) => item.review_state === "candidate");
+    const excludedClaims = claims.filter((item) => item.current_evidence !== true && item.review_state !== "candidate");
+    append(root,
+      pageHeading("RESEARCH STREAM", "Evidence about AI and work", "Source-grounded documents and reviewed claims. Research samples stay separate from job-posting counts and skill mentions.", actionGroup(buttonLink("#/methodology", "How to read evidence", "button"))),
+      text("p", "research-scope-note", "Daily discovery stores source versions. Annotations remain candidates until explicit review; only accepted claims bound to the current normalized text count as current evidence.")
+    );
+    const stats = element("div", "stat-grid research-stat-grid");
+    append(stats,
+      statCard("Documents", documentOverview.body_bearing_count, "Stored publication records", "▤"),
+      statCard("Text extracted", documentOverview.extractable_count, "Non-null deterministic text extractions", "⌕"),
+      statCard("Accepted · current", claimsOverview.current_evidence_count, "Exact quote and locator still match current text", "✓"),
+      statCard("Candidates", candidateClaims.length, "Unreviewed annotations", "…")
+    );
+    root.append(stats);
+
+    const questionsPanel = panel("Research questions", "Hypothesis status requires an explicit monthly review.");
+    const questionList = element("div", "research-question-grid");
+    const monthlyReviews = Array.isArray(products.monthly_reviews) ? products.monthly_reviews : [];
+    const reviewedProduct = monthlyReviews.length ? monthlyReviews[monthlyReviews.length - 1].latest : null;
+    const proposalProduct = products.monthly_proposal && products.monthly_proposal.product;
+    const monthlyProduct = !reviewedProduct || (proposalProduct && proposalProduct.period_id > reviewedProduct.period_id)
+      ? proposalProduct : reviewedProduct;
+    for (const question of Array.isArray(questionResponse.items) ? questionResponse.items : []) {
+      questionList.append(researchQuestionCard(question, monthlyProduct));
+    }
+    questionsPanel.body.append(questionList);
+    questionsPanel.box.append(questionsPanel.body);
+    root.append(questionsPanel.box);
+
+    const sourcePanel = panel("Publisher coverage", "Stored documents and latest acquisition status; source counts do not measure evidence quality.");
+    const sourceList = element("div", "source-list");
+    const sourceRows = Array.isArray(documentOverview.by_source) ? documentOverview.by_source : [];
+    for (const source of sourceRows) {
+      const row = element("div", "source-row research-source-row");
+      const copy = element("div");
+      const attempt = source.latest_attempt || {};
+      const outcome = attempt.outcome || "No acquisition attempt";
+      const detail = `${formatNumber(source.document_count)} documents · ${formatNumber(source.extractable_count)} text extracted · latest: ${outcome}${attempt.http_status ? ` (${attempt.http_status})` : ""}`;
+      append(copy,
+        text("div", "source-name", source.publisher || publisherLabel(source.source_key)),
+        text("div", "source-detail", detail)
+      );
+      const statusClass = /failed|blocked|error/i.test(outcome) ? "status-error" : /partial|timeout|unavailable/i.test(outcome) ? "status-warning" : "";
+      append(row, copy, text("span", `status-pill ${statusClass}`, source.enabled === false ? "Disabled" : outcome));
+      sourceList.append(row);
+    }
+    sourcePanel.body.append(sourceList);
+    sourcePanel.box.append(sourcePanel.body);
+    root.append(sourcePanel.box);
+
+    const productsPanel = panel("Latest reviewed products", "Weekly items only use accepted current evidence. Unresolved monthly proposals do not carry a conclusion.");
+    const weekly = products.weekly && products.weekly.product;
+    if (weekly) {
+      const week = element("section", "research-product-block");
+      const items = Array.isArray(weekly.items) ? weekly.items : [];
+      const window = weekly.window || {};
+      append(week,
+        text("h3", "", `Weekly evidence · ${formatNumber(items.length)} ${items.length === 1 ? "item" : "items"}`),
+        text("p", "research-note", `Coverage ${window.start || "unknown"} to ${window.end || weekly.generated_at || "unknown"}. Historical output is checked against current accepted claims.`)
+      );
+      if (!items.length) week.append(text("p", "empty-inline", "No accepted current items were available for this period."));
+      for (const item of items) {
+        const currentLabel = item.current_eligibility || "unverified";
+        const line = element("div", "research-product-item");
+        const citations = element("span", "research-note");
+        for (const citation of Array.isArray(item.citations) ? item.citations : []) {
+          const link = externalAnchor(citation.canonical_url, `${citation.title || publisherLabel(citation.source_key)} · ${citation.version_relation || "version"} ↗`, "research-citation-link");
+          if (link) citations.append(link);
+        }
+        append(line,
+          text("span", `status-pill${currentLabel === "current" ? "" : " status-warning"}`, currentLabel),
+          text("strong", "", item.plain_language_summary || "Evidence item"),
+          citations
+        );
+        week.append(line);
+      }
+      productsPanel.body.append(week);
+    } else {
+      productsPanel.body.append(text("p", "empty-inline", "No weekly product has been written yet."));
+    }
+    const monthlyBlock = element("section", "research-product-block");
+    if (monthlyProduct) {
+      append(monthlyBlock,
+        text("h3", "", `Monthly review · ${monthlyProduct.period_id || "period unknown"}`),
+        text("p", "research-note", monthlyProduct.review_state === "reviewed" ? `Reviewed by ${monthlyProduct.reviewer || "reviewer not reported"} on ${formatDate(monthlyProduct.reviewed_at)}.` : "Proposal only. All hypothesis statuses remain unresolved until explicit review.")
+      );
+      for (const hypothesis of Array.isArray(monthlyProduct.hypotheses) ? monthlyProduct.hypotheses : []) {
+        const currentStatus = hypothesis.requires_review
+          ? `review required · previously ${hypothesis.published_status || "reviewed"}`
+          : hypothesis.status || "unresolved";
+        append(monthlyBlock,
+          text("div", "research-product-item", `${hypothesis.id || "Hypothesis"}: ${currentStatus}${hypothesis.requires_review ? " · review required" : ""}`),
+          hypothesis.rationale ? text("p", "research-note", `Rationale: ${hypothesis.rationale}`) : null,
+          Array.isArray(hypothesis.alternative_explanations) && hypothesis.alternative_explanations.length
+            ? text("p", "research-note", `Alternative explanations: ${hypothesis.alternative_explanations.join("; ")}`) : null,
+          Array.isArray(hypothesis.limitations) && hypothesis.limitations.length
+            ? text("p", "research-note", `Limitations: ${hypothesis.limitations.join("; ")}`) : null,
+          ...(Array.isArray(hypothesis.evidence) ? hypothesis.evidence.map((evidence) => {
+            const citation = evidence.citation || {};
+            return externalAnchor(citation.canonical_url, `${citation.title || publisherLabel(citation.source_key)} · view citation ↗`, "research-citation-link");
+          }) : []),
+          hypothesis.requires_review ? text("p", "research-warning", "Some cited claims are no longer current; the saved review remains historical.") : null
+        );
+      }
+    } else {
+      monthlyBlock.append(text("p", "empty-inline", "No monthly proposal or review has been written yet."));
+    }
+    productsPanel.body.append(monthlyBlock);
+    productsPanel.box.append(productsPanel.body);
+    root.append(productsPanel.box);
+
+    append(root,
+      renderClaimGroup("Accepted current evidence", currentClaims, "These exact quotations still match the latest normalized document text.", true),
+      renderClaimGroup("Unreviewed candidates", candidateClaims, "Candidate annotations are not counted as evidence until explicitly accepted.", false),
+      renderClaimGroup("Excluded or historical annotations", excludedClaims, "Rejected, superseded, retracted, and obsolete-version claims remain visible for audit.", false)
+    );
+
+    const docsPanel = panel("Collected publications", `${formatNumber(documents.length)} records · original HTML/PDF bodies remain in the local database and are not served here.`);
+    const docsList = element("div", "research-document-list");
+    if (documents.length) for (const item of documents) docsList.append(researchDocumentCard(item));
+    else docsList.append(text("p", "empty-inline", "No research documents have been collected yet."));
+    docsPanel.body.append(docsList);
+    docsPanel.box.append(docsPanel.body);
+    root.append(docsPanel.box);
+  }
+
+  function renderClaimGroup(title, claims, description, current) {
+    const view = panel(title, description);
+    const list = element("div", "research-claim-list");
+    if (claims.length) for (const claim of claims) list.append(researchClaimCard(claim, { current }));
+    else list.append(text("p", "empty-inline", current ? "No accepted current claims are available." : "None recorded."));
+    view.body.append(list);
+    view.box.append(view.body);
+    return view.box;
+  }
+
+  async function renderResearchVersion(documentId, versionId, seq) {
+    const evidence = await getJson(`research/documents/${encodeURIComponent(documentId)}/versions/${encodeURIComponent(versionId)}`);
+    if (seq !== renderSequence) return;
+    root.replaceChildren();
+    updateNav("research", "Research evidence");
+    const document = evidence.document || {};
+    const version = evidence.version || {};
+    const info = researchDocumentTitle({
+      id: document.id,
+      source_key: document.source_key,
+      canonical_url: document.canonical_url,
+      latest_version: version,
+    });
+    append(root,
+      pageHeading("DOCUMENT VERSION", info.title, `${publisherLabel(document.source_key)} · version ${formatNumber(version.version_number)} · retrieved ${formatDate(version.retrieved_at)}`, actionGroup(buttonLink("#/research", "← Back to research", "button"))),
+      info.note ? text("p", "research-note", info.note) : null
+    );
+    const provenance = panel("Version provenance", "Immutable source-body and extraction details");
+    const values = [
+      ["Official document", document.canonical_url || "Not reported"],
+      ["Retrieved URL", version.retrieved_url || "Not reported"],
+      ["Publication date", version.publication_date && version.publication_date.value || "Not reported"],
+      ["Data period", version.data_period && (version.data_period.start || version.data_period.end) ? `${version.data_period.start || "Unknown"} to ${version.data_period.end || "unknown"}` : "Unknown"],
+      ["Media type", version.media_type || "Not reported"],
+      ["Original body SHA-256", version.raw_sha256 || "Not available"],
+      ["Normalized text SHA-256", version.normalized_text_sha256 || "Not available"],
+      ["Extraction version", version.extraction_version || "Not reported"],
+      ["Version relation", version.version_relation || "Initial"],
+    ];
+    const factList = element("div", "research-facts");
+    for (const [label, value] of values) {
+      const row = element("div", "research-fact");
+      append(row, text("span", "research-fact-label", label), text("span", "research-fact-value", value));
+      factList.append(row);
+    }
+    provenance.body.append(factList);
+    const officialLink = externalAnchor(document.canonical_url, "Open official source ↗", "button");
+    append(provenance.body, officialLink, version.extraction_error ? text("p", "research-warning", `Text extraction error: ${version.extraction_error}`) : null);
+    provenance.box.append(provenance.body);
+    root.append(provenance.box);
+
+    append(root, renderClaimGroup("Claims bound to this version", evidence.claims && evidence.claims.items || [], "Current eligibility and review history are shown for each claim.", null));
+    const regions = Array.isArray(version.extraction_regions) ? version.extraction_regions : [];
+    const regionPanel = panel("Extracted text and locators", `${formatNumber(regions.length)} page or section regions · offsets refer to this immutable normalized text.`);
+    const textValue = evidence.normalized_text;
+    if (typeof textValue === "string") {
+      const pre = element("pre", "research-source-text", textValue);
+      regionPanel.body.append(pre);
+    } else {
+      regionPanel.body.append(text("p", "empty-inline", "No normalized text is available for this version."));
+    }
+    const regionList = element("div", "research-region-list");
+    for (const region of regions) {
+      append(regionList, text("div", "research-region", `${region.page_number ? `Page ${region.page_number}` : region.section || "Section"} · offsets ${region.start_offset}–${region.end_offset}`));
+    }
+    regionPanel.body.append(regionList);
+    regionPanel.box.append(regionPanel.body);
+    root.append(regionPanel.box);
+  }
+
   async function renderMethodology(seq) {
     const methodology = await getJson("methodology");
     if (seq !== renderSequence) return;
@@ -1059,6 +1476,14 @@
       }
       if (page === "job" && route.segments[1]) {
         await renderJobDetail(route.segments[1], seq);
+        return;
+      }
+      if (page === "research" && route.segments[1] === "document" && route.segments[2] && route.segments[3]) {
+        await renderResearchVersion(route.segments[2], route.segments[3], seq);
+        return;
+      }
+      if (page === "research") {
+        await renderResearch(seq);
         return;
       }
       const isOverview = page === "overview";

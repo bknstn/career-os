@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 from career_os import cli
 from career_os.application.market import MarketDataConsistencyError
 from career_os.application.operations import SourceOperationalStatus
+from career_os.application.research_collection import ResearchCollectionResult
 from career_os.cli import _job_payload, _load_quality_review, _run_payload, _selected_sources, app
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -90,6 +91,13 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["research", "plan", "--help"],
         ["research", "seed", "--help"],
         ["research", "collect", "--help"],
+        ["research", "monitor", "--help"],
+        ["research", "pending", "--help"],
+        ["research", "review-version", "--help"],
+        ["research", "monthly-review", "--help"],
+        ["research", "import-claims", "--help"],
+        ["research", "review-claim", "--help"],
+        ["research", "questions", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -133,6 +141,120 @@ def test_research_plan_reports_finite_limits_without_database_or_network(monkeyp
         "stanford_hai_ai_index",
         "metr",
     }
+
+
+def test_research_claim_import_rejects_unknown_fields_before_database_access(
+    monkeypatch, tmp_path: Path
+) -> None:
+    def unexpected_io(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("invalid claim imports must fail before persistence setup")
+
+    monkeypatch.setattr(cli, "create_database_engine", unexpected_io)
+    draft_file = tmp_path / "claims.json"
+    draft_file.write_text(
+        json.dumps(
+            {
+                "schema_version": "career-os.research-claim-drafts.v1",
+                "claims": [],
+                "accept_automatically": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["research", "import-claims", str(draft_file)])
+
+    assert result.exit_code == 2
+    assert "schema validation failed" in result.output
+
+
+def test_research_claim_import_rejects_empty_stdin_payload_before_database_access(
+    monkeypatch,
+) -> None:
+    def unexpected_io(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("schema validation must run before persistence setup")
+
+    monkeypatch.setattr(cli, "create_database_engine", unexpected_io)
+    payload = json.dumps({"schema_version": "career-os.research-claim-drafts.v1", "claims": []})
+
+    result = CliRunner().invoke(app, ["research", "import-claims", "-"], input=payload)
+
+    assert result.exit_code == 2
+    assert "schema validation failed" in result.output
+
+
+def test_research_monitor_cli_bootstrap_uses_isolated_state_and_needs_no_live_database(
+    monkeypatch, tmp_path: Path
+) -> None:
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    class PartialCollector:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        def collect(self, *, trigger: str) -> object:
+            assert trigger == "daily"
+            return ResearchCollectionResult(
+                run_id=uuid4(),
+                status="partial",
+                candidate_urls_seen=1,
+                new_candidates=0,
+                acquired=0,
+                new_documents=0,
+                new_versions=0,
+                equivalent_versions=0,
+                material_revisions=0,
+                unchanged=0,
+                failed=1,
+                body_bytes=0,
+                wire_requests=1,
+            )
+
+    monkeypatch.setattr(cli, "load_settings", lambda: object())
+    monkeypatch.setattr(cli, "create_database_engine", lambda _settings: FakeEngine())
+    monkeypatch.setattr(cli, "create_session_factory", lambda _engine: object())
+    monkeypatch.setattr(cli, "ResearchCollectionService", PartialCollector)
+    monkeypatch.setattr(
+        cli,
+        "_research_source_failures",
+        lambda _factory, _run_id: [
+            {
+                "source_key": "publisher",
+                "outcome": "network_error",
+                "error_code": "dns_failure",
+                "http_status": None,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        cli,
+        "_research_snapshot",
+        lambda _factory: {"documents": [], "claims": []},
+    )
+    state_path = tmp_path / "state" / "monitor.json"
+
+    result = CliRunner().invoke(
+        app,
+        ["research", "monitor", "--bootstrap", "--state", str(state_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "collection_failed"
+    assert payload["collection"]["source_failures"] == [
+        {
+            "source_key": "publisher",
+            "outcome": "network_error",
+            "error_code": "dns_failure",
+            "http_status": None,
+        }
+    ]
+    assert payload["due_outputs"] == ["weekly", "monthly"]
+    assert payload["weekly_output"]
+    assert payload["monthly_proposal"]
+    assert state_path.is_file()
 
 
 def test_radar_cutoff_requires_rfc3339_offset_and_normalizes_to_utc() -> None:

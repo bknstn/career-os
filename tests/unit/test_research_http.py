@@ -5,10 +5,12 @@ from __future__ import annotations
 import socket
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+import career_os.adapters.research_http as research_http
 from career_os.adapters.research_http import (
     RESEARCH_USER_AGENT,
     ResearchFetcher,
@@ -65,6 +67,25 @@ class _Connection:
 
     def close(self) -> None:
         return None
+
+
+class _TimeoutConnection(_Connection):
+    def __init__(self) -> None:
+        super().__init__(_Response(200, {}))
+
+    def getresponse(self) -> _Response:
+        raise TimeoutError("read timed out")
+
+
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
 
 
 def _public_resolver(host: str, port: int, *, type: int) -> list[tuple[object, ...]]:
@@ -224,3 +245,145 @@ def test_partial_read_bytes_are_carried_across_retry_and_failure() -> None:
             deadline=10**12,
         )
     assert error.value.bytes_received == len(b"part")
+
+
+def test_forbidden_response_is_classified_without_retry() -> None:
+    connections: list[_Connection] = []
+
+    def connection_factory(*args: Any, **kwargs: Any) -> _Connection:
+        connection = _Connection(_Response(403, {"Content-Type": "text/html"}))
+        connections.append(connection)
+        return connection
+
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=connection_factory,
+        retries=1,
+        retry_delay_seconds=0,
+        minimum_host_interval_seconds=0,
+        sleep=lambda _: None,
+    )
+
+    with pytest.raises(ResearchFetchError) as error:
+        fetcher.fetch(
+            _registry().get("anthropic_economics"),
+            "https://www.anthropic.com/research/labor-market-impacts",
+            maximum_bytes=1024,
+            deadline=10**12,
+        )
+
+    assert error.value.outcome == "http_error"
+    assert error.value.error_code == "http_403"
+    assert error.value.http_status == 403
+    assert error.value.request_count == 1
+    assert len(connections) == 1
+
+
+@pytest.mark.parametrize("second_status", [200, 429])
+def test_rate_limit_retries_once_and_preserves_final_request_count(
+    second_status: int,
+) -> None:
+    statuses = iter([429, second_status])
+    connections: list[_Connection] = []
+
+    def connection_factory(*args: Any, **kwargs: Any) -> _Connection:
+        status = next(statuses)
+        response = _Response(
+            status,
+            {"Content-Type": "text/html"},
+            b"ok" if status == 200 else b"",
+        )
+        connection = _Connection(response)
+        connections.append(connection)
+        return connection
+
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=connection_factory,
+        retries=1,
+        retry_delay_seconds=0,
+        minimum_host_interval_seconds=0,
+        sleep=lambda _: None,
+    )
+    args = (
+        _registry().get("anthropic_economics"),
+        "https://www.anthropic.com/research/labor-market-impacts",
+    )
+
+    if second_status == 200:
+        result = fetcher.fetch(*args, maximum_bytes=1024, deadline=10**12)
+        assert result.body == b"ok"
+        assert result.request_count == 2
+    else:
+        with pytest.raises(ResearchFetchError) as error:
+            fetcher.fetch(*args, maximum_bytes=1024, deadline=10**12)
+        assert error.value.outcome == "http_error"
+        assert error.value.error_code == "http_429"
+        assert error.value.http_status == 429
+        assert error.value.request_count == 2
+
+    assert len(connections) == 2
+
+
+def test_timeout_retry_cap_and_deadline_prevent_extra_requests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    capped_connections: list[_TimeoutConnection] = []
+
+    def capped_factory(*args: Any, **kwargs: Any) -> _TimeoutConnection:
+        connection = _TimeoutConnection()
+        capped_connections.append(connection)
+        return connection
+
+    capped_fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=capped_factory,
+        retries=2,
+        retry_delay_seconds=0,
+        minimum_host_interval_seconds=0,
+        sleep=lambda _: None,
+    )
+    with pytest.raises(ResearchFetchError) as capped_error:
+        capped_fetcher.fetch(
+            _registry().get("anthropic_economics"),
+            "https://www.anthropic.com/research/labor-market-impacts",
+            maximum_bytes=1024,
+            deadline=10**12,
+        )
+    assert capped_error.value.outcome == "network_error"
+    assert capped_error.value.error_code == "timeouterror"
+    assert capped_error.value.request_count == 3
+    assert len(capped_connections) == 3
+
+    clock = _FakeClock()
+    monkeypatch.setattr(research_http, "time", SimpleNamespace(monotonic=clock.monotonic))
+    deadline_connections: list[_TimeoutConnection] = []
+
+    def deadline_factory(*args: Any, **kwargs: Any) -> _TimeoutConnection:
+        connection = _TimeoutConnection()
+        deadline_connections.append(connection)
+        return connection
+
+    deadline_fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=deadline_factory,
+        retries=3,
+        retry_delay_seconds=1,
+        minimum_host_interval_seconds=0,
+        sleep=clock.sleep,
+    )
+    with pytest.raises(ResearchFetchError) as deadline_error:
+        deadline_fetcher.fetch(
+            _registry().get("anthropic_economics"),
+            "https://www.anthropic.com/research/labor-market-impacts",
+            maximum_bytes=1024,
+            deadline=1,
+        )
+    assert deadline_error.value.outcome == "network_error"
+    assert deadline_error.value.error_code == "run_deadline_exceeded"
+    assert deadline_error.value.request_count == 1
+    assert len(deadline_connections) == 1

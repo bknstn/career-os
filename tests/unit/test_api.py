@@ -9,11 +9,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from openapi_spec_validator import validate
 
 from career_os.api.app import ApiDependencies, _prometheus_metrics, create_app
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
+from career_os.api.research_products import create_research_products_router
 from career_os.api.schemas import JobFilters
 from career_os.application.operations import SourceOperationalStatus
 from career_os.config.skills import load_skill_taxonomy
@@ -53,6 +55,12 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
         "/radar/api/snapshot",
         "/radar/api/jobs/{job_id}",
         "/radar/api/methodology",
+        "/radar/api/research/overview",
+        "/radar/api/research/questions",
+        "/radar/api/research/documents",
+        "/radar/api/research/documents/{document_id}/versions/{version_id}",
+        "/radar/api/research/claims",
+        "/radar/api/research/products",
     }
     job_detail_schema = schema["components"]["schemas"]["JobDetailResponse"]
     serialized = str(job_detail_schema)
@@ -66,6 +74,60 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
     target_universe_operation = str(schema["paths"]["/v1/target-universe-reports"])
     assert "TargetUniverseReportResponse" in target_universe_operation
     assert "MarketReportResponse" not in target_universe_operation
+
+
+def test_research_product_projection_is_read_only_and_defers_io_until_request(
+    tmp_path: Path,
+) -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("isolated read failure")
+
+    state_path = tmp_path / "monitor" / "state.json"
+    app = FastAPI()
+    app.include_router(
+        create_research_products_router(
+            session_factory_provider=unavailable,
+            state_path=state_path,
+        )
+    )
+    assert calls == 0
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/radar/api/research/products")
+
+    assert response.status_code == 200
+    assert response.json()["weekly"] is None
+    assert response.json()["eligibility_check_status"] == "unavailable"
+    assert calls == 1
+    assert not state_path.exists()
+    assert not state_path.parent.exists()
+
+
+def test_research_page_assets_include_terminal_navigation_without_database_access() -> None:
+    calls = 0
+
+    def unavailable():
+        nonlocal calls
+        calls += 1
+        raise AssertionError("static research navigation must not access persistence")
+
+    client = TestClient(
+        create_app(
+            ApiDependencies(session_factory_provider=unavailable, taxonomy_provider=unavailable)
+        )
+    )
+    page = client.get("/radar/")
+    script = client.get("/radar/app.js?v=research-terminal-1")
+
+    assert page.status_code == 200
+    assert 'href="#/research" data-nav="research"' in page.text
+    assert script.status_code == 200
+    assert 'getJson("research/overview")' in script.text
+    assert "Accepted current evidence" in script.text
+    assert calls == 0
 
 
 def test_radar_invalid_identifiers_are_rejected_before_database_access() -> None:

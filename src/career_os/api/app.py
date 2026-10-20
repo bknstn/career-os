@@ -21,6 +21,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
 from career_os.api.radar_mvp import create_radar_mvp_router
+from career_os.api.research import create_research_router
+from career_os.api.research_products import create_research_products_router
 from career_os.api.schemas import (
     ErrorResponse,
     JobCompensationResponse,
@@ -423,6 +425,12 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
             taxonomy_provider=deps.taxonomy_provider,
             policy_provider=policy_provider,
         )
+    )
+    app.include_router(
+        create_research_router(session_factory_provider=deps.session_factory_provider)
+    )
+    app.include_router(
+        create_research_products_router(session_factory_provider=deps.session_factory_provider)
     )
     app.mount(
         "/radar",
