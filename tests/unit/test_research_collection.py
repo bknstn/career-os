@@ -104,6 +104,10 @@ Disallow: /private
     assert robots_policy_allows(wildcard_only_text, "https://publisher.example/research/paper")
 
 
+def test_empty_successful_robots_body_is_an_allow_all_policy() -> None:
+    assert robots_policy_allows("", "https://publisher.example/research/paper")
+
+
 def test_robots_blank_lines_do_not_end_agent_groups_and_matching_groups_merge() -> None:
     policy = """User-agent: *
 

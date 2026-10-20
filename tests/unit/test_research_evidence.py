@@ -107,7 +107,12 @@ def test_question_projection_keeps_lineage_and_job_search_context_separate() -> 
     assert "denominator" in developer_tasks["context"]["denominator_note"]
     assert developer_tasks["context"]["job_radar_searches"]
     assert developer_tasks["context"]["skill_search_terms"]
-    assert "heterogeneous methods" in developer_tasks["assessment_note"]
+    assert "counts alone do not determine" in developer_tasks["assessment_note"].lower()
+    assert "/radar/api/research/products" in developer_tasks["assessment_note"]
+    assert (
+        "methods, populations, periods, and denominators remain separate"
+        in developer_tasks["assessment_note"].lower()
+    )
 
 
 def test_primary_lineage_groups_union_shared_documents_and_upstream_names() -> None:

@@ -323,13 +323,6 @@ class ResearchFetcher:
                             request_count=requests_for_fetch,
                         )
                     body = b"".join(chunks)
-                    if not body:
-                        raise ResearchFetchError(
-                            "unsupported_content",
-                            "empty_body",
-                            http_status=response.status,
-                            request_count=requests_for_fetch,
-                        )
                     try:
                         media_type, charset = self._content_metadata(
                             response.getheader("Content-Type"),
@@ -341,6 +334,14 @@ class ResearchFetcher:
                         error.http_status = response.status
                         error.request_count = requests_for_fetch
                         raise
+                    if not body and media_type is not None:
+                        raise ResearchFetchError(
+                            "unsupported_content",
+                            "empty_body",
+                            http_status=response.status,
+                            bytes_received=transfer_bytes,
+                            request_count=requests_for_fetch,
+                        )
                     return ResearchFetchResult(
                         requested_url=requested,
                         retrieved_url=current,

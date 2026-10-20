@@ -801,8 +801,9 @@ def _question_payload(
         "question": context.prompt,
         "assessment": "insufficient",
         "assessment_note": (
-            "No reviewed structured hypothesis synthesis is stored. Counts are descriptive; "
-            "heterogeneous methods, populations, periods, and denominators are not combined."
+            "Counts alone do not determine a hypothesis assessment. Reviewed hypothesis statuses, "
+            "when recorded, are available from /radar/api/research/products. Methods, populations, "
+            "periods, and denominators remain separate."
         ),
         "reading_note": context.reading_note,
         "current_evidence_claim_count": len(current_rows),

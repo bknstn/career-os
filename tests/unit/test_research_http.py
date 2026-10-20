@@ -206,6 +206,73 @@ def test_unsupported_media_reports_downloaded_bytes_and_status() -> None:
     assert error.value.bytes_received == len(b"not-html")
 
 
+def test_empty_text_plain_robots_body_is_a_valid_empty_policy() -> None:
+    connection = _Connection(_Response(200, {"Content-Type": "text/plain; charset=utf-8"}))
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=lambda *args, **kwargs: connection,
+        retries=0,
+    )
+
+    result = fetcher.fetch(
+        _registry().get("linkedin_economic_graph"),
+        "https://economicgraph.linkedin.com/robots.txt",
+        maximum_bytes=1024,
+        deadline=10**12,
+        allow_text_plain=True,
+    )
+
+    assert result.status == 200
+    assert result.media_type is None
+    assert result.body == b""
+    assert result.bytes_received == 0
+
+
+def test_empty_html_robots_body_is_rejected_fail_closed() -> None:
+    connection = _Connection(_Response(200, {"Content-Type": "text/html; charset=utf-8"}))
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=lambda *args, **kwargs: connection,
+        retries=0,
+    )
+
+    with pytest.raises(ResearchFetchError, match="empty_body") as error:
+        fetcher.fetch(
+            _registry().get("linkedin_economic_graph"),
+            "https://economicgraph.linkedin.com/robots.txt",
+            maximum_bytes=1024,
+            deadline=10**12,
+            allow_text_plain=True,
+        )
+
+    assert error.value.http_status == 200
+    assert error.value.bytes_received == 0
+
+
+@pytest.mark.parametrize("content_type", ["text/html", "application/pdf"])
+def test_empty_document_bodies_are_rejected(content_type: str) -> None:
+    connection = _Connection(_Response(200, {"Content-Type": content_type}))
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=lambda *args, **kwargs: connection,
+        retries=0,
+    )
+
+    with pytest.raises(ResearchFetchError, match="empty_body") as error:
+        fetcher.fetch(
+            _registry().get("linkedin_economic_graph"),
+            "https://economicgraph.linkedin.com/research/report",
+            maximum_bytes=1024,
+            deadline=10**12,
+        )
+
+    assert error.value.http_status == 200
+    assert error.value.bytes_received == 0
+
+
 def test_partial_read_bytes_are_carried_across_retry_and_failure() -> None:
     responses = iter(
         [
