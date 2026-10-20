@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 import typer
@@ -50,6 +50,7 @@ from career_os.application.operations import (
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.radar import RadarBuildPersistenceError, RadarBuildService
 from career_os.application.report import MarketReportService
+from career_os.application.research_collection import ResearchCollectionService
 from career_os.config.career_profiles import load_career_profile
 from career_os.config.compensation_supplements import (
     append_compensation_record,
@@ -61,6 +62,7 @@ from career_os.config.compensation_supplements import (
 from career_os.config.markets import load_market_filters
 from career_os.config.profiles import load_profile
 from career_os.config.radar_panel import RadarPanelManifest
+from career_os.config.research_sources import ResearchConfigurationError, ResearchSourceRegistry
 from career_os.config.skills import load_golden_extraction_corpus, load_skill_taxonomy
 from career_os.config.sources import (
     AshbySourceConfig,
@@ -108,6 +110,9 @@ jobs_app = typer.Typer(no_args_is_help=True, help="Inspect persisted canonical j
 taxonomy_app = typer.Typer(no_args_is_help=True, help="Validate versioned skill taxonomy files.")
 market_app = typer.Typer(no_args_is_help=True, help="Build evidence-backed market reports.")
 operations_app = typer.Typer(no_args_is_help=True, help="Inspect collection health and metrics.")
+research_app = typer.Typer(
+    no_args_is_help=True, help="Collect and inspect research evidence sources."
+)
 radar_app = typer.Typer(
     no_args_is_help=True, help="Build and inspect persisted role Radar results."
 )
@@ -126,16 +131,34 @@ app.add_typer(taxonomy_app, name="taxonomy")
 app.add_typer(market_app, name="market")
 app.add_typer(operations_app, name="operations")
 app.add_typer(radar_app, name="radar")
+app.add_typer(research_app, name="research")
 
 DEFAULT_SOURCES_CONFIG = Path("config/sources.yaml")
 DEFAULT_SKILL_TAXONOMY_CONFIG = Path("config/taxonomy/skills.v1.yaml")
 DEFAULT_GOLDEN_EXTRACTION_CORPUS = Path("tests/fixtures/taxonomy/golden_extraction.v1.yaml")
+DEFAULT_RESEARCH_REGISTRY = Path("config/radar/research.sources.v1.yaml")
 _CONFIG_OPTION = typer.Option(DEFAULT_SOURCES_CONFIG, "--config", exists=False, dir_okay=False)
 _TAXONOMY_CONFIG_OPTION = typer.Option(
     DEFAULT_SKILL_TAXONOMY_CONFIG, "--config", exists=False, dir_okay=False
 )
 _GOLDEN_CORPUS_OPTION = typer.Option(
     DEFAULT_GOLDEN_EXTRACTION_CORPUS, "--golden", exists=False, dir_okay=False
+)
+_RESEARCH_REGISTRY_OPTION = typer.Option(
+    DEFAULT_RESEARCH_REGISTRY,
+    "--config",
+    exists=False,
+    dir_okay=False,
+    help="Strict allowlisted research publisher registry.",
+)
+_RESEARCH_PLAN_SOURCE_OPTION = typer.Option(
+    None, "--source", help="Show only this configured research source key (repeatable)."
+)
+_RESEARCH_COLLECT_SOURCE_OPTION = typer.Option(
+    None, "--source", help="Collect only this enabled research source key (repeatable)."
+)
+_RESEARCH_TRIGGER_OPTION = typer.Option(
+    "manual", "--trigger", help="Durable run purpose recorded with the registry snapshot."
 )
 _ENRICH_TAXONOMY_OPTION = typer.Option(
     DEFAULT_SKILL_TAXONOMY_CONFIG, "--taxonomy", exists=False, dir_okay=False
@@ -550,6 +573,133 @@ def collect(
     if strict and unsafe:
         raise typer.Exit(code=1)
     if all_failed:
+        raise typer.Exit(code=1)
+
+
+@research_app.command("plan")
+def research_plan(
+    config: Path = _RESEARCH_REGISTRY_OPTION,
+    source: list[str] | None = _RESEARCH_PLAN_SOURCE_OPTION,
+) -> None:
+    """Print bounded source URLs and limits without database or network access."""
+    try:
+        registry = ResearchSourceRegistry.load(config)
+        selected_keys = tuple(dict.fromkeys(source or ()))
+        if selected_keys:
+            selected = []
+            for key in selected_keys:
+                selected_source = registry.get(key)
+                if not selected_source.enabled:
+                    raise ResearchConfigurationError(f"disabled source cannot be planned: {key}")
+                selected.append(selected_source)
+            sources = tuple(selected)
+        else:
+            sources = registry.enabled_sources
+    except ResearchConfigurationError as error:
+        _emit_error(error, exit_code=2)
+    _json_echo(
+        {
+            "registry_version": registry.version,
+            "registry_sha256": registry.digest,
+            "network_requests_performed": 0,
+            "database_reads_or_writes_performed": 0,
+            "limits": {
+                "max_total_download_bytes": 64 * 1024 * 1024,
+                "max_wire_requests": 96,
+                "max_daily_document_bodies": 12,
+                "max_backfill_document_bodies": 32,
+                "max_index_candidates_per_source": 8,
+                "unfetched_retry_interval_hours": 24,
+                "acquired_document_revisit_interval_days": 7,
+                "max_redirects": 4,
+                "retries": 1,
+                "minimum_host_interval_seconds": 0.2,
+                "request_timeout_seconds": 12,
+                "run_deadline_seconds": 15 * 60,
+                "robots_policy": (
+                    "robots policy fetched once per exact host and evaluated per path for "
+                    "CareerOSResearch; supports REP groups, *, terminal $, longest-match allow "
+                    "ties, and URI octet normalization; malformed or unavailable policy "
+                    "fails closed"
+                ),
+            },
+            "sources": [
+                {
+                    "key": selected_source.key,
+                    "publisher": selected_source.publisher,
+                    "max_document_bytes": selected_source.max_response_bytes,
+                    "seed_documents": list(selected_source.candidate_document_urls),
+                    "discovery_urls": list(selected_source.discovery_urls),
+                    "document_aliases": [
+                        alias.model_dump(mode="json") for alias in selected_source.document_aliases
+                    ],
+                }
+                for selected_source in sources
+            ],
+        }
+    )
+
+
+@research_app.command("seed")
+def research_seed(
+    source_key: str = typer.Argument(..., help="Enabled research source registry key."),
+    url: str = typer.Argument(..., help="Exact official HTTPS document URL."),
+    title: str | None = typer.Option(
+        None, "--title", help="Visible title supplied by the operator."
+    ),
+    config: Path = _RESEARCH_REGISTRY_OPTION,
+) -> None:
+    """Store an operator-selected official URL as a candidate; fetch it on a later run."""
+    try:
+        registry = ResearchSourceRegistry.load(config)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            candidate_id = ResearchCollectionService(
+                session_factory, registry
+            ).add_manual_candidate(source_key, url, title)
+        finally:
+            engine.dispose()
+    except (ResearchConfigurationError, ConfigurationError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo(
+        {
+            "candidate_id": candidate_id,
+            "source_key": source_key,
+            "status": "discovered",
+            "next_step": "career-os research collect --trigger manual",
+        }
+    )
+
+
+@research_app.command("collect")
+def research_collect(
+    trigger: Literal["daily", "manual", "backfill"] = _RESEARCH_TRIGGER_OPTION,
+    source: list[str] | None = _RESEARCH_COLLECT_SOURCE_OPTION,
+    config: Path = _RESEARCH_REGISTRY_OPTION,
+) -> None:
+    """Acquire allowlisted source documents and persist exact bodies and run outcomes."""
+    try:
+        registry = ResearchSourceRegistry.load(config)
+        settings = load_settings()
+        engine = create_database_engine(settings)
+        try:
+            session_factory = create_session_factory(engine)
+            result = ResearchCollectionService(session_factory, registry).collect(
+                trigger=trigger,
+                source_keys=source,
+            )
+        finally:
+            engine.dispose()
+    except (ResearchConfigurationError, ConfigurationError, ValueError) as error:
+        _emit_error(error, exit_code=2)
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        _emit_error(error, exit_code=1)
+    _json_echo(asdict(result))
+    if result.status != "succeeded":
         raise typer.Exit(code=1)
 
 

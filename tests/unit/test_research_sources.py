@@ -19,7 +19,7 @@ def test_checked_in_registry_has_eight_enabled_pilot_publishers_and_four_disable
     project_root = Path(__file__).resolve().parents[2]
     registry = ResearchSourceRegistry.load(project_root / "config/radar/research.sources.v1.yaml")
 
-    assert registry.version == "research-sources-v1"
+    assert registry.version == "research-sources-v2"
     assert len(registry.enabled_sources) == 8
     assert len(registry.sources) == 12
     assert {source.key for source in registry.sources if not source.enabled} == {
@@ -28,6 +28,15 @@ def test_checked_in_registry_has_eight_enabled_pilot_publishers_and_four_disable
         "google_deepmind",
         "bls",
     }
+    assert sum(len(source.candidate_document_urls) for source in registry.enabled_sources) == 20
+    assert (
+        registry.canonical_document_url(
+            "linkedin_economic_graph",
+            "https://economicgraph.linkedin.com/research/labor-market-report-2026",
+        )
+        == registry.get("linkedin_economic_graph").candidate_document_urls[0]
+    )
+    assert registry.get("mckinsey_state_of_ai").candidate_document_urls == ()
     assert len(registry.digest) == 64
 
 

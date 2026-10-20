@@ -86,6 +86,10 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["radar", "--help"],
         ["radar", "build", "--help"],
         ["radar", "show", "--help"],
+        ["research", "--help"],
+        ["research", "plan", "--help"],
+        ["research", "seed", "--help"],
+        ["research", "collect", "--help"],
         ["runs", "--help"],
         ["runs", "list", "--help"],
         ["runs", "show", "--help"],
@@ -94,6 +98,41 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
     ):
         assert runner.invoke(app, arguments).exit_code == 0
     assert "--radar-panel-manifest" in runner.invoke(app, ["collect", "--help"]).output
+
+
+def test_research_plan_reports_finite_limits_without_database_or_network(monkeypatch) -> None:
+    def unexpected_io(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("research plan is a read-only local configuration check")
+
+    monkeypatch.setattr(cli, "create_database_engine", unexpected_io)
+    monkeypatch.setattr(cli, "load_settings", unexpected_io)
+    config = Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
+
+    result = CliRunner().invoke(app, ["research", "plan", "--config", str(config)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["network_requests_performed"] == 0
+    assert payload["database_reads_or_writes_performed"] == 0
+    assert payload["limits"]["max_total_download_bytes"] >= 45_336_666
+    assert payload["limits"]["max_daily_document_bodies"] == 12
+    assert payload["limits"]["max_backfill_document_bodies"] == 32
+    assert payload["limits"]["minimum_host_interval_seconds"] == 0.2
+    assert payload["limits"]["unfetched_retry_interval_hours"] == 24
+    assert payload["limits"]["acquired_document_revisit_interval_days"] == 7
+    assert "evaluated per path" in payload["limits"]["robots_policy"]
+    assert "fails closed" in payload["limits"]["robots_policy"]
+    assert sum(len(source["seed_documents"]) for source in payload["sources"]) == 20
+    assert {source["key"] for source in payload["sources"]} == {
+        "anthropic_economics",
+        "openai_economic_research",
+        "linkedin_economic_graph",
+        "indeed_hiring_lab",
+        "mckinsey_state_of_ai",
+        "deloitte_state_of_ai",
+        "stanford_hai_ai_index",
+        "metr",
+    }
 
 
 def test_radar_cutoff_requires_rfc3339_offset_and_normalizes_to_utc() -> None:

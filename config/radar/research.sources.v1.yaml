@@ -1,41 +1,73 @@
-version: research-sources-v1
+version: research-sources-v2
 sources:
   - key: anthropic_economics
     publisher: Anthropic Economic Research
     enabled: true
-    allowed_hosts: [www.anthropic.com]
+    allowed_hosts: [www.anthropic.com, cdn.sanity.io]
     discovery_methods: [html_index, single_document]
     discovery_urls:
       - https://www.anthropic.com/research/team/economics
       - https://www.anthropic.com/research/labor-market-impacts
     candidate_document_urls:
       - https://www.anthropic.com/research/labor-market-impacts
+      - https://www.anthropic.com/research/economic-index-june-2026-report
+      - https://www.anthropic.com/research/81k-economics
+      - https://www.anthropic.com/research/claude-code-expertise
+    document_aliases:
+      - alias_url: https://cdn.sanity.io/files/4zrzovbb/website/2b5bbaf2c1eb81dbf6e6fb813c1a24e35a64d376.pdf
+        canonical_url: https://www.anthropic.com/research/labor-market-impacts
+      - alias_url: https://cdn.sanity.io/files/4zrzovbb/website/9e0eadc8097864886c5d5060ebb1f89b02ea29d6.pdf
+        canonical_url: https://www.anthropic.com/research/economic-index-june-2026-report
+      - alias_url: https://cdn.sanity.io/files/4zrzovbb/website/3a8d990bc90098038eabd77b0d12ff636ed58d50.pdf
+        canonical_url: https://www.anthropic.com/research/81k-economics
+      - alias_url: https://cdn.sanity.io/files/4zrzovbb/website/433472e34b60db1a52ebf0b8c6600f057b6908c5.pdf
+        canonical_url: https://www.anthropic.com/research/claude-code-expertise
   - key: openai_economic_research
     publisher: OpenAI Economic Research
     enabled: true
-    allowed_hosts: [openai.com]
+    allowed_hosts: [openai.com, cdn.openai.com]
+    max_response_bytes: 26214400
     discovery_methods: [html_index, single_document]
     discovery_urls: [https://openai.com/signals/research/]
     candidate_document_urls:
       - https://openai.com/business/guides-and-resources/the-state-of-enterprise-ai-2025-report/
-      - https://openai.com/index/how-ai-is-expanding-what-people-do-at-work/
+      - https://cdn.openai.com/pdf/work-at-the-frontier-report.pdf
+      - https://cdn.openai.com/pdf/the-ai-jobs-transition-framework_report.pdf
+      - https://openai.com/signals/research/2026q1-update/
+    document_aliases:
+      - alias_url: https://openai.com/index/how-ai-is-expanding-what-people-do-at-work/
+        canonical_url: https://cdn.openai.com/pdf/work-at-the-frontier-report.pdf
+      - alias_url: https://openai.com/index/modeling-ai-jobs-transition/
+        canonical_url: https://cdn.openai.com/pdf/the-ai-jobs-transition-framework_report.pdf
   - key: linkedin_economic_graph
     publisher: LinkedIn Economic Graph
     enabled: true
-    allowed_hosts: [economicgraph.linkedin.com]
+    allowed_hosts: [economicgraph.linkedin.com, delivery-p143253-e1476319.adobeaemcloud.com]
     discovery_methods: [html_index, single_document]
     discovery_urls: [https://economicgraph.linkedin.com/workforce-data/publications]
     candidate_document_urls:
-      - https://economicgraph.linkedin.com/research/labor-market-report-2026
-      - https://economicgraph.linkedin.com/content/dam/me/economicgraph/en-us/PDF/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
+      - https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:cef0613f-8120-4328-a651-eea88832fcf0/original/as/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
+      - https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:81d35729-ba25-4ecd-9365-146d22005a2b/original/as/The_AI_Talent_Divide_2026.pdf
+      - https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:0e5ab70a-edfd-4bdb-b68f-787fd3ba1a51/original/as/us-software-engineer-talent-landscape-2026.pdf
+      - https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:53e0a9c1-2d1a-48e2-8f9b-c4188c1a90e7/original/as/ai-labor-market-update-january-2026.pdf
+    document_aliases:
+      - alias_url: https://economicgraph.linkedin.com/research/labor-market-report-2026
+        canonical_url: https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:cef0613f-8120-4328-a651-eea88832fcf0/original/as/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
+      - alias_url: https://economicgraph.linkedin.com/content/dam/me/economicgraph/en-us/PDF/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
+        canonical_url: https://delivery-p143253-e1476319.adobeaemcloud.com/adobe/assets/urn:aaid:aem:cef0613f-8120-4328-a651-eea88832fcf0/original/as/linkedIn-labor-market-report-building-a-future-of-work-that-works-jan-2026.pdf
   - key: indeed_hiring_lab
     publisher: Indeed Hiring Lab
     enabled: true
-    allowed_hosts: [hiringlab.indeed.com]
+    allowed_hosts: [hiringlab.indeed.com, d341ezm4iqaae0.cloudfront.net]
     discovery_methods: [html_index, single_document]
     discovery_urls: [https://hiringlab.indeed.com/]
     candidate_document_urls:
       - https://hiringlab.indeed.com/2025/07/30/experience-requirements-have-tightened-amid-the-tech-hiring-freeze/
+      - https://hiringlab.indeed.com/2024/09/25/artificial-intelligence-skills-at-work/
+      - https://hiringlab.indeed.com/2026/09/17/ai-exposure-isnt-squeezing-advertised-pay-in-the-us-its-boosting-it/
+    document_aliases:
+      - alias_url: https://d341ezm4iqaae0.cloudfront.net/hiringlaborg/2024/09/02114612/Indeed-Hiring-Lab-AI-24_05.pdf
+        canonical_url: https://hiringlab.indeed.com/2024/09/25/artificial-intelligence-skills-at-work/
   - key: mckinsey_state_of_ai
     publisher: McKinsey State of AI
     enabled: true
@@ -50,12 +82,22 @@ sources:
     discovery_methods: [html_index]
     discovery_urls:
       - https://www.deloitte.com/us/en/what-we-do/capabilities/applied-artificial-intelligence/content/state-of-ai-in-the-enterprise.html
+    candidate_document_urls:
+      - https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2026/state-of-ai-2026.pdf
+    document_aliases:
+      - alias_url: https://www.deloitte.com/us/en/what-we-do/capabilities/applied-artificial-intelligence/content/state-of-ai-in-the-enterprise.html
+        canonical_url: https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2026/state-of-ai-2026.pdf
   - key: stanford_hai_ai_index
     publisher: Stanford HAI AI Index
     enabled: true
     allowed_hosts: [hai.stanford.edu]
     discovery_methods: [html_index]
     discovery_urls: [https://hai.stanford.edu/ai-index]
+    candidate_document_urls:
+      - https://hai.stanford.edu/assets/files/ai_index_report_2026_chapter_4_economy.pdf
+    document_aliases:
+      - alias_url: https://hai.stanford.edu/ai-index/2026-ai-index-report/economy
+        canonical_url: https://hai.stanford.edu/assets/files/ai_index_report_2026_chapter_4_economy.pdf
   - key: metr
     publisher: METR
     enabled: true

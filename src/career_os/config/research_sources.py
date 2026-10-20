@@ -44,6 +44,15 @@ _UniqueKeyYamlLoader.add_constructor(BaseResolver.DEFAULT_MAPPING_TAG, _construc
 DiscoveryMethod = Literal["rss", "atom", "sitemap", "html_index", "single_document"]
 
 
+class ResearchDocumentAlias(BaseModel):
+    """An official URL that is the same publication as one selected body URL."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    alias_url: Annotated[str, Field(min_length=1)]
+    canonical_url: Annotated[str, Field(min_length=1)]
+
+
 class ResearchSource(BaseModel):
     """One publisher boundary with finite official URLs and request limits."""
 
@@ -56,6 +65,7 @@ class ResearchSource(BaseModel):
     discovery_methods: tuple[DiscoveryMethod, ...] = ()
     discovery_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     candidate_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
+    document_aliases: tuple[ResearchDocumentAlias, ...] = ()
     max_response_bytes: int = Field(default=12 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
 
     @model_validator(mode="after")
@@ -69,8 +79,24 @@ class ResearchSource(BaseModel):
             raise ValueError("discovery_urls must be unique")
         if len(set(self.candidate_document_urls)) != len(self.candidate_document_urls):
             raise ValueError("candidate_document_urls must be unique")
+        aliases = [alias.alias_url for alias in self.document_aliases]
+        if len(aliases) != len(set(aliases)):
+            raise ValueError("document alias URLs must be unique")
+        candidates = {
+            normalize_research_url(url, allowed_hosts=tuple(hosts))
+            for url in self.candidate_document_urls
+        }
         for url in (*self.discovery_urls, *self.candidate_document_urls):
             normalize_research_url(url, allowed_hosts=tuple(hosts))
+        for alias in self.document_aliases:
+            normalized_alias = normalize_research_url(alias.alias_url, allowed_hosts=tuple(hosts))
+            normalized_canonical = normalize_research_url(
+                alias.canonical_url, allowed_hosts=tuple(hosts)
+            )
+            if normalized_alias == normalized_canonical:
+                raise ValueError("a document alias must differ from its canonical URL")
+            if normalized_canonical not in candidates:
+                raise ValueError("document alias targets must be configured candidate URLs")
         if self.enabled and (not self.discovery_methods or not self.discovery_urls):
             raise ValueError("enabled sources require at least one discovery method and URL")
         if not self.enabled and (self.discovery_methods or self.discovery_urls):
@@ -123,6 +149,19 @@ class ResearchSourceRegistry:
             return self._sources[key]
         except KeyError as error:
             raise ResearchConfigurationError(f"Unknown research source: {key}") from error
+
+    def canonical_document_url(self, source_key: str, value: str) -> str:
+        """Return the registry-selected primary representation for an official alias."""
+        source = self.get(source_key)
+        allowed_hosts = tuple(host.rstrip(".").lower() for host in source.allowed_hosts)
+        normalized = normalize_research_url(value, allowed_hosts=allowed_hosts)
+        aliases = {
+            normalize_research_url(
+                alias.alias_url, allowed_hosts=allowed_hosts
+            ): normalize_research_url(alias.canonical_url, allowed_hosts=allowed_hosts)
+            for alias in source.document_aliases
+        }
+        return aliases.get(normalized, normalized)
 
     @classmethod
     def load(cls, path: str | Path) -> ResearchSourceRegistry:

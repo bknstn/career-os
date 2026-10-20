@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Barrier, Event
@@ -131,6 +132,20 @@ def test_research_repository_serializes_versions_and_preserves_revision_history(
                 title=None,
             )
             assert candidate1.id == candidate2.id
+            transport_only = replace(
+                first,
+                id=uuid4(),
+                discovered_url="https://metr.org/blog/candidate-report",
+                retrieved_url="https://metr.org/research/candidate-report?redirected=1",
+                retrieved_at=datetime.now(UTC),
+                response_etag='W/"candidate-v2"',
+                response_last_modified="Tue, 20 Oct 2026 12:00:00 GMT",
+                relation=ResearchVersionRelation.EQUIVALENT_TEXT,
+                previous_version_id=first.id,
+            )
+            transport_result = repository.append_version(transport_only)
+            assert not transport_result.inserted
+            assert transport_result.version.id == first.id
             claim1 = repository.insert_claim_candidate(_draft(first.id))
             repository.append_claim_review(
                 claim_id=claim1.id,
@@ -288,6 +303,25 @@ def test_research_repository_serializes_versions_and_preserves_revision_history(
             count = session.scalar(select(func.count(ResearchDocumentVersion.id)))
             assert count == 5
 
+        extractor_revision = _version(
+            raw_body=next_revision.original_bytes,
+            normalized_text="Third finding.",
+            relation=ResearchVersionRelation.EQUIVALENT_TEXT,
+            previous_version_id=next_revision.id,
+            extraction_version="research-extraction-v2",
+        )
+        with session_factory.begin() as session:
+            repository = ResearchRepository(session, registry)
+            extracted_again = repository.append_version(extractor_revision)
+            assert extracted_again.inserted
+            assert extracted_again.version.version_number == 6
+            assert extracted_again.version.version_relation == "equivalent_text"
+            duplicate = repository.append_version(extractor_revision)
+            assert not duplicate.inserted
+            assert duplicate.version.id == extractor_revision.id
+            count = session.scalar(select(func.count(ResearchDocumentVersion.id)))
+            assert count == 6
+
         with pytest.raises(DBAPIError, match="append-only"), engine.begin() as connection:
             connection.execute(
                 text(
@@ -321,6 +355,7 @@ def _version(
     normalized_text: str,
     relation: ResearchVersionRelation,
     previous_version_id: UUID | None,
+    extraction_version: str = "html-text-v1",
 ) -> ResearchOriginalVersion:
     return ResearchOriginalVersion(
         id=uuid4(),
@@ -341,7 +376,7 @@ def _version(
                 section="Results",
             ),
         ),
-        extraction_version="html-text-v1",
+        extraction_version=extraction_version,
         response_etag='W/"candidate-v1"',
         response_last_modified="Mon, 19 Oct 2026 12:00:00 GMT",
         relation=relation,

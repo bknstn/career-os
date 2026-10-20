@@ -136,7 +136,8 @@ class ResearchRepository:
         if previous is not None and previous.raw_sha256 == value.raw_sha256:
             if previous.raw_body != value.original_bytes:
                 raise ResearchPersistenceError("SHA-256 collision detected for stored body")
-            return ResearchVersionInsert(previous, inserted=False)
+            if _same_observation(previous, value):
+                return ResearchVersionInsert(previous, inserted=False)
         relation = _relation(previous, value.normalized_text_sha256)
         if value.relation is not relation:
             raise ResearchPersistenceError(
@@ -366,6 +367,24 @@ def _relation(
     if normalized_digest is not None and previous.normalized_text_sha256 == normalized_digest:
         return ResearchVersionRelation.EQUIVALENT_TEXT
     return ResearchVersionRelation.REVISION
+
+
+def _same_observation(previous: ResearchDocumentVersion, value: ResearchOriginalVersion) -> bool:
+    """Deduplicate content/extraction replays; transport route and validators stay telemetry."""
+    return (
+        previous.title == value.title
+        and previous.publication_date == value.publication_date.value
+        and previous.publication_date_state == value.publication_date.state.value
+        and previous.data_period_start == value.data_period.start
+        and previous.data_period_end == value.data_period.end
+        and previous.data_period_state == value.data_period.state.value
+        and previous.media_type == value.media_type.value
+        and previous.normalized_text_sha256 == value.normalized_text_sha256
+        and previous.extraction_version == value.extraction_version
+        and previous.extraction_regions
+        == [_region_json(region) for region in value.extraction_regions]
+        and previous.extraction_error == value.extraction_error
+    )
 
 
 def _region_json(region: ResearchTextRegion) -> dict[str, object]:

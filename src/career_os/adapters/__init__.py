@@ -30,6 +30,12 @@ from career_os.adapters.registry import (
     AdapterRegistry,
     AdapterRegistryError,
 )
+from career_os.adapters.research_http import (
+    ResearchFetcher,
+    ResearchFetchError,
+    ResearchFetchResult,
+    ResearchRequestBudget,
+)
 from career_os.adapters.workable_public import (
     WorkablePublicAdapter,
     WorkablePublicAdapterError,
@@ -62,6 +68,10 @@ __all__ = [
     "LeverHttpError",
     "LeverHttpResponse",
     "LeverTransportError",
+    "ResearchFetchError",
+    "ResearchFetchResult",
+    "ResearchFetcher",
+    "ResearchRequestBudget",
     "WorkablePublicAdapter",
     "WorkablePublicAdapterError",
     "WorkablePublicHttpClient",
