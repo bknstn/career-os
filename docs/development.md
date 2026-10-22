@@ -41,7 +41,9 @@ make security-history
 
 The check runs pinned `detect-secrets` detectors plus repository privacy rules.
 It reports locations and detector names without candidate values. History mode
-inspects reachable commits and unique historical text blobs. Working-tree mode
+inspects commits and historical text blobs reachable from branches, tags,
+remote-tracking branches, and HEAD. Private application snapshot tree refs
+remain local and are outside the publishable commit history. Working-tree mode
 checks intended public files, excluding ignored local inputs.
 
 Redaction tests use obvious dummy values and reserved example domains.

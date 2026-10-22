@@ -1,5 +1,6 @@
 """Publication checks reject private inputs even if force-added to Git."""
 
+import subprocess
 from runpy import run_path
 
 import pytest
@@ -34,3 +35,31 @@ def test_user_home_paths_and_personal_profile_urls_are_rejected():
 
 def test_empty_env_template_is_shareable():
     assert not list(privacy_findings(".env.example", "POSTGRES_PASSWORD="))
+
+
+def test_history_checks_publishable_commits_and_keeps_private_app_trees_local(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def git(*args, content=None):
+        return subprocess.check_output(["git", *args], input=content)
+
+    git("init", "-q")
+    git(
+        "-c",
+        "user.name=Example",
+        "-c",
+        "user.email=example@users.noreply.github.com",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "--allow-empty",
+        "-qm",
+        "Public commit",
+    )
+    blob = git("hash-object", "-w", "--stdin", content=b"Private local snapshot").strip()
+    tree = git("mktree", content=b"100644 blob " + blob + b"\t.env\n").strip()
+    git("update-ref", "refs/codex/turn-diffs/example", tree.decode())
+
+    assert not list(CHECKER["history_blobs"]())

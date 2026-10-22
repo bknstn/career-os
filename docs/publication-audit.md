@@ -1,7 +1,7 @@
 # Public repository preparation audit
 
-Date: 2026-10-22. Scope: the intended public working tree, all locally reachable
-Git history after fetching published refs, and GitHub repository exposure.
+Date: 2026-10-22. Scope: the intended public working tree, all publishable branch/tag commit
+history after fetching published refs, and GitHub repository exposure.
 
 ## Prepared files
 
@@ -38,7 +38,7 @@ successfully during preparation.
   key accounted for the reviewed detector matches.
 - The prepared public content passes the secret/privacy check.
 - A clean export of the Git index, without ignored profiles or reports, passed
-  812 tests; 59 database/live tests remained explicitly skipped.
+  814 tests; 59 database/live tests remained explicitly skipped.
 - Ruff formatting/lint and strict mypy passed. Relative Markdown links resolve
   to public files. Compose configuration and dotenv interpolation were checked
   without starting a service.
@@ -58,8 +58,11 @@ inherited implementation commits remain before the public preparation commit.
 The rewritten history and prepared files passed all 27 secret detectors and
 privacy checks with zero findings. A separate historical content check found
 no retained private name, actual compensation amount, or user home path.
-The local application regression is repeated against the isolated clean tree
-before publication.
+The application regression passed against the isolated clean tree. CI exposed
+a color-sensitive CLI-help assertion; the assertion now compares unstyled text
+and is exercised with both colored and uncolored output. History scanning
+uses branch/tag/remote commit roots so private local application snapshot tree
+refs do not become part of publication checks.
 
 Both `main` and `codex/career-radar-pivot` are published at the prepared public
 tip. Force pushes use the previously observed remote SHAs as leases, preventing
@@ -67,7 +70,9 @@ an unnoticed newer remote update from being overwritten. The original local
 personal files and a private recovery bundle remain outside Git tracking.
 
 At the audit there were no pull requests, forks, tags, releases, or stored
-Actions artifacts. GitHub secret scanning, push protection, and private
+Actions artifacts. A further Actions metadata review found 38 old workflow
+runs exposing personal commit email fields. Their metadata and log archives
+were preserved privately, and the old public runs were removed. GitHub secret scanning, push protection, and private
 vulnerability reporting are enabled. Subsequent clones use the rewritten
 history; existing collaborators must avoid reintroducing the old history.
 

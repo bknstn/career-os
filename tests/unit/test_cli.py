@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
+from click import unstyle
 from sqlalchemy.exc import OperationalError
 from typer.testing import CliRunner
 
@@ -60,7 +61,8 @@ def test_quality_review_loader_is_strict_and_preserves_review_evidence(tmp_path:
         _load_quality_review(artifact)
 
 
-def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> None:
+@pytest.mark.parametrize("color", [False, True])
+def test_help_paths_construct_without_database_or_network_io(monkeypatch, color) -> None:
     def unexpected_io(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("CLI help must not initialize persistence")
 
@@ -104,8 +106,9 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> Non
         ["jobs", "--help"],
         ["jobs", "list", "--help"],
     ):
-        assert runner.invoke(app, arguments).exit_code == 0
-    assert "--radar-panel-manifest" in runner.invoke(app, ["collect", "--help"]).output
+        assert runner.invoke(app, arguments, color=color).exit_code == 0
+    help_text = runner.invoke(app, ["collect", "--help"], color=color).output
+    assert "--radar-panel-manifest" in unstyle(help_text)
 
 
 def test_research_plan_reports_finite_limits_without_database_or_network(monkeypatch) -> None:

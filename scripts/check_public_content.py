@@ -18,6 +18,7 @@ from pathlib import Path
 # Reviewed dummy values used exclusively by redaction/encryption regression tests.
 # Each exception binds the detector, exact value hash, and individual fixture.
 ALLOWLIST_PATH = Path(".public-content-allowlist.json")
+PUBLIC_REVISIONS = ("--branches", "--tags", "--remotes", "HEAD")
 
 PRIVATE_PATHS = (
     ".env",
@@ -84,7 +85,7 @@ def worktree_blobs() -> Iterator[tuple[str, bytes]]:
 
 
 def history_blobs() -> Iterator[tuple[str, bytes]]:
-    objects = git("rev-list", "--objects", "--all").decode().splitlines()
+    objects = git("rev-list", "--objects", *PUBLIC_REVISIONS).decode().splitlines()
     names = {line.split(" ", 1)[0]: line.split(" ", 1)[1] for line in objects if " " in line}
     if not names:
         return
@@ -133,7 +134,7 @@ def main() -> int:
     sources = [worktree_blobs()]
     if args.history:
         sources.append(history_blobs())
-        emails = git("log", "--all", "--format=%ae%n%ce").decode().splitlines()
+        emails = git("log", *PUBLIC_REVISIONS, "--format=%ae%n%ce").decode().splitlines()
         if any(
             not email.endswith(("@users.noreply.github.com", "@noreply.github.com"))
             for email in emails
