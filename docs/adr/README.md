@@ -2,7 +2,7 @@
 
 These records explain the project's consequential architecture and product
 choices in effective-date order. Existing ADRs 0001–0004 retain their original
-identifiers. ADR 0000 and 0005 onward were reconstructed on 2026-10-22 from the
+identifiers. ADR 0000 and 0005–0016 were reconstructed on 2026-10-22 from the
 implementation history; their effective dates describe when the choices took
 effect. A superseded direction remains recorded as historical context.
 
@@ -25,6 +25,7 @@ effect. A superseded direction remains recorded as historical context.
 | [0014](0014-terminal-style-interface.md) | 2026-10-19 | Adopt the terminal-style Radar interface |
 | [0015](0015-reviewed-research-stream.md) | 2026-10-19 | Add a reviewed research stream beside job observations |
 | [0016](0016-public-repository-boundary.md) | 2026-10-22 | Separate public source code from private operating data |
+| [0017](0017-mit-license.md) | 2026-10-22 | Use the MIT license for the project |
 
 For the current implementation, see the [architecture overview](../architecture.md).
 For setup and usage, see the [project README](../../README.md).

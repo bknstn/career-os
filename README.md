@@ -179,4 +179,4 @@ with a plain JavaScript/CSS interface. See the
 
 ## License
 
-[Apache License 2.0](LICENSE).
+[MIT License](LICENSE).
