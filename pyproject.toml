@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "career-os"
 version = "0.1.0"
-description = "Personal career intelligence system; foundation for the Market Explorer MVP."
+description = "Local job-market exploration and evidence-based career research."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -33,7 +33,7 @@ classifiers = [
 
 [project.urls]
 Documentation = "https://github.com/bknstn/career-os#readme"
-Architecture = "https://github.com/bknstn/career-os/blob/main/docs/adr/0001-market-explorer-foundation.md"
+Architecture = "https://github.com/bknstn/career-os/blob/main/docs/adr/README.md"
 
 [project.scripts]
 career-os = "career_os.cli:main"

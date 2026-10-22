@@ -1,0 +1,1367 @@
+{
+  "schema": "career-radar-title-only-verification-corpus/v1",
+  "frozen_at_utc": "2026-10-17T07:39:50+00:00",
+  "classifier_version_before_calibration": "1.0.0",
+  "taxonomy_version": "1.0.0",
+  "source_snapshot": {
+    "transaction_started_at": "2026-10-17T07:39:49.955034+00:00",
+    "schema_revision": "20260821_0003",
+    "postings_considered": 3543,
+    "title_rows_read": 3543,
+    "transaction_isolation": "REPEATABLE READ",
+    "transaction_read_only": true
+  },
+  "source_artifact": "retained career_os PostgreSQL; bounded title-only query",
+  "sample_design": {
+    "kind": "fresh stratified diagnostic holdout",
+    "preflight_row_ids_excluded": 75,
+    "golden_retained_row_ids_excluded": 7,
+    "all_excluded_reference_row_ids": [
+      "01300076-b419-42df-ba80-5c399f3526c1",
+      "013a3429-cc24-479f-b40b-275c25247665",
+      "0ca7cd96-f643-4526-b22c-c362d9281163",
+      "0e6368e8-05ff-46b2-b6a3-086ded45fc4d",
+      "0fb17f3e-ed65-4ded-b7c1-d92cb2c59981",
+      "10e85918-2f85-4f0b-8cac-ef1307c81b07",
+      "11e5be4a-b1fc-4bc5-9759-a26ca7aae12f",
+      "142c18c8-f355-4ab6-accf-4171ad26d50a",
+      "15e70357-0d94-4a87-bd22-a409db29cf57",
+      "188170e2-f375-48b3-ac9c-2b877e59e8cb",
+      "189b6233-2b7e-45d3-98b1-4162f9b71a82",
+      "1c59addd-8e35-43e5-922c-4bedcb269aa3",
+      "20117226-7c04-44a9-b83f-2b999706aab2",
+      "20d0448c-81b3-45f5-b7a8-afb9c193dd49",
+      "24f66d9f-bcea-4bcc-962a-5d29c9b65152",
+      "2511fd86-64d3-4577-844e-25377a2af100",
+      "25fa7b99-5685-4460-991a-91b42d80e1e2",
+      "2654cd9b-f749-4128-969b-6a3a7e7c1648",
+      "2d3a09b0-d399-4f37-8498-b5ab6ab9a8bd",
+      "2efcbdeb-d5b1-4fb5-adbb-2ba2a17be42e",
+      "38235317-fb11-42de-8e44-4f19d0e23397",
+      "3973cb37-b3d2-4b99-9b53-fc55d471777e",
+      "39b3cd6f-7a2a-4f6e-98cb-6fb52d9e6356",
+      "3bdccf28-44fc-4f0a-9c2a-6a38bf56e461",
+      "3ee71bd2-c5af-4536-a9a0-e476dc8475ee",
+      "415f2148-5612-4758-b180-4f2dc342d5fd",
+      "4afcada2-2e01-48d3-be8e-d37a22c4307e",
+      "4c91d6e5-9bd6-41d9-86d0-93a300ca5504",
+      "4e3a271f-ca43-41da-90c7-c4ec5d53834a",
+      "52cb10a4-1f38-4c8c-90fc-f3ef48104c1b",
+      "5bb68876-4306-4cda-9435-7ab3e0255db3",
+      "60f651d0-5717-4c47-a5aa-857ad7d7241b",
+      "639a3905-096f-4fb9-8158-7ab741976776",
+      "64794209-a392-402b-9139-776e5b1b64cf",
+      "6832e14f-a240-4601-911c-a2bee742176b",
+      "6986e454-e8b5-4d05-9ab2-345572cf242d",
+      "6baecf50-4038-4769-ac67-bb26738bdf1a",
+      "6d5eeca5-1860-4160-86fa-0dfb980946f3",
+      "6ee9cf67-a5a3-4897-aa47-cf4a2a7d1d2a",
+      "6eed977a-aa6e-4a6a-a4d2-81d33c8023cd",
+      "7307175b-19d9-493a-96df-677323969129",
+      "737272ea-d862-4a76-9de9-e7267ecc80e6",
+      "749d19b9-6ab5-4c71-8524-a3d31cec90c9",
+      "75724c9d-26e2-4486-ade8-3b64b5a6aae8",
+      "75c72f5d-0508-45fb-8552-b03485d3b485",
+      "793c5f54-829d-44c3-bf8c-e9bd1bae4b7f",
+      "7a1fff6b-7c51-41e9-9e2c-78ab9feb0584",
+      "7df3e9b6-5560-4a16-804a-638f68c5d99f",
+      "7f0cba08-b7b3-4561-939c-035697e9cd3a",
+      "82f93793-da7d-432d-83c5-17de10cbb159",
+      "83777075-53c2-4e0b-a068-3ee268afc52a",
+      "848c6dfa-8360-4065-b156-5d3572c711f9",
+      "93d267da-267b-4411-8a1f-ec4d307e5e65",
+      "96ad3196-3b74-4752-9e85-5f6fecc493fd",
+      "9a642118-74dd-467b-9435-b571c3e0c99e",
+      "9f46e3b0-e37b-47bd-9373-42e9d0af0000",
+      "ab2759aa-fcef-4c17-9b3f-00dd4f836974",
+      "b2cb4fd4-edde-488e-8b46-cdd7d6d670cd",
+      "b3ba95a4-9029-46b7-bd3e-47bbb8039317",
+      "c3cf85e3-8cc9-4c63-ab32-041dedbcae5f",
+      "c739813c-24ff-4f20-808a-7e26d1a393fb",
+      "c8c9dfae-a368-4ed6-a0b0-487625b8a12f",
+      "cec3c725-9cd3-4d3a-a728-7c6526001dbb",
+      "cfe2d3ad-923d-4eed-b671-5b2ac4fc6d78",
+      "d1bf604d-8c4b-4a4c-bdd6-a27c4bd5adbc",
+      "d3d78c21-5f02-4ddb-b170-a6bef23256f5",
+      "d547b341-0f28-44b1-a595-857f076ea109",
+      "d602ba90-8cc7-40fb-9c06-b8fee7b6d6f4",
+      "d9ea8fd3-cd2c-4b98-81fb-8185b76cecc3",
+      "e145dd43-0ba0-46ab-9a81-f0c7fe826ae4",
+      "e1b89f97-a2ff-4b85-b436-6e7945374ac7",
+      "e7994b7e-b5cb-41b4-b9b1-f8dc26ff6196",
+      "e9fbe065-a326-4793-9e2e-84c300f79046",
+      "ebe15880-13de-487c-a871-cba668fd3055",
+      "ecc337ea-5460-4d66-84dc-971444a0ea94",
+      "efcdb7b4-981b-4a58-8af5-ec549d77ccde",
+      "f00a51be-36de-41a4-b5e4-04b99eb70c45",
+      "f415b21c-726e-4654-86b0-f6dbe0c2e455",
+      "f69a1bf6-8504-483f-a147-426038af70e1",
+      "fb7071ea-4895-4d25-9900-64a603155139",
+      "fd9465e2-35d0-4bff-b6f7-c171c74f58f1"
+    ],
+    "normalized_title_duplicates_excluded": 53,
+    "normalized_role_head_near_duplicates_excluded": 1111,
+    "reference_corpus_titles": 100,
+    "reference_role_head_keys": 82,
+    "normalization": "Case-insensitive; repeated whitespace collapsed; dash variants normalized; leading seniority markers removed for role-head comparison; technical role heads use title-only classifier evidence and other heads use annotated evidence or the leading title segment.",
+    "duplicate_rule": "Exclude all preflight and retained golden row IDs; exclude normalized title equality with those reference corpora; exclude exact normalized role-head equality after trimming context suffixes and leading seniority markers. No prefix-only matches are treated as duplicates.",
+    "sampling": "Deterministic SHA-256 ordering within each classifier 1.0.0 title-only status stratum; take up to 10 rows per non-conflict status and every remaining conflict row.",
+    "verification_rows": 40,
+    "status_counts": {
+      "classified": 10,
+      "conflict": 0,
+      "out_of_scope": 10,
+      "unclassified": 10,
+      "unknown_scope": 10
+    },
+    "limits": "A fresh retained-database diagnostic holdout fixed before classifier edits. It is stratified and title-only, not a probability sample or human ground truth. Use only for regression and boundary-preservation checks; do not claim accuracy or population-level performance."
+  },
+  "rows": [
+    {
+      "job_id": "01f3056d-514d-4efa-ac0c-b0f028edc6c5",
+      "source_key": "clickhouse-ashby",
+      "title": "Senior Site Reliability Engineer- Remote",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "platform_infrastructure_engineering",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "sre_title",
+            "matched_text": "Site Reliability Engineer"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "041e0f43-9400-435b-bd8b-5a351dfeb7cd",
+      "source_key": "grafana-labs-greenhouse",
+      "title": "Senior Platform Engineer - Platform Metal | Ireland | Remote",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "platform_infrastructure_engineering",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [
+          "platform"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "platform_engineer",
+            "matched_text": "Platform Engineer"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_platform",
+            "matched_text": "Platform"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "2fe2ed0c-8d51-41d4-be16-9419505c94bd",
+      "source_key": "temporal-ashby",
+      "title": "Senior Solutions Architect, Growth - East",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solutions Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "a323a8b1-0cb3-44df-ad84-5da480a690ea",
+      "source_key": "stripe-greenhouse",
+      "title": "Specialist Solution Architect, Money Management",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solution Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "5023e19b-a429-4c44-b78e-2bff556a3047",
+      "source_key": "mongodb-greenhouse",
+      "title": "Advisory Solutions Architect",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solutions Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "76d85712-26a3-4cfb-ab6c-8047cd31aacb",
+      "source_key": "datadog-greenhouse",
+      "title": "Partner Solutions Architect (Brazil)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solutions Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "9d67159c-798d-4565-85e9-9d2eb2ec2e4b",
+      "source_key": "clickhouse-ashby",
+      "title": "Senior Infrastructure Engineer - Postgres",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "platform_infrastructure_engineering",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "infrastructure_engineer",
+            "matched_text": "Infrastructure Engineer"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "3e443306-631f-42d9-8433-c257b279b6b2",
+      "source_key": "datadog-greenhouse",
+      "title": "Partner Solutions Architect (GSI) - AMER West",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solutions Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "9e0dc4a7-8f80-4449-a173-0f40e82b6fa6",
+      "source_key": "mongodb-greenhouse",
+      "title": "Site Reliability Engineer (Senior or Staff), Storage Layer Services (SLS)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "platform_infrastructure_engineering",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Staff"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "sre_title",
+            "matched_text": "Site Reliability Engineer"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "decbe34e-ce0d-4135-8edd-9591051a1f3a",
+      "source_key": "mongodb-greenhouse",
+      "title": "Solutions Architect",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": "solutions_architecture",
+        "status": "classified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "role",
+            "source": "title",
+            "rule_id": "solutions_architect",
+            "matched_text": "Solutions Architect"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "classified"
+    },
+    {
+      "job_id": "3a159a75-7d2b-4158-a2b2-385d1966a892",
+      "source_key": "temporal-ashby",
+      "title": "Finance Director, GTM",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "director",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Finance Director"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Director"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "a4529d0b-252f-4188-8262-870a67f7c1d6",
+      "source_key": "n8n-ashby",
+      "title": "Customer Success Lead (Remote California or Texas)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "lead",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Customer Success"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Lead"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "4b023fa3-f734-4193-b73e-effd458245ac",
+      "source_key": "stripe-greenhouse",
+      "title": "Sales Manager, Product - Issuing & Treasury",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "manager",
+        "managerial_function": null,
+        "context": [
+          "product"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Sales Manager"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Manager"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_product",
+            "matched_text": "Product"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "235ce4a4-0b5f-4161-94ca-84e37370adff",
+      "source_key": "hauler-hero-ashby",
+      "title": "Customer Success Associate",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "junior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Customer Success"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Associate"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "f73d7b91-38f2-42fe-a2a8-2ef074ceaca2",
+      "source_key": "stripe-greenhouse",
+      "title": "Recruiting Scheduler (Fixed Term Contract)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Recruiting"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "743ec0c5-1a18-42aa-a969-dd6fd9ad3139",
+      "source_key": "datadog-greenhouse",
+      "title": "Customer Success Associate - Commercial Accounts",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "junior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Customer Success"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Associate"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "ff77ff63-929c-4c60-96b4-63abb972d943",
+      "source_key": "solidgate-ashby",
+      "title": "Talent Acquisition Specialist",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Talent Acquisition"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "909b65b1-2c93-4ff6-b671-2d1ece9d8c6c",
+      "source_key": "stripe-greenhouse",
+      "title": "Sales Manager, SMB (Hunter)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "manager",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Sales Manager"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Manager"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "a56296d3-ee48-4838-882c-fbaf3e150e7d",
+      "source_key": "datadog-greenhouse",
+      "title": "Customer Success Associate - Boston",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "junior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Customer Success"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Associate"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "c26a3c15-35c0-4cee-9525-1480d4d57ad3",
+      "source_key": "datadog-greenhouse",
+      "title": "Customer Success Associate",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "out_of_scope",
+        "scope": "out_of_scope",
+        "seniority": "junior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "nontechnical_role_head",
+            "matched_text": "Customer Success"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Associate"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "out_of_scope"
+    },
+    {
+      "job_id": "7458a80d-ea0a-4150-a1fa-e53528ebbd01",
+      "source_key": "cloudflare-greenhouse",
+      "title": "Senior Professional Services Engineer",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "32d7adb3-0805-4dcc-9dae-1c1c92787f31",
+      "source_key": "gitlab-greenhouse",
+      "title": "Senior Manager, Product Management: Agentic Software Delivery",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [
+          "product"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Software"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Manager"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_product",
+            "matched_text": "Product"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "91106b0b-8cf0-4d6e-8c38-092994cc86e0",
+      "source_key": "datadog-greenhouse",
+      "title": "Senior Services Architect, Security-Cloud SIEM",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [
+          "cloud",
+          "security"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Architect"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_cloud",
+            "matched_text": "Cloud"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_security",
+            "matched_text": "Security"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "c047ce1c-2eaa-4878-a626-f6de904965be",
+      "source_key": "datadog-greenhouse",
+      "title": "Senior Staff GenAI Engineer - Application Performance Monitoring (APM)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Staff"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "c757f3ea-ef0c-4270-b391-45c8d61f054d",
+      "source_key": "affirm-greenhouse",
+      "title": "Manager, Machine Learning Engineering (Repayment & Recovery)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": "manager",
+        "managerial_function": null,
+        "context": [
+          "machine_learning"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineering"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Manager"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_machine_learning",
+            "matched_text": "Machine Learning"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "947b672c-3470-469e-982c-ac3b25941b53",
+      "source_key": "tripadvisor-greenhouse",
+      "title": "Product Data Scientist",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [
+          "product",
+          "data"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Data Scientist"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_product",
+            "matched_text": "Product"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_data",
+            "matched_text": "Data"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "081c3bd9-1318-474d-96ef-999d5fa937d1",
+      "source_key": "affirm-greenhouse",
+      "title": "Software Engineer II, Backend (Test Infra)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [
+          "backend"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Software Engineer"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_backend",
+            "matched_text": "Backend"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "8dc04b68-91e9-4c7d-8eff-0361d4623e45",
+      "source_key": "stripe-greenhouse",
+      "title": "Senior Data Scientist",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [
+          "data"
+        ],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Data Scientist"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_data",
+            "matched_text": "Data"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "c40f01a6-ef36-4ea4-b75e-62b06d3a158b",
+      "source_key": "datadog-greenhouse",
+      "title": "Commercial Sales Engineer - Amsterdam",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Engineer"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "b2665138-07c0-4dad-a16c-6e5fe6da5b17",
+      "source_key": "cloudflare-greenhouse",
+      "title": "Threat Intelligence Software Engineer, Cloudforce One",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unclassified",
+        "scope": "in_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "scope",
+            "source": "title",
+            "rule_id": "technical_title",
+            "matched_text": "Software Engineer"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unclassified"
+    },
+    {
+      "job_id": "85786936-fd3e-4501-b754-daf24419d9b2",
+      "source_key": "cloudflare-greenhouse",
+      "title": "Senior Named Account Executive, Salt Lake City",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "cb0e560d-3e64-43be-a92e-aea34c454d0e",
+      "source_key": "mesh-greenhouse",
+      "title": "Director of Sales",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "director",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Director"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "d414e671-6629-44b0-94c2-7ada40aa40c5",
+      "source_key": "stripe-greenhouse",
+      "title": "Senior Workday Analyst, Payroll",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "senior",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Senior"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "ea47c4ed-b083-4c0d-9f4c-e95654529819",
+      "source_key": "first-connect-insurance-greenhouse",
+      "title": "Digital Campaign Specialist",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": []
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "6f2e6216-67ba-4c82-af73-e711d9a33dd0",
+      "source_key": "skelar-ashby",
+      "title": "Data Analyst (Payments Team)",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [
+          "data"
+        ],
+        "evidence": [
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_data",
+            "matched_text": "Data"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "1c5f5875-e712-4269-9497-3f82ef7325fd",
+      "source_key": "synthesia-ashby",
+      "title": "Mid Market Account Executive",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "mid",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Mid"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "d8f12e62-bed4-4cfc-90cc-39a20f5d7eb1",
+      "source_key": "temporal-ashby",
+      "title": "Senior Manager, Solutions Architecture - New Logo",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": null,
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Senior"
+          },
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "conflicting_seniority_markers",
+            "matched_text": "Manager"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "f45816d6-4d73-4cd7-9093-465200d53863",
+      "source_key": "clickhouse-ashby",
+      "title": "Director of Product Management, Security",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "director",
+        "managerial_function": null,
+        "context": [
+          "product",
+          "security"
+        ],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Director"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_product",
+            "matched_text": "Product"
+          },
+          {
+            "axis": "context",
+            "source": "title",
+            "rule_id": "context_security",
+            "matched_text": "Security"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "d404f3e3-9c26-4b6d-92ae-47c6d4c7ec5f",
+      "source_key": "datadog-greenhouse",
+      "title": "Mid Market Account Executive",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "mid",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Mid"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    },
+    {
+      "job_id": "89e26304-510a-4c47-84c3-5ee00fa2de57",
+      "source_key": "n8n-ashby",
+      "title": "Deal Desk Manager",
+      "baseline_title_only_output": {
+        "classifier_version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "family": null,
+        "status": "unknown_scope",
+        "scope": "unknown_scope",
+        "seniority": "manager",
+        "managerial_function": null,
+        "context": [],
+        "evidence": [
+          {
+            "axis": "seniority",
+            "source": "title",
+            "rule_id": "title_seniority",
+            "matched_text": "Manager"
+          }
+        ]
+      },
+      "pre_calibration_status_stratum": "unknown_scope"
+    }
+  ]
+}

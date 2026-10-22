@@ -14,3 +14,8 @@ repos:
         entry: uv run ruff check .
         language: system
         pass_filenames: false
+      - id: public-content
+        name: secrets and private content
+        entry: make security
+        language: system
+        pass_filenames: false

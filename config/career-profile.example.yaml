@@ -1,0 +1,452 @@
+# Entirely fictional profile for examples and regression tests.
+career_profile:
+  schema_version: h3.career-profile.v2
+  name: Synthetic Example Engineer
+  evidence_as_of: '2026-09-08'
+  review_status: draft
+  sources:
+  - id: cv
+    kind: document
+    reference: https://example.invalid/synthetic/cv
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  - id: linkedin
+    kind: document
+    reference: https://example.invalid/synthetic/linkedin
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  - id: skills_review
+    kind: user_statement
+    reference: https://example.invalid/synthetic/skills_review
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  - id: target_review
+    kind: user_statement
+    reference: https://example.invalid/synthetic/target_review
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  - id: sample_clarification
+    kind: user_statement
+    reference: https://example.invalid/synthetic/sample_clarification
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  - id: analysis
+    kind: analysis
+    reference: https://example.invalid/synthetic/analysis
+    locator: Fictional test evidence; no real person or document
+    recorded_on: '2026-09-08'
+  employment:
+  - id: sample_current
+    employer: Example Company 1
+    title: Software Engineer
+    start: 2025-01
+    end: null
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: sample_previous
+    employer: Example Company 2
+    title: Software Engineer
+    start: 2022-01
+    end: 2024-12
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  skills:
+  - id: python
+    level: working
+    years: null
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - skills_review
+  - id: go
+    level: working
+    years: null
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - skills_review
+  - id: postgresql
+    level: working
+    years: null
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - skills_review
+  - id: docker
+    level: working
+    years: null
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - skills_review
+  claims:
+  - id: current_employer
+    category: current_role
+    context: Synthetic example initiative
+    statement: Fictional current_role claim for current_employer.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: current_title
+    category: current_role
+    context: Synthetic example initiative
+    statement: Fictional current_role claim for current_title.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: backend_only
+    category: constraint
+    context: Synthetic example initiative
+    statement: Fictional constraint claim for backend_only.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: target_levels
+    category: preference
+    context: Synthetic example initiative
+    statement: Fictional preference claim for target_levels.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: product_company
+    category: preference
+    context: Synthetic example initiative
+    statement: Fictional preference claim for product_company.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: companies
+    category: preference
+    context: Synthetic example initiative
+    statement: Fictional preference claim for companies.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: physical_ai
+    category: preference
+    context: Synthetic example initiative
+    statement: Fictional preference claim for physical_ai.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: geography
+    category: constraint
+    context: Synthetic example initiative
+    statement: Fictional constraint claim for geography.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: employment_contract
+    category: constraint
+    context: Synthetic example initiative
+    statement: Fictional constraint claim for employment_contract.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: base_pay
+    category: constraint
+    context: Synthetic example initiative
+    statement: Fictional constraint claim for base_pay.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: undisclosed_pay
+    category: constraint
+    context: Synthetic example initiative
+    statement: Fictional constraint claim for undisclosed_pay.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review
+  - id: feature_lead
+    category: technical_leadership
+    context: Synthetic example initiative
+    statement: Fictional technical_leadership claim for feature_lead.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: api_architecture
+    category: architecture
+    context: Synthetic example initiative
+    statement: Fictional architecture claim for api_architecture.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: stakeholders
+    category: scope
+    context: Synthetic example initiative
+    statement: Fictional scope claim for stakeholders.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: no_coordination
+    category: people_management
+    context: Synthetic example initiative
+    statement: Fictional people_management claim for no_coordination.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: monetization
+    category: business_goal
+    context: Synthetic example initiative
+    statement: Fictional business_goal claim for monetization.
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - sample_clarification
+  - id: sample_services
+    category: architecture
+    context: Synthetic example initiative
+    statement: Fictional architecture claim for sample_services.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: sample_domain
+    category: domain
+    context: Synthetic example initiative
+    statement: Fictional domain claim for sample_domain.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: integration_domain
+    category: domain
+    context: Synthetic example initiative
+    statement: Fictional domain claim for integration_domain.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: integration_boundary
+    category: architecture
+    context: Synthetic example initiative
+    statement: Fictional architecture claim for integration_boundary.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+      - linkedin
+  - id: integration_leadership
+    category: technical_leadership
+    context: Synthetic example initiative
+    statement: Fictional technical_leadership claim for integration_leadership.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: integration_mentoring
+    category: technical_leadership
+    context: Synthetic example initiative
+    statement: Fictional technical_leadership claim for integration_mentoring.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: integration_stack
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for integration_stack.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_prior
+    category: domain
+    context: Synthetic example initiative
+    statement: Fictional domain claim for sample_prior.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_prior_stack
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for sample_prior_stack.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_metrics
+    category: domain
+    context: Synthetic example initiative
+    statement: Fictional domain claim for sample_metrics.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_metrics_migration
+    category: architecture
+    context: Synthetic example initiative
+    statement: Fictional architecture claim for sample_metrics_migration.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_metrics_stack
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for sample_metrics_stack.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_legacy
+    category: domain
+    context: Synthetic example initiative
+    statement: Fictional domain claim for sample_legacy.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: sample_legacy_stack
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for sample_legacy_stack.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+  - id: top_skills
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for top_skills.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: languages
+    category: language
+    context: Synthetic example initiative
+    statement: Fictional language claim for languages.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: courses
+    category: skill_context
+    context: Synthetic example initiative
+    statement: Fictional skill_context claim for courses.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: university
+    category: education
+    context: Synthetic example initiative
+    statement: Fictional education claim for university.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - cv
+      - linkedin
+  - id: college
+    category: education
+    context: Synthetic example initiative
+    statement: Fictional education claim for college.
+    evidence:
+      status: document_unreviewed
+      source_ids:
+      - linkedin
+  - id: api_decision
+    category: architecture
+    context: Synthetic example initiative
+    statement: Fictional architecture claim for api_decision.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: initiative_outcome
+    category: outcome
+    context: Synthetic example initiative
+    statement: Fictional outcome claim for initiative_outcome.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: production
+    category: scope
+    context: Synthetic example initiative
+    statement: Fictional scope claim for production.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: management
+    category: people_management
+    context: Synthetic example initiative
+    statement: Fictional people_management claim for management.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: scope_outcomes
+    category: outcome
+    context: Synthetic example initiative
+    statement: Fictional outcome claim for scope_outcomes.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: backend_tenure
+    category: scope
+    context: Synthetic example initiative
+    statement: Fictional scope claim for backend_tenure.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: sample_earliest_scope
+    category: scope
+    context: Synthetic example initiative
+    statement: Fictional scope claim for sample_earliest_scope.
+    evidence:
+      status: unknown
+      source_ids:
+      - analysis
+  - id: direction
+    category: career_direction
+    context: Synthetic example initiative
+    statement: Fictional career_direction claim for direction.
+    evidence:
+      status: interpretation
+      source_ids:
+      - analysis
+  target:
+    role_families:
+    - backend_engineering
+    primary_seniority: senior
+    exploratory_seniorities: []
+    country: PL
+    remote_from_country: true
+    onsite_or_hybrid_cities:
+    - Warsaw
+    relocation: false
+    employment_model: UoP
+    minimum_base_pay: '14000'
+    currency: PLN
+    pay_period: month
+    pay_basis: gross
+    accept_undisclosed_pay_for_review: true
+    evidence:
+      status: user_confirmed
+      source_ids:
+      - target_review

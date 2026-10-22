@@ -1,0 +1,46 @@
+# Entirely fictional amounts; not anyone's pay or an actual offer.
+compensation_ledger:
+  schema_version: compensation-ledger.v1
+  sources:
+  - id: user_salary_update_2026_09_20
+    kind: user_statement
+    reference: Synthetic unit-test user statement
+    locator: Fictional compensation evidence 1
+    recorded_on: '2026-09-20'
+  observations:
+  - id: sample_current_base_2026_09_20
+    subject:
+      kind: current_role
+      id: sample_current
+      label: Example current role
+      reference: https://example.invalid/synthetic/sample_current
+    amount:
+      minimum: 10000
+      maximum: 10000
+      currency: PLN
+      period: month
+      basis: gross
+      component: base
+      employment_model: UoP
+    disclosure_kind: current_compensation
+    source_id: user_salary_update_2026_09_20
+    disclosed_on: '2026-09-20'
+    note: Synthetic test data; private correspondence is not retained.
+  - id: sample_recruiter_range_2026_09_20
+    subject:
+      kind: opportunity
+      id: sample_opportunity
+      label: Example opportunity
+      reference: https://example.invalid/synthetic/sample_opportunity
+    amount:
+      minimum: 180000
+      maximum: 240000
+      currency: PLN
+      period: year
+      basis: gross
+      component: base
+      employment_model: UoP
+    disclosure_kind: recruiter_range
+    source_id: user_salary_update_2026_09_20
+    disclosed_on: '2026-09-20'
+    note: Synthetic test data; private correspondence is not retained.

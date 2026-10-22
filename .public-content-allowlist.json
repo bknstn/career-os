@@ -1,0 +1,1784 @@
+[
+  {
+    "filename": "src/career_os/radar/role_contract.py",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "51b46a66cc549da362f82836431a620857212461",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/normalization/waymo-2026-09-08.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fd74bae19e3917762a41a0a871f2ca3a48946410",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5e07710ffd635ff5d59eaec4b180cd345de5a7a6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "288906dd55a8393fd5b6838ebeab5af8df8250e5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "bffde3c6942ea97f1f0ca4d14ef2853d9f26b7ad",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "95d0cae0f02d518080e6f3666d06fd7c54f8fa6a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "25495d2aea94be99c7769cb1335e74a617e0cbed",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "51b46a66cc549da362f82836431a620857212461",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a01c3c3123ca03f97102568e36cb8cde13eb703f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4568e79ad3c8cb2206be211786d4055b2ebc1195",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "326ed730b09e589188bcdb8294442053660d24af",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4606389aa6f08c09763ecd1e31f834801ef52612",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "70cc34db3a91618b05778ce32981429c088001cb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2f0a97f49156603ebe543544da8fbece54f81704",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a32f3600c8b447b96cb8b1005146fcb941351f60",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7fd27067233e915ee2c3b1346a0f23f707852674",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e5d4e4c068c3de8f33f329cbb9f2fff55a2f3964",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b144647551b063033c65c2d7ee1e1c5f2f4e3818",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "014caa5909ab0371d409ec5015ab6ef50fa39dc4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fe2c0c025c375ef3ed5b3ba01a49896f57f1f8ee",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "94620e674e9a5abe3fdc18dd0210b32c5a4f0195",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "34f5ab66fa681529a17ceb182a539e7796f631f7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3931417587976bea7241fdd9294e37d23669ad6f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "328f43648240433810e1c1ec289d3e82dfc71d65",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f26002b52c94aef9ab7484fc4ab8fb994f511c2e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "da3c092cc325ae2c2696bde3d2d19a4d893693b3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c63064b05f4ddd27289e24a52b46b4bafa0e15e2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7271ea538d7dc0015663b2b63b05048e1bcc9ea0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6a7c623137e76d052d6583d8a996a061e9d3db45",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d8b910211768311fb5fbad10d93ad3413d28e166",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5ccfc5b568635a6f32fdc8e1bcc7fad2827a08fe",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5e42b37a206e0f1202e267ca27aa78bdbbe910dc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2bb073c52567c94569012c32156c3037e8110564",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a14c9b4ad21273196f69ba2976277e4aba76e985",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2a397a75a7623ca5b0500e8b1b097dcacb3ba912",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1a78674741fdb58076a4355359a9972c9133170e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f1a1afdb56289cc89538c90a6b6db9b10e8b197b",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5f6adac43a26e89d3148bf708493062bfa6459b7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "14c32d61267df4f6802dcb1c26a893703b0b9d81",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "676c21ae12c29a3b826c616d2c2f17c05cd7615b",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6e4d7ee52bc63b0975a6f2c6a02aec765fd2f635",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4183fdbbcc2a8101005208de07dd7ad705ba5edd",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4322c091dd946cce33cb579e7e69d553448faec2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "30687ef76caf68c9f657b4ead0519a3173e94c5c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3cf2f224f2e0ac00fd920af1811a24f254dfe82c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "de3e5ca4511bb643ae18e7ecf57270bd1a8d9ce4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "17a5710e224037aaa798515fd84c55878bf33c41",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2a3d87b2cee4966f18ff9c17f1934b5a2940f7d4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "0ca8bfbc2e01a2f6d54e319faf5f04796ed30a26",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f4ce43631b531191145b2f0d3874fc0878c23d2d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a7a530ce7c5c544d274a692e5eb4cf5ec9b6acfd",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1c0fce9520e342d719db5bb27f333f67ddcf8903",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a6d5a73877bce5a5afe21122c6ce879964013b14",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a0a9da68cf9172c96ec4a5f1b43783338f9a59cc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "29d1cb430f1c56ecd2c880423caafd902b8c8c12",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a40b555037276eddce60d74a3c1b3551bad4ef02",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "cf746c0d5e23bc52c06858357e2177c150d2f45c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "69712f84e10df2ed9ebdb8efe24de26a49c5eb78",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "79078b9b13c9d175d2800120a428f11c3e01883a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "79d02414a87e2d132834c29623423ed04f40a176",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a5d8ae8e37c00746cb196c7c466df47a2650bc05",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f6835170bb4222e64033a85f8b47e4e32afebfcf",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4d5680077256524e6bfbfc38b7006548e430c0fb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d13d4175ad9d3664eb2a8dca8f73f5f498f4cccf",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "05ead330a96a3eefe66b9cf59aa95812b2511908",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b103238a62553f62395b897eb6d5d4149963b146",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6272147b1d23c53102900a5fbec4b24a9c99355f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a071d941f5f3c553fe0913abf1fbc4304fcc2fd7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "57742a2c9418b7455a3b6ee97e3a25285b57f8a4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "96fd267fba420b74a458594e0a6f78e37f87e0a9",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "575f70fa50a641dc5d0c1a532e022489114018be",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "266a29a554179c82458ffebc2964a4334242887e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b2df0b8e3117a14fbb3f3327c6492910b083599f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3694ab55421b48fed52a42717158d9a8a90cf007",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ff45acdad963d3d90a6c235fa93e21286a5777b8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f045c423ec2950a01114f3c0516e592d65c8b372",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "285b91de707b7430b6829b15d330b4dc9cad1839",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "88dff1dd6237d06e17bbce5d3875be56f1b05769",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8662c52ac7a1edb76199e808893f33fa1d2e2c6f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ed8f653364a154083c205b5e03aa26280ceba1de",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "35d56cd268905efbe9fb25cda370064e3503dc40",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b25a97f26516deeee215b67fe970372eff9d7804",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "67837d0f94da3fd91e2a17e271adf030ec921d40",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "28f7bd3b31d77b0e3002daa1269db6aa94daad1a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "405a18e3352f09e63a944a37d4a37dd41162ffa0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "193c1b9d00c1c6129ef58bc5a393d61b81d75a4e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3a36410f46606d94d89215537724ccd04e0c1d33",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "07ab1c5f6decbc7e164b47938159e20b792b4715",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2d48ed45c7efe7bf237195efeeb3627cca0272e7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3357a11e41cff7ef47c609fe20866f626209de03",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6e2086edb36e95c57d0dd3095660d41b714cd36f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "70fb9832dcf0819bc5c67ec221c258f64d370be4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "734a75f967980fb8bd800e53a4d6bef5026cbfd5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "cef02b156c4a3218ba23923745afc3f28781b37e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "374e4e24b5e61b4e355368bae4baedeea9446626",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "cddfadb51763b3d5fc0b19f74bc4101683147fbd",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b8104519f5646effe23c1119e91c2ec4d953d2e4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "48c9b04bb782ef876fce5c233771a7b5db81f71f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2f875982ff4a7703ec54e8e15222645a2e5035a3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f050b0d1ee1e95f1d0f645b89f61b4e658173e93",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "028cc6b2ccdbce52cdd72188ae9a41827f8d6701",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2ba2c1c7ef5649d5b7801fb980ad0fcd03a605a6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "99f269e74aff367d117efc87a70fe5e791df8fff",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e99059c52a9153589dc135ccac56acf0e15b6590",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b3913d4230089d8a05864ca168c5d529a8bf6527",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2c2cd38e28a77fbcb1fdf14c61d9688f4b0c7289",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5928b2bc1210ad6b4db8149a4000a335748a13bf",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "dd4e203e3225c7a361657e3be785880ff797ac17",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "76893744e5704763771f04e506c2b40cb447f0eb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "78502bbf7cdada16d171522a594b6e1737846ccb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b220675cf828f12f13fc7c73cc1826f56437946b",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d7352b20d35ef3c0fc197e14539a01aca7688799",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fd0b2f35d0d24c9165ac87fb310e0abebc213bbc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "bc88928f7df31c00797fd4cee50da5f69c207fec",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ef65cfbfc4b6a20373070ecb779b7dd4fa67e020",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ddcfb136ce7ba1c5e478a480d12d65ca5b5c8d1a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "bc03fd3a8644e72c9a0c0d4f501e96465673b9b6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "303aadca7c9dcd45cd04583fbb3ea69c76e56654",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "febcb408d22f0f38c8d81812a147084f943046b7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "637133a9c3b4a4036bde43e5a6332c56b3e7472d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c526983c754e571d76e2c6ee623bf409f86bcf2e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "48607a2398fa49b2f8b25dbd27bdc66a27f0029a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8b4a8954d316216aadc1e9a883160c86f2208560",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "efc927f9cc01b936769ca861d8376c7ac4d01e27",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ab31c2b14d82c7f5d8af8b8de56d6d5db342e168",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "20e2796508162f5c29a9a1a40cda6840d1ebb807",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "98228675de0bfed0439c645b339b329e120ea7f4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8d2ba7005af697657fdb56b29ce73ff005ba4abc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "38e40e916e73ea66e4d2dbee8451db1b61e41cce",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "792436fa58cddbeefab802bc85a10356c40fe6da",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2dcc5158be9c7981bacdace96b00376e0bef59f0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a127c6cfe2c187eb22153080159c2a1569f8cd90",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "297cd363c307a3f6bec915bbb8a0043d0c706aa1",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "dbe899c51f8c7f2ea913e9af4a50ebffcd98efc8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1c3fb2f957bea0d41d65d8fbd91ddf2c30dc72be",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a7370eb4e373004ed597fe90449ddaf518f7484e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "399fc09b4e6b68bffa1d910a4ae95e6f4f6781b3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f769af2c7ae704abe73928aa6397192488647d4e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e13103002c7ac44682407a4340c1ef3b0ee61ac4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fea629be6fd0ae2a40d2d01b84fe5171fc950503",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fa2d483ebc06e3e8a9241855e6157acb58fcdf17",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "46cb12511d29352ef4a5893561c80360b747628c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "66fc71fc0318deb69f29d1f815cf2ce4c696f380",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "393d70b6f251c40fc36bbd6f20800af825c41c86",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1b36bafe1c293465a95a15e60f705203a51f9ba3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5ef171f94c1f71ff69492f1984e7b0e47954a538",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e421d43179766c7d99f7f13ac95b99bd6911ebc8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fb06fa97aff4fcd2936d780020ff6e6fbd4a5cac",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e5456e50a88213091fb36729ff02c5803c60a510",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ab144c834b713259387579acc13f309504f2357c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8aedafe83d19424e07fcc5be25c44aa0927b4c0d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "34c0cebfcecb14bdeceb5aa55b3d49c333863ff8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f13d259a77ecf6d757bd1597195c0b0defe41d68",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ff29b479f34790acd611ef8139e76b32d9643b74",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "87b2b1570a4f39ba60e2d371e8e06de41a1eb7a3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ee9fbdbb501e828e8b85c8efa7a5b600099737e2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ac4c72b831d05671b2e229f5d0f135904f6f6447",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1972b301b9d5d825a3c50d4d7ac55fdf35bc43d0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5b5bfacc48343f65a019756210000e8acd11e442",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "9670a3136dd2a869bf3781b4c65f666cdc97a5c0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6a0991c9a9b8d7cf2938af5faed101682c91f540",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "3668d6088edc6eb420f0dcf3ce01d818944cce86",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "38ba657d8bfefa45a05f2c3877de88aec11afb4d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1d8fc9a1b110a6a8a5c357745f34b354b873d81c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8408fdbdf24120fbcd607ab5f99386690bd45fd7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "679169b1a189d60b053f88677a82658612ca47ff",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c750db8b4065d97c3fbd54cb58e11f376c51bf3a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "dd8139d10c9ef2ff47223956aabb52e2cb61da0b",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "49f6409fbbb5c90b219cd45986375c6c06de38d2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "baee7eb187e3dd3fcb06100659d0e48c6dfb24cb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "72191a7493f292e172dc8ab3fa4d4e652fb177e4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c4b6632d27c6312438fb53587bc46d937d997172",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7cbe2f38e0031a311ea7ad1a9c3842600d07e312",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "af7a4c9f42b5a19b16bb6387421cb18a35679bba",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f384fe0e4b8f96e2225776d0a11b3680cf89f5bf",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a6b3c6ddc1f7c7eca6148270abc238e8d98b1e42",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "de661ab0fcae2c2f2b1ace969f79f3af8900e2c0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "35d98d8a0f28c56b92970707a9a87bf2d0181d7b",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "af6d747ecbdeccdd97b3dde7f00357d5919616fa",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "43c6b91e9f70dbc89f9f2158e86751d031d334f7",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e38296eb4af40fc9902c94d0dbbe5cb7e901b645",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1613982e834c3650ca2ff614218d240beee6fa84",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8a3233abf4c0f2b83a796452fe8e74a689d44ede",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "960eced486e2999d5aeb9479a4a6aece7be4d589",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "990d970508f546be5963eb5658bdce39bbe85ef2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ad87dd39e6f53f279b4ddc65054d9c6d825d5117",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1dc00e8a8c38d4840c33c90288154ee6c4bc51d5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "0a21504c829a1f8503ece79edb5f2d69af89cfdc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "1110aa1372b08ccb266ef5c2d681ad4c6d7fbb94",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "62e8768aae8a7ceb055f441827eaa221d85ec98c",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "af7579dd19aa0788898d9b6ea353f491216ed18a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8e5464669e7c33b210e74dbbbd3fc6ba441e3aad",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "92755c52d995bc3a9c4005df1cfe7bdcd8766e24",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b56ece920786d729fb444bf523cba9990351a9df",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f8e20a6616180c68cecb8d2ac87aaca52cab3955",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7aa9c01fa60948c6102f278b3c67c74a1c45374a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d0c215dad36590ea897ffcda6603f59b8de8e319",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fb9da9b71be8aaf95989b2cdfd2fdd954d0b1399",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f8766d166ffb4f7dede1b908e363cb77abf8d2c6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "758bd90396a68f950b814c06f447acf5b02345f2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "bd624a6ab7f99ced5aafdb2b364d5a7dc6274133",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5b488dec5c51bb605903d91dac4c07658f17a637",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "741d631ec3ef3645a2efad38fa42f90562dbcd76",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ddbe7e278f10ff00a3d00950e5e0df3e0c12ed79",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c11d4b10ecbb71b594d2eeff796128c2bf99645a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8e50338b6576c2c0cf5e8ce1da7df560a885b407",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c8cd5997f02890a568bfcce57c41451ef1685ca2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-residual-cause.frozen.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "395de215a16287ca1f94ce383bf3b3c36c9f25b1",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a58e6585a34ec263cceac09c7b6fa4c7db04431d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c1d69ee5ed9bf7993f127dfea09855c9b419e36d",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "11fbbeeae5094488aea90fd15165ee369fc257fb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "18830b6b0b5d4c37b00dab34ffdc2f655abd5072",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "39c023008bd95dbc011035ff7cf605c0e9df554f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b3c4c4a4e5335b190179e2bfd25924fc1776ffb6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "adf3e412eab71ae5ebfe88664f346da9042c4ed2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7b73b0bf3a52ca46d550023d5016a77d9dba15fd",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "356ba18ac92d462a497e7ecbf8067e9560612001",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4171dab5b2a3472e43decea6111caf4f3b0acfb6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "65d35fec4fcedd7f80adb2af760f760fa2e8bbb1",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4afb5c983bf3804d7f04dad50848377b97ff2342",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "5bd0691fb335827fa2f036113077277e748f379f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a6929e64e66ac08c3e1466e6c0d9b8e9ba092708",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "6edf4cdff4fd00281c1545716d70b21c065df046",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "22ddc2ea658ea5484040f6096459b66bb60e2ae9",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "585f82b2ca463151df5661c5e6a61ef5862f859a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "b28d4d86a5ec59f1649c805576f77e53ed7c33d8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d433fe84a3939b90559aa865c4e69dd58c05b0c2",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fa16a64e7be5c5be18731d4cf777da79146a2cb8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c6eace5d65ae2edab7b3c35b21429877670e4497",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "954a3dee0a22feedd32394d2f9bac7cb09a8f14f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "510fe2b5611bb676017ec8a3bfa97bd2e29e10d6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4606389aa6f08c09763ecd1e31f834801ef52612",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "70cc34db3a91618b05778ce32981429c088001cb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "2f0a97f49156603ebe543544da8fbece54f81704",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a32f3600c8b447b96cb8b1005146fcb941351f60",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "c39a8f570399c6f3db8738deb1a31b11ff51ea40",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "9ca47650207b3e9a711c8d3d03a5c3a0df07deb5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "12fde737263f0fc71a5a90a2008523d7efaeb539",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "cc72ab825fca069379403d329121d2c7d44871f0",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7def1b47ea61a39ea2b4472f997c768bf7af6857",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f6a993d264318c8a9ba3dff7fff7a93c6ef6440f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "740fd400d0e2bb1d8aa2c23eafaa4ae91ab7a0d5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "dde938050ed95c8705a6f02ffb2ed2c7832337ae",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d24308a63cc708292e0cd8752a1909c20d0c5d45",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "bf19e4f1bfa838a951350ea4f303442a203c9f83",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "fb4245c0956bfe192756d49f8c767f49d53e3563",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "89610c1849db8d5b3c96ab0bf3f60a94c75a44f1",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "53cd85894ec8b19d8dd09e6db5a49dbf9949d5ab",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4b892c2db0b73a2cc48b8b2e0e9711a6a9f67c84",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "75774dd2c12b0ebf27b2d0dac83f345f954879a1",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "7cbdbcf202bc33650e405eb785aa1ab57e8fce62",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a4e60a755d87451c9aa900ab504e2d536bcbbceb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "285b91de707b7430b6829b15d330b4dc9cad1839",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "575f70fa50a641dc5d0c1a532e022489114018be",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ffedb7c6d09725c3ad1413ae8716f3c885c80bf8",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a54fa877a0485598c36b7cca46405dc8420361b6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "82d5d5c70f2d6d2ed6eeb4577daddd9913c4abf6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "57742a2c9418b7455a3b6ee97e3a25285b57f8a4",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4be23b861898960019ae87e2d68ad186f8c1badc",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "341e0ae6bb2c4e82070ec4746facc92c2d9bc61e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "74cbbc7525842151e9297d6c35dff600740fc4b6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "76751222d89a68d1a5b32d733d0e8783f425d110",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a18ae4915b51269809ea798bcd02be20ded63f63",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "a7ed20020d789c4bdaf35fdb2d9ab2877d5f1ae5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "379d3f5681f77698d8ed6dba1ae10c0fb38caa3e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "8339ad4329697e2f318774281f7e0c9799b779c6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ca648dace2dc73c19d2b6b4650bc9e180f4c1afb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ea4dce0de863434936bd46dae7f6dc71caa68b8a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "aedd1e7a550d03b78cfa6842b832c84bcc297caf",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "068ead547d400c66f121dbd4f4f745e8c0d4daaa",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f58f7a7baed00382a40781ab86433e787863a40e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "167c8c0211562503929a80569c6e949039db9895",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "d4b590ccdeecc9478f7cd4778826f92cb8e02c12",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "0326f864ba52cc6a1d79415929519669c36d83b5",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "eeaf2945ede789fe1534255425d0cd8c17508fc6",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "ae68a610ba6d14a6491b1834a4a2d902d5767a4e",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "f9b7bf20b487a9b0ca763bae038dd9c75b92d2df",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "0b4e2ddbd175204b9a22d5a28e3afa7ac52e630a",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "224e0df091a4d19d142db0741ca996de41954174",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "9e536aff2523fcbb9d7a384ce72779a20fe037cb",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "361d3cf26c4a6c3bb8346b9ce4ac546ae93e86f9",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "e99772616292af0d733d938a09882857a7fc3369",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "84a7cc38454b52fd59c73c15cb3efdda154c59ee",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/fixtures/radar/role-scope-preflight.corpus.json",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "4709f62f1869609c29f2171aa6c170c6213f21e3",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/integration/test_radar_mvp.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_canonical.py",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "80ea2ee8614c0c9771874dc1504ac8167b0c583f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/unit/test_db.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "ee3caa41e58ff7177ccded362942e459f34c62d2",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_integration_safety.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "ee3caa41e58ff7177ccded362942e459f34c62d2",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_logging.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "cbfdac6008f9cab4083784cbd1874f76618d2a97",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_logging.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "d0941e68da8f38151ff86a61fc59f7c5cf9fcaa2",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_logging.py",
+    "type": "Secret Keyword",
+    "hashed_secret": "ff25e4294f203c517a3e72177ee08226d72f538d",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_logging.py",
+    "type": "Secret Keyword",
+    "hashed_secret": "cff396dc53137e98c1aed9431de7597e7d2d5a37",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_markdown_report.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "e5e9fa1ba31ecd1ae84f75caaa474f3a663f05f4",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_radar_role_contract.py",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "623dcd013bbd5e1ca8bc99e1280de5c1dace020f",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/unit/test_radar_role_contract.py",
+    "type": "Hex High Entropy String",
+    "hashed_secret": "51b46a66cc549da362f82836431a620857212461",
+    "reason": "reviewed-content-fingerprint"
+  },
+  {
+    "filename": "tests/unit/test_research_domain.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "9d4e1e23bd5b727046a9e3b4b7db57bd8d6ee684",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  },
+  {
+    "filename": "tests/unit/test_settings.py",
+    "type": "Basic Auth Credentials",
+    "hashed_secret": "ee3caa41e58ff7177ccded362942e459f34c62d2",
+    "reason": "reviewed-synthetic-redaction-fixture"
+  }
+]

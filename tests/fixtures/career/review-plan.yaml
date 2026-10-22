@@ -1,0 +1,195 @@
+# Fictional candidate mapping against the public vacancy fixture.
+review:
+  schema_version: h5.review-plan.v1
+  method: manual_evidence_mapping
+  reviewed_on: '2026-09-17'
+  profile_sha256: 2fcab92a7a119f1d5a776f43cbc084d43a8a88b4b6cbdc3ad5efe5601eef57e7
+  vacancy_sha256: 5db576a0fc22e325e0ef2b71c94051f66031eada7dfc99af8f9d2c72e92e9b03
+  assessments:
+  - evidence_id: api_design
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: api_architecture
+    - collection: claims
+      id: feature_lead
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: city_data
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: sample_metrics
+    - collection: claims
+      id: sample_metrics_migration
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: roadmap
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: feature_lead
+    - collection: claims
+      id: api_architecture
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: infrastructure
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: sample_services
+    - collection: claims
+      id: production
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: collaboration
+    relation: relevant
+    profile_refs:
+    - collection: claims
+      id: stakeholders
+    - collection: claims
+      id: integration_leadership
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: mentorship
+    relation: relevant
+    profile_refs:
+    - collection: claims
+      id: integration_mentoring
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: end_to_end
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: feature_lead
+    - collection: claims
+      id: initiative_outcome
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: scaling
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: sample_metrics
+    - collection: claims
+      id: scope_outcomes
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: education
+    relation: relevant
+    profile_refs:
+    - collection: claims
+      id: university
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: backend_years
+    relation: partial
+    profile_refs:
+    - collection: skills
+      id: python
+    - collection: skills
+      id: go
+    - collection: claims
+      id: backend_tenure
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: distributed
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: api_architecture
+    - collection: claims
+      id: integration_boundary
+    - collection: claims
+      id: sample_metrics_migration
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: cross_site
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: stakeholders
+    - collection: claims
+      id: integration_leadership
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: large_efforts
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: feature_lead
+    - collection: claims
+      id: no_coordination
+    - collection: claims
+      id: integration_mentoring
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: communication
+    relation: relevant
+    profile_refs:
+    - collection: claims
+      id: stakeholders
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: operational_practices
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: integration_stack
+    - collection: claims
+      id: production
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: large_scale
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: sample_metrics
+    - collection: claims
+      id: scope_outcomes
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: cpp
+    relation: not_established
+    profile_refs: []
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  - evidence_id: team_leading
+    relation: partial
+    profile_refs:
+    - collection: claims
+      id: integration_mentoring
+    - collection: claims
+      id: no_coordination
+    rationale: Synthetic mapping used to exercise evidence and provenance checks.
+    next_check: Review the fictional evidence before drawing any conclusion.
+  constraints:
+  - dimension: role
+    status: compatible
+    source_excerpt: Backend Software Engineer
+    rationale: Synthetic constraint check; no actual candidate preference.
+    next_check: Verify terms independently for a real application.
+  - dimension: location
+    status: compatible
+    source_excerpt: Warsaw, Poland
+    rationale: Synthetic constraint check; no actual candidate preference.
+    next_check: Verify terms independently for a real application.
+  - dimension: work_mode
+    status: compatible
+    source_excerpt: '#LI-Hybrid'
+    rationale: Synthetic constraint check; no actual candidate preference.
+    next_check: Verify terms independently for a real application.
+  - dimension: employment
+    status: unknown
+    source_excerpt: ''
+    rationale: Synthetic constraint check; no actual candidate preference.
+    next_check: Verify terms independently for a real application.
+  - dimension: base_pay
+    status: unknown
+    source_excerpt: ''
+    rationale: Synthetic constraint check; no actual candidate preference.
+    next_check: Verify terms independently for a real application.
+  priority_evidence_ids:
+  - backend_years
+  - large_efforts

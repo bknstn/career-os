@@ -1,4 +1,4 @@
-.PHONY: format format-check lint typecheck test pre-commit check db-up db-down db-logs db-status migration-up migration-down migration-current radar radar-refresh
+.PHONY: format format-check lint typecheck test pre-commit check security security-history db-up db-down db-logs db-status migration-up migration-down migration-current radar radar-refresh
 
 format:
 	uv run ruff format .
@@ -19,6 +19,12 @@ pre-commit:
 	uv run pre-commit run --all-files
 
 check: format-check lint typecheck test
+
+security:
+	uv tool run --from detect-secrets==1.5.0 python scripts/check_public_content.py
+
+security-history:
+	uv tool run --from detect-secrets==1.5.0 python scripts/check_public_content.py --history
 
 db-up:
 	docker compose up --detach --wait postgres

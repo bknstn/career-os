@@ -39,9 +39,9 @@ from career_os.radar.roles import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-FROZEN_PATH = ROOT / "reports/radar/role-residual-cause-2026-10-17.frozen.json"
-PREFLIGHT_PATH = ROOT / "reports/radar/role-scope-preflight-2026-10-15.corpus.json"
-VERIFICATION_PATH = ROOT / "reports/radar/role-calibration-2026-10-17.verification-corpus.json"
+FROZEN_PATH = ROOT / "tests/fixtures/radar/role-residual-cause.frozen.json"
+PREFLIGHT_PATH = ROOT / "tests/fixtures/radar/role-scope-preflight.corpus.json"
+VERIFICATION_PATH = ROOT / "tests/fixtures/radar/role-calibration.verification-corpus.json"
 GOLDEN_PATH = ROOT / "tests/fixtures/radar/golden_role_classification.v1.yaml"
 FROZEN_SHA256 = "f9790e68d37ba0004506b3204935ddf99f42570523c8c5d0cf0b2f54b577e20b"
 LEGACY_ROLES_SHA256 = "3f1ddb0e76dcb243165790003fa0630fb5b737f14d29bb54823fc4bc5874db74"
