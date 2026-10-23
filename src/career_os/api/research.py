@@ -86,4 +86,13 @@ def create_research_router(*, session_factory_provider: SessionFactoryProvider) 
                 page_size=page_size,
             )
 
+    @router.get("/highlights", summary="Show a bounded set of current reviewed research claims")
+    def highlights(
+        limit: Annotated[int, Query(ge=1, le=5)] = 3,
+    ) -> dict[str, object]:
+        with _read_session(session_factory_provider) as session:
+            return ResearchEvidenceService(SqlResearchEvidenceReadStore(session)).highlights(
+                limit=limit,
+            )
+
     return router

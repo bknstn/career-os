@@ -10,8 +10,8 @@ from typing import Any, Protocol
 from urllib.parse import urlencode
 from uuid import UUID
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import exists, func, select
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import Subquery
 
@@ -43,6 +43,8 @@ class ResearchEvidenceReadStore(Protocol):
         page: int,
         page_size: int,
     ) -> tuple[Sequence[Row], int]: ...
+
+    def list_current_highlights(self, *, limit: int) -> Sequence[Row]: ...
 
     def list_claim_summaries(self) -> Sequence[Row]: ...
 
@@ -315,6 +317,54 @@ class ResearchEvidenceService:
             ),
         }
 
+    def highlights(self, *, limit: int = 3) -> dict[str, object]:
+        """Return a small, deterministic slice of accepted claims still bound to current text."""
+        if not 1 <= limit <= 5:
+            raise ValueError("highlight limit must be between 1 and 5")
+        rows = tuple(self._store.list_current_highlights(limit=limit))
+        payloads = self._claim_payloads(rows)
+        items: list[dict[str, object]] = []
+        for row, claim in zip(rows, payloads, strict=True):
+            # Reapply the shared review-history and digest rule before exposing any highlight.
+            if claim.get("current_evidence") is not True:
+                continue
+            details = _mapping_payload(row.get("evidence_details"))
+            publication = _version_payload(row)["publication_date"]
+            period = _mapping_payload(details.get("data_period"))
+            missing = _mapping_payload(details.get("missing_reasons"))
+            limitation = _str(details.get("limitations"))
+            items.append(
+                {
+                    "id": _uuid_string(row.get("claim_id")),
+                    "question": _str(row.get("question")),
+                    "statement": _str(row.get("statement")),
+                    "evidence_kind": _str(row.get("evidence_kind")),
+                    "limitation": limitation,
+                    "limitation_state": _str(missing.get("limitations"))
+                    or ("reported" if limitation is not None else "not_reported"),
+                    "accepted_at": _datetime_string(row.get("accepted_at")),
+                    "document": {
+                        "id": _uuid_string(row.get("document_id")),
+                        "source_key": _str(row.get("source_key")),
+                        "canonical_url": _str(row.get("canonical_url")),
+                        "version_id": _uuid_string(row.get("version_id")),
+                        "version_number": _int(row.get("version_number")),
+                        "title": _str(row.get("title")),
+                        "publication_date": publication,
+                    },
+                    "data_period": {
+                        "start": _str(period.get("start")),
+                        "end": _str(period.get("end")),
+                        "state": _str(period.get("state")) or "unclear",
+                    },
+                }
+            )
+        return {
+            "schema_version": "career-radar.research.highlights.v1",
+            "limit": limit,
+            "items": items,
+        }
+
     def _claim_payloads(self, rows: Sequence[Row]) -> list[dict[str, object]]:
         claim_ids = tuple(_as_uuid(row.get("claim_id")) for row in rows)
         document_ids = tuple(dict.fromkeys(_as_uuid(row.get("document_id")) for row in rows))
@@ -489,6 +539,54 @@ class SqlResearchEvidenceReadStore:
             .offset((page - 1) * page_size)
         )
         return self._rows(statement), total
+
+    def list_current_highlights(self, *, limit: int) -> Sequence[Row]:
+        """Bound the query to latest accepted, nonterminal claims matching current text."""
+        latest_review = select(
+            ResearchClaimReview.claim_id.label("claim_id"),
+            ResearchClaimReview.state.label("state"),
+            ResearchClaimReview.event_sequence.label("event_sequence"),
+            ResearchClaimReview.reviewed_at.label("reviewed_at"),
+            func.row_number()
+            .over(
+                partition_by=ResearchClaimReview.claim_id,
+                order_by=ResearchClaimReview.event_sequence.desc(),
+            )
+            .label("review_rank"),
+        ).subquery()
+        latest_numbers = _latest_version_numbers()
+        latest_version = aliased(ResearchDocumentVersion)
+        statement = (
+            self._claim_select()
+            .add_columns(latest_review.c.reviewed_at.label("accepted_at"))
+            .join(latest_review, latest_review.c.claim_id == ResearchClaim.id)
+            .join(latest_numbers, latest_numbers.c.document_id == ResearchDocument.id)
+            .join(
+                latest_version,
+                (latest_version.document_id == ResearchDocument.id)
+                & (latest_version.version_number == latest_numbers.c.version_number),
+            )
+            .where(
+                latest_review.c.review_rank == 1,
+                latest_review.c.state == "accepted",
+                ResearchDocumentVersion.normalized_text_sha256.is_not(None),
+                ResearchDocumentVersion.normalized_text_sha256
+                == latest_version.normalized_text_sha256,
+                ~exists(
+                    select(1).where(
+                        ResearchClaimReview.claim_id == ResearchClaim.id,
+                        ResearchClaimReview.state.in_(("superseded", "retracted")),
+                    )
+                ),
+            )
+            .order_by(
+                latest_review.c.reviewed_at.desc(),
+                latest_review.c.event_sequence.desc(),
+                ResearchClaim.id,
+            )
+            .limit(limit)
+        )
+        return self._rows(statement)
 
     def list_claim_summaries(self) -> Sequence[Row]:
         statement = (

@@ -666,17 +666,114 @@
       statCard("Unclassified roles", summary.unknown_occupation_count, `${formatNumber(summary.missing_description_count)} without a description`, "?"));
     root.append(stats);
 
-    const grid = element("div", "content-grid");
-    const left = element("div", "stack");
-    const right = element("div", "stack");
+    const grid = element("div", "content-grid overview-content-grid");
+    const left = element("div", "stack overview-left");
+    const right = element("div", "stack overview-support");
+    const highlights = researchHighlightsPanel();
     left.append(distributionPanel("Role distribution", data.occupations, summary.posting_count, "occupation", "Share of all postings, including unknown roles", summary.unknown_occupation_count));
     left.append(distributionPanel("Specialties", data.specialties, summary.technical_engineering_count, "specialty", "Share of engineering postings"));
     left.append(distributionPanel("Common skill mentions", data.skills, summary.posting_count, "skill", "Share of postings with a detected mention"));
     left.append(jobsPanel((data.jobs && data.jobs.items || []).slice(0, 5), data.jobs && data.jobs.total, "Recent observations"));
     right.append(sourcesPanel(data.sources));
     right.append(trendPanel(data.history, data.history && data.history.metrics, routeFromHash()));
-    grid.append(left, right);
+    grid.append(left, highlights.box, right);
     root.append(grid);
+    loadResearchHighlights(renderSequence, highlights);
+  }
+
+  function researchHighlightsPanel() {
+    const link = buttonLink("#/research", "All research →", "panel-link");
+    const view = panel(
+      "What’s happening",
+      "Latest reviewed research · original study dates below.",
+      link
+    );
+    view.box.classList.add("overview-highlights");
+    view.body.classList.add("research-highlights-list");
+    view.body.setAttribute("aria-live", "polite");
+    view.body.setAttribute("aria-busy", "true");
+    view.body.append(text("p", "research-note", "Loading reviewed research…"));
+    view.box.append(view.body);
+    return view;
+  }
+
+  async function loadResearchHighlights(seq, view) {
+    try {
+      const response = await getJson("research/highlights", new URLSearchParams({ limit: "3" }));
+      if (seq !== renderSequence || !view.box.isConnected) return;
+      view.body.replaceChildren();
+      const items = Array.isArray(response.items) ? response.items : [];
+      if (!items.length) {
+        view.body.append(text("p", "research-note", "No current reviewed highlights are available yet."));
+      } else {
+        for (const item of items) view.body.append(researchHighlightCard(item));
+      }
+      view.body.setAttribute("aria-busy", "false");
+    } catch {
+      if (seq !== renderSequence || !view.box.isConnected) return;
+      view.body.replaceChildren(
+        text("p", "research-note", "Reviewed research is temporarily unavailable.")
+      );
+      view.body.setAttribute("aria-busy", "false");
+    }
+  }
+
+  function researchHighlightCard(item) {
+    const card = element("article", "research-highlight");
+    const document = item.document || {};
+    const publication = document.publication_date || {};
+    const period = item.data_period || {};
+    const questionLabels = {
+      developer_tasks: "Developer task change",
+      experience_seniority: "Experience and seniority",
+      production_ai_skills: "Production AI skills",
+    };
+    const method = RESEARCH_METHODS[String(item.evidence_kind)] || "Method not reported";
+    const publicationText = publication.value
+      ? `Published ${publication.value}`
+      : `Publication date ${missingReasonLabel(publication.state)}`;
+    const periodText = period.start || period.end
+      ? `Data period ${period.start || "start unknown"} to ${period.end || "end unknown"}`
+      : `Data period ${missingReasonLabel(period.state)}`;
+    const versionLink = document.id && document.version_id
+      ? buttonLink(
+        `#/research/document/${encodeURIComponent(document.id)}/${encodeURIComponent(document.version_id)}`,
+        "Read evidence →",
+        "research-citation-link"
+      )
+      : null;
+    const limitation = typeof item.limitation === "string" && item.limitation.trim()
+      ? item.limitation.trim()
+      : missingReasonLabel(item.limitation_state);
+    append(card,
+      text("div", "research-highlight-question", questionLabels[String(item.question)] || "Research question"),
+      text("h3", "research-highlight-statement", item.statement || "Claim statement unavailable."),
+      text("p", "research-highlight-source", `${publisherLabel(document.source_key)} · ${method}`),
+      text("p", "research-highlight-dates", `${publicationText} · ${periodText}`),
+      researchHighlightLimitation(limitation),
+      text("p", "research-highlight-review", `Reviewed ${formatDate(item.accepted_at)}`),
+      versionLink
+    );
+    return card;
+  }
+
+  function researchHighlightLimitation(limitation) {
+    if (limitation.length <= 180) {
+      return text("p", "research-highlight-limitation", `Key limitation: ${limitation}`);
+    }
+    const disclosure = element("details", "research-highlight-limitation-details");
+    let excerpt = "";
+    for (const word of limitation.trim().split(/\s+/)) {
+      const candidate = excerpt ? `${excerpt} ${word}` : word;
+      if (candidate.length > 177) break;
+      excerpt = candidate;
+    }
+    const summaryText = excerpt
+      ? `Key limitation: ${excerpt}${excerpt === limitation ? "" : "…"}`
+      : "Key limitation · open to read";
+    const summary = text("summary", "research-highlight-limitation", summaryText);
+    disclosure.append(summary, text("p", "research-highlight-limitation", limitation));
+    return disclosure;
   }
 
   function buttonLink(href, label, className = "button") {

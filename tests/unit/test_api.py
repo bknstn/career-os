@@ -60,6 +60,7 @@ def test_app_construction_openapi_and_liveness_are_offline() -> None:
         "/radar/api/research/documents",
         "/radar/api/research/documents/{document_id}/versions/{version_id}",
         "/radar/api/research/claims",
+        "/radar/api/research/highlights",
         "/radar/api/research/products",
     }
     job_detail_schema = schema["components"]["schemas"]["JobDetailResponse"]
@@ -106,6 +107,23 @@ def test_research_product_projection_is_read_only_and_defers_io_until_request(
     assert not state_path.parent.exists()
 
 
+def test_highlight_read_failure_does_not_change_api_health() -> None:
+    def unavailable():
+        raise DatabaseConfigurationError("isolated test failure")
+
+    client = TestClient(
+        create_app(
+            ApiDependencies(session_factory_provider=unavailable, taxonomy_provider=unavailable)
+        )
+    )
+
+    response = client.get("/radar/api/research/highlights")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "database unavailable"}
+    assert client.get("/health/live").status_code == 200
+
+
 def test_research_page_assets_include_terminal_navigation_without_database_access() -> None:
     calls = 0
 
@@ -120,12 +138,15 @@ def test_research_page_assets_include_terminal_navigation_without_database_acces
         )
     )
     page = client.get("/radar/")
-    script = client.get("/radar/app.js?v=research-terminal-1")
+    script = client.get("/radar/app.js?v=research-highlights-1")
 
     assert page.status_code == 200
     assert 'href="#/research" data-nav="research"' in page.text
     assert script.status_code == 200
     assert 'getJson("research/overview")' in script.text
+    assert 'getJson("research/highlights"' in script.text
+    assert "view.box.isConnected" in script.text
+    assert "Reviewed research is temporarily unavailable." in script.text
     assert "Accepted current evidence" in script.text
     assert calls == 0
 

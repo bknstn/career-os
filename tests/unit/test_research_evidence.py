@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.api.research import create_research_router
@@ -59,6 +61,62 @@ def test_current_claim_requires_latest_acceptance_and_matching_latest_text() -> 
         latest_document_digest=None,
         reviews=(accepted,),
     ) == (False, "accepted", "normalized_text_unavailable")
+
+
+def test_highlights_include_only_current_claims_and_keep_unknown_dates_explicit() -> None:
+    document_id = UUID(int=41)
+    current = _claim_row(41, document_id, lineage="primary", upstream="Study A")
+    current["accepted_at"] = datetime(2026, 10, 20, tzinfo=UTC)
+    current["evidence_details"] = {
+        "limitations": None,
+        "missing_reasons": {"limitations": "not_reported"},
+        "data_period": {"start": None, "end": None, "state": "not_reported"},
+    }
+    changed = _claim_row(42, document_id, lineage="primary", digest="old")
+    changed["accepted_at"] = datetime(2026, 10, 21, tzinfo=UTC)
+    terminal = _claim_row(43, document_id, lineage="primary")
+    terminal["accepted_at"] = datetime(2026, 10, 22, tzinfo=UTC)
+    candidate = _claim_row(44, document_id, lineage="primary")
+    candidate["accepted_at"] = datetime(2026, 10, 23, tzinfo=UTC)
+    store = FakeStore(
+        claims=(current, changed, terminal, candidate),
+        reviews={
+            UUID(int=41): (_review(1, "accepted"),),
+            UUID(int=42): (_review(2, "accepted"),),
+            UUID(int=43): (_review(3, "accepted"), _review(4, "retracted")),
+            UUID(int=44): (_review(5, "candidate"),),
+        },
+        latest_digests={document_id: "same"},
+    )
+
+    result = cast(Any, ResearchEvidenceService(store).highlights(limit=5))
+
+    assert result["schema_version"] == "career-radar.research.highlights.v1"
+    assert len(result["items"]) == 1
+    item = result["items"][0]
+    assert item["id"] == str(UUID(int=41))
+    assert item["accepted_at"] == "2026-10-20T00:00:00+00:00"
+    assert item["document"]["version_id"] == str(UUID(int=1041))
+    assert item["document"]["publication_date"] == {
+        "value": None,
+        "state": "not_reported",
+    }
+    assert item["data_period"] == {"start": None, "end": None, "state": "not_reported"}
+    assert item["limitation"] is None
+    assert item["limitation_state"] == "not_reported"
+
+
+def test_highlight_limit_is_small_and_validated() -> None:
+    store = FakeStore()
+    service = ResearchEvidenceService(store)
+    assert service.highlights(limit=5)["items"] == []
+    for limit in (0, 6):
+        try:
+            service.highlights(limit=limit)
+        except ValueError as error:
+            assert "between 1 and 5" in str(error)
+        else:
+            raise AssertionError("out-of-range highlight limit should fail")
 
 
 def test_question_projection_keeps_lineage_and_job_search_context_separate() -> None:
@@ -245,6 +303,40 @@ def test_sql_projections_measure_body_bytes_without_selecting_body_content() -> 
     assert "research_document_versions.normalized_text," not in sql
 
 
+def test_highlight_sql_filters_current_reviews_and_sorts_by_review_time() -> None:
+    class Result:
+        def mappings(self) -> Result:
+            return self
+
+        def all(self) -> list[Row]:
+            return []
+
+    class CaptureSession:
+        statement: Any
+
+        def execute(self, statement: Any) -> Result:
+            self.statement = statement
+            return Result()
+
+    session = CaptureSession()
+    store = SqlResearchEvidenceReadStore(cast(Session, session))
+    assert store.list_current_highlights(limit=3) == []
+    sql = str(
+        session.statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+
+    assert "research_document_versions.normalized_text_sha256 =" in sql
+    assert "research_claim_reviews.state IN ('superseded', 'retracted')" in sql
+    assert "ORDER BY anon_" in sql
+    assert "reviewed_at DESC, anon_" in sql
+    assert "event_sequence DESC, research_claims.id" in sql
+    assert sql.endswith("LIMIT 3")
+    assert "SELECT research_document_versions.raw_body" not in sql
+
+
 def test_router_paths_and_query_validation_do_not_open_a_database() -> None:
     calls: list[str] = []
 
@@ -260,9 +352,12 @@ def test_router_paths_and_query_validation_do_not_open_a_database() -> None:
     assert "/radar/api/research/documents" in paths
     assert "/radar/api/research/documents/{document_id}/versions/{version_id}" in paths
     assert "/radar/api/research/claims" in paths
+    assert "/radar/api/research/highlights" in paths
 
-    response = TestClient(app).get("/radar/api/research/documents?page_size=101")
+    client = TestClient(app)
+    response = client.get("/radar/api/research/documents?page_size=101")
     assert response.status_code == 422
+    assert client.get("/radar/api/research/highlights?limit=6").status_code == 422
     assert calls == []
 
 
@@ -367,6 +462,9 @@ class FakeStore(ResearchEvidenceReadStore):
         )
         start = (page - 1) * page_size
         return filtered[start : start + page_size], len(filtered)
+
+    def list_current_highlights(self, *, limit: int) -> Sequence[Row]:
+        return self._claims[:limit]
 
     def list_claim_summaries(self) -> Sequence[Row]:
         return self._claims
