@@ -4,6 +4,7 @@ Start with the [project README](../README.md) for the purpose and local setup.
 
 | Guide | Contents |
 | --- | --- |
+| [Product thesis](PRODUCT_THESIS.md) | Career Thesis as the intended product wedge, post-pivot direction, and value validation |
 | [Architecture](architecture.md) | Components, data flow, and storage boundaries |
 | [Development](development.md) | Quality checks, database tests, and live tests |
 | [Contracts](contracts.md) | Profile, market, review, Radar, and research formats |

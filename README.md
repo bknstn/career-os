@@ -1,23 +1,44 @@
 # Career OS
 
-Career OS is a local career research tool for software engineers. It collects
-public company job postings, makes roles and skill mentions searchable, and
-keeps research about AI and work connected to its original evidence.
+Career OS is being built to help software engineers form and revisit a
+**Career Thesis: a reasoned bet on where to invest the next 2–5 years of career
+capital, why that direction fits, and what would change the decision.**
 
-The main interface is **Career Radar**: a browser workspace for exploring a
-configured panel of company job boards, inspecting posting evidence, and saving
-a shortlist. The separate Research view tracks publisher documents and reviewed
-claims about developer tasks, seniority, and production AI skills.
+**Career Radar** is the evidence foundation for that goal. The current local
+prototype collects public company job postings, makes roles and skill mentions
+searchable, and keeps research about AI and work connected to its original
+evidence. Its browser workspace supports exploring a configured company-board
+panel, inspecting posting evidence, and saving a shortlist. The Research view
+tracks reviewed claims about developer tasks, seniority, and production AI skills.
 
 This repository contains the Python application, browser interface, database
 migrations, source configurations, fictional profile examples, and tests.
-It is a working local prototype for exploring career questions and the quality
-of the evidence behind them.
+The personal Career Map and Career Thesis are planned product layers. The
+current prototype provides the evidence and exploration tools described below.
 
 ![Career Radar: roles, source freshness, and job coverage](docs/images/career-radar.jpg)
 
 *Example capture from a collected panel. A fresh installation starts with an
 empty database; counts and source availability change between collections.*
+
+## Why Career Thesis
+
+The decision Career OS aims to support is: **Which career direction should I
+invest in next, and what evidence would make me reconsider?**
+
+After the pivot, the unit of decision is a career trajectory over several years.
+A Career Thesis would connect a person's experience, goals, constraints, and
+preferences to observed changes in roles, skills, and developer work. It would
+explain the current bet, alternatives considered, supporting and conflicting
+evidence, assumptions, risks, and conditions for revision.
+
+This is the intended product wedge: a personal decision that can be revisited
+as the person and the evidence change. Radar supplies the signals; a Career Map
+would compare plausible paths; the Thesis would explain which path to pursue
+and why. Collection serves that decision loop.
+
+See the [product thesis](docs/PRODUCT_THESIS.md) for the post-pivot direction,
+the intended output, and how to validate its value.
 
 ## What you can do
 
@@ -169,6 +190,7 @@ with a plain JavaScript/CSS interface. See the
 
 ## Documentation
 
+- [Product thesis and post-pivot direction](docs/PRODUCT_THESIS.md)
 - [Documentation index](docs/README.md)
 - [Architecture decisions and product evolution](docs/adr/README.md)
 - [Collection operations](docs/operations.md)

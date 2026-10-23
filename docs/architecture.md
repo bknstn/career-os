@@ -3,6 +3,26 @@
 Career OS is a modular Python application with a PostgreSQL evidence store.
 The CLI, HTTP API, and browser interface share application services.
 
+## Product direction
+
+The intended decision output is a **Career Thesis**: a reasoned, revisable bet
+on where a software engineer should invest the next 2–5 years of career
+capital. The [product thesis](PRODUCT_THESIS.md) defines this post-pivot goal.
+
+Collection and enrichment supply evidence to Career Radar. The future personal
+layer would combine those signals with a person's experience, goals,
+constraints, and preferences, compare trajectories in a Career Map, and explain
+a chosen direction in a Career Thesis. Each thesis would retain its evidence,
+alternatives, assumptions, risks, and conditions for revision. New observations
+could then prompt a review of the decision.
+
+The current application implements the evidence and exploration foundation.
+The personal Radar-to-Map-to-Thesis loop remains planned. Job observations and
+reviewed research provide distinct inputs with their own populations and
+limitations; their interpretation must preserve those boundaries.
+
+## Current components and data flow
+
 ```mermaid
 flowchart LR
     Boards[Public company boards] --> Adapters[Source adapters]
