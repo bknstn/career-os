@@ -20,9 +20,10 @@ observations from the configured job-board panel; a research survey, experiment,
 forecast, or case study cannot be merged into that denominator. Research claims
 do not establish actual employment changes merely by measuring model exposure.
 
-The initial pilot has eight official publishers: Anthropic economics; OpenAI
-Economic Research; LinkedIn Economic Graph; Indeed Hiring Lab; McKinsey State of
-AI; Deloitte State of AI in the Enterprise; Stanford HAI AI Index; and METR.
+The initial research-publisher pilot has eight official publishers: Anthropic
+economics; OpenAI Economic Research; LinkedIn Economic Graph; Indeed Hiring
+Lab; McKinsey State of AI; Deloitte State of AI in the Enterprise; Stanford
+HAI AI Index; and METR.
 Official entry points are `https://www.anthropic.com/research/team/economics`,
 `https://www.anthropic.com/research/labor-market-impacts`,
 `https://openai.com/signals/research/`,
@@ -60,6 +61,17 @@ These leads came from official-page search only, not document review. Titles and
 search summaries do not establish claims. Acquisition must preserve the body,
 hash it, extract it, and record explicit metadata before an item can enter the
 seed corpus.
+
+Amazon's [official software-engineer role-guideline article](https://www.aboutamazon.com/news/company-news/amazon-software-engineer-role-guideline-ai)
+is a separate employer-guidance source, not a ninth empirical research
+publisher. It may support a `case_study` claim about the evaluation and skills
+Amazon says it expects in its own SDE roles. It does not establish hiring
+practice, workforce outcomes, general skill demand, or productivity.
+Unquantified internal correlations without disclosed sample, method, or
+controls are not evidence of those outcomes. Discovery from the [company-news
+index](https://www.aboutamazon.com/news/company-news) requires both AI-related
+and software-role context so unrelated corporate announcements do not consume
+the daily candidate budget.
 
 ## Evidence and lifecycle contract
 
@@ -189,6 +201,13 @@ The parser handles applicable REP groups, `*`, terminal `$`, longest octet
 match with allow precedence on ties, and URI octet normalization; unsupported,
 malformed, or unavailable policy fails closed. This is a bounded pilot parser,
 not a claim of complete REP implementation.
+
+The Amazon employer-guidance source has a 10-second per-host minimum request
+interval, applied to robots, index, document, redirect, and retry requests.
+This follows the publisher's current `Crawl-delay: 10` instruction. That
+directive is nonstandard; the interval is an explicit source setting rather
+than a general robots-parser feature and should be reviewed if the publisher's
+policy changes.
 
 Every durable implementation checkpoint records the current Alembic revision,
 whether the new migration exists, whether disposable `*_test` up/down/rollback

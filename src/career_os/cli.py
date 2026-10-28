@@ -732,6 +732,12 @@ def research_plan(
                     "key": selected_source.key,
                     "publisher": selected_source.publisher,
                     "max_document_bytes": selected_source.max_response_bytes,
+                    "effective_minimum_host_interval_seconds": max(
+                        0.2, selected_source.minimum_request_interval_seconds or 0.0
+                    ),
+                    "discovery_required_term_groups": [
+                        list(group) for group in selected_source.discovery_required_term_groups
+                    ],
                     "seed_documents": list(selected_source.candidate_document_urls),
                     "discovery_urls": list(selected_source.discovery_urls),
                     "document_aliases": [

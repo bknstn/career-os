@@ -159,6 +159,14 @@ def relevant_candidates(
         title = " ".join(link.title.split())
         context = " ".join((link.context or "").split())
         signals = f"{title} {context} {link.url}"
+        folded_signals = signals.casefold()
+        if any(
+            not any(
+                re.search(rf"\b{re.escape(term.casefold())}\b", folded_signals) for term in group
+            )
+            for group in source.discovery_required_term_groups
+        ):
+            continue
         if _EXCLUDED.search(title) or not _RELEVANCE.search(signals):
             continue
         if _GENERIC_LINK.fullmatch(title) and not _RELEVANCE.search(f"{context} {link.url}"):

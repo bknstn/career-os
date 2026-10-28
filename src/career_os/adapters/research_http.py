@@ -68,9 +68,13 @@ class ResearchRequestBudget:
         self.used = 0
 
     def reserve(self) -> None:
+        self.ensure_available()
+        self.used += 1
+
+    def ensure_available(self) -> None:
+        """Fail before waiting when the run has no remaining wire requests."""
         if self.used >= self.maximum:
             raise ResearchFetchError("blocked", "run_request_limit")
-        self.used += 1
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
@@ -149,6 +153,10 @@ class ResearchFetcher:
             host.lower().rstrip(".")
             for host in (allowed_hosts_override or tuple(source.allowed_hosts))
         )
+        minimum_host_interval_seconds = max(
+            self.minimum_host_interval_seconds,
+            source.minimum_request_interval_seconds or 0.0,
+        )
         try:
             requested = normalize_research_url(value, allowed_hosts=allowed_hosts)
         except ValueError as error:
@@ -194,14 +202,12 @@ class ResearchFetcher:
                         bytes_received=transfer_bytes,
                     )
                 try:
-                    self.request_budget.reserve()
+                    self.request_budget.ensure_available()
                 except ResearchFetchError as error:
                     error.request_count = requests_for_fetch
                     error.bytes_received = max(error.bytes_received, transfer_bytes)
                     raise
-                requests_for_fetch += 1
-                timeout = min(self.timeout_seconds, remaining)
-                pause = self._host_pause(hostname)
+                pause = self._host_pause(hostname, minimum_host_interval_seconds)
                 if pause > 0:
                     if time.monotonic() + pause >= deadline:
                         raise ResearchFetchError(
@@ -211,6 +217,22 @@ class ResearchFetcher:
                             bytes_received=transfer_bytes,
                         )
                     self.sleep(pause)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ResearchFetchError(
+                        "network_error",
+                        "run_deadline_exceeded",
+                        request_count=requests_for_fetch,
+                        bytes_received=transfer_bytes,
+                    )
+                try:
+                    self.request_budget.reserve()
+                except ResearchFetchError as error:
+                    error.request_count = requests_for_fetch
+                    error.bytes_received = max(error.bytes_received, transfer_bytes)
+                    raise
+                requests_for_fetch += 1
+                timeout = min(self.timeout_seconds, remaining)
                 self._last_host_request[hostname] = time.monotonic()
                 connection = self.connection_factory(
                     hostname, address, timeout=timeout, context=self.context
@@ -400,10 +422,13 @@ class ResearchFetcher:
             raise ResearchFetchError("network_error", "dns_no_public_address")
         return addresses[0]
 
-    def _host_pause(self, hostname: str) -> float:
-        if self.minimum_host_interval_seconds == 0:
+    def _host_pause(self, hostname: str, minimum_interval_seconds: float) -> float:
+        if minimum_interval_seconds == 0:
             return 0.0
-        ready_at = self._last_host_request.get(hostname, 0.0) + self.minimum_host_interval_seconds
+        last_request = self._last_host_request.get(hostname)
+        if last_request is None:
+            return 0.0
+        ready_at = last_request + minimum_interval_seconds
         return max(0.0, ready_at - time.monotonic())
 
     @staticmethod

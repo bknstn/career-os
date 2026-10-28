@@ -67,6 +67,8 @@ class ResearchSource(BaseModel):
     candidate_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     document_aliases: tuple[ResearchDocumentAlias, ...] = ()
     max_response_bytes: int = Field(default=12 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    minimum_request_interval_seconds: float | None = Field(default=None, ge=0, le=60)
+    discovery_required_term_groups: tuple[tuple[Annotated[str, Field(min_length=1)], ...], ...] = ()
 
     @model_validator(mode="after")
     def validate_boundary(self) -> ResearchSource:
@@ -79,6 +81,11 @@ class ResearchSource(BaseModel):
             raise ValueError("discovery_urls must be unique")
         if len(set(self.candidate_document_urls)) != len(self.candidate_document_urls):
             raise ValueError("candidate_document_urls must be unique")
+        for group in self.discovery_required_term_groups:
+            if not group or any(not term.strip() for term in group):
+                raise ValueError("each discovery term group must contain non-blank terms")
+        if self.minimum_request_interval_seconds is not None and not self.enabled:
+            raise ValueError("disabled sources must not configure a request interval")
         aliases = [alias.alias_url for alias in self.document_aliases]
         if len(aliases) != len(set(aliases)):
             raise ValueError("document alias URLs must be unique")

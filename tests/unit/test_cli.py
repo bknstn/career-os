@@ -133,8 +133,9 @@ def test_research_plan_reports_finite_limits_without_database_or_network(monkeyp
     assert payload["limits"]["acquired_document_revisit_interval_days"] == 7
     assert "evaluated per path" in payload["limits"]["robots_policy"]
     assert "fails closed" in payload["limits"]["robots_policy"]
-    assert sum(len(source["seed_documents"]) for source in payload["sources"]) == 20
-    assert {source["key"] for source in payload["sources"]} == {
+    assert sum(len(source["seed_documents"]) for source in payload["sources"]) == 21
+    sources = {source["key"]: source for source in payload["sources"]}
+    assert set(sources) == {
         "anthropic_economics",
         "openai_economic_research",
         "linkedin_economic_graph",
@@ -143,7 +144,13 @@ def test_research_plan_reports_finite_limits_without_database_or_network(monkeyp
         "deloitte_state_of_ai",
         "stanford_hai_ai_index",
         "metr",
+        "amazon_engineering_guidance",
     }
+    assert sources["amazon_engineering_guidance"]["effective_minimum_host_interval_seconds"] == 10
+    amazon_groups = sources["amazon_engineering_guidance"]["discovery_required_term_groups"]
+    assert amazon_groups[0] == ["ai", "artificial intelligence"]
+    assert "software engineers" in amazon_groups[1]
+    assert sources["anthropic_economics"]["effective_minimum_host_interval_seconds"] == 0.2
 
 
 def test_research_claim_import_rejects_unknown_fields_before_database_access(

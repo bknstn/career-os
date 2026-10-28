@@ -1110,6 +1110,7 @@
     deloitte_state_of_ai: "Deloitte State of AI",
     stanford_hai_ai_index: "Stanford HAI AI Index",
     metr: "METR",
+    amazon_engineering_guidance: "Amazon · Employer guidance",
   };
   const RESEARCH_METHODS = {
     observed: "Observed data",

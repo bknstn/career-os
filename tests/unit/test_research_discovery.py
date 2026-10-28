@@ -95,3 +95,29 @@ def test_discovery_fills_limit_after_known_urls_and_caps_parsed_links() -> None:
     assert [candidate.canonical_url for candidate in candidates] == [
         "https://economicgraph.linkedin.com/research/item-9"
     ]
+
+
+def test_amazon_index_requires_ai_and_software_role_context() -> None:
+    registry = ResearchSourceRegistry.load(
+        Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
+    )
+    source = registry.get("amazon_engineering_guidance")
+    links = parse_visible_index_links(
+        """
+        <main>
+          <a href="/news/company-news/ai-warehouse-hiring">AI warehouse hiring</a>
+          <a href="/news/company-news/ai-data-center-investment">AI data-center investment</a>
+          <a href="/news/company-news/software-engineer-hiring">Software engineer hiring</a>
+          <a href="/news/company-news/new-guidance">
+            AI guidance for software engineers and developers
+          </a>
+        </main>
+        """,
+        base_url="https://www.aboutamazon.com/news/company-news",
+    )
+
+    candidates = relevant_candidates(source, links, registry)
+
+    assert [candidate.canonical_url for candidate in candidates] == [
+        "https://www.aboutamazon.com/news/company-news/new-guidance"
+    ]

@@ -1,4 +1,4 @@
-version: research-sources-v2
+version: research-sources-v3
 sources:
   - key: anthropic_economics
     publisher: Anthropic Economic Research
@@ -108,6 +108,31 @@ sources:
       - https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/
       - https://metr.org/blog/2026-02-24-uplift-update/
       - https://metr.org/blog/2026-05-11-ai-usage-survey/
+  - key: amazon_engineering_guidance
+    publisher: Amazon · Employer guidance
+    enabled: true
+    allowed_hosts: [www.aboutamazon.com]
+    minimum_request_interval_seconds: 10
+    discovery_methods: [html_index, single_document]
+    discovery_urls: [https://www.aboutamazon.com/news/company-news]
+    candidate_document_urls:
+      - https://www.aboutamazon.com/news/company-news/amazon-software-engineer-role-guideline-ai
+    discovery_required_term_groups:
+      - [ai, "artificial intelligence"]
+      - - developer
+        - developers
+        - software engineer
+        - software engineers
+        - software-engineer
+        - software-engineers
+        - software engineering
+        - software-engineering
+        - sde
+        - sdes
+        - programming
+        - programmers
+        - coding
+        - coders
   - key: world_economic_forum
     publisher: World Economic Forum
     enabled: false

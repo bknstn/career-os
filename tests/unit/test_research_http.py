@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import socket
 from collections.abc import Iterator
+from itertools import pairwise
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -454,3 +455,122 @@ def test_timeout_retry_cap_and_deadline_prevent_extra_requests(
     assert deadline_error.value.error_code == "run_deadline_exceeded"
     assert deadline_error.value.request_count == 1
     assert len(deadline_connections) == 1
+
+
+def test_amazon_minimum_interval_covers_robots_index_redirects_and_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = _FakeClock()
+    monkeypatch.setattr(research_http, "time", SimpleNamespace(monotonic=clock.monotonic))
+    responses = iter(
+        [
+            _Response(200, {"Content-Type": "text/plain"}, b"User-agent: *\n"),
+            _Response(301, {"Location": "/news/company-news"}),
+            _Response(429, {"Content-Type": "text/html"}),
+            _Response(200, {"Content-Type": "text/html"}, b"<main>index</main>"),
+            _Response(200, {"Content-Type": "text/html"}, b"<article>guidance</article>"),
+        ]
+    )
+    request_times: list[float] = []
+
+    def connection_factory(*args: Any, **kwargs: Any) -> _Connection:
+        request_times.append(clock.monotonic())
+        return _Connection(next(responses))
+
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(8),
+        resolver=_public_resolver,
+        connection_factory=connection_factory,
+        retries=1,
+        retry_delay_seconds=0.1,
+        minimum_host_interval_seconds=0.2,
+        sleep=clock.sleep,
+    )
+    source = _registry().get("amazon_engineering_guidance")
+
+    robots = fetcher.fetch(
+        source,
+        "https://www.aboutamazon.com/robots.txt",
+        maximum_bytes=1024,
+        deadline=1000,
+        accept_header="text/plain",
+        allow_text_plain=True,
+    )
+    index = fetcher.fetch(
+        source,
+        "https://www.aboutamazon.com/news/company-news",
+        maximum_bytes=1024,
+        deadline=1000,
+    )
+    document = fetcher.fetch(
+        source,
+        "https://www.aboutamazon.com/news/company-news/amazon-software-engineer-role-guideline-ai",
+        maximum_bytes=1024,
+        deadline=1000,
+    )
+
+    assert robots.body == b"User-agent: *\n"
+    assert index.body == b"<main>index</main>"
+    assert document.body == b"<article>guidance</article>"
+    assert request_times == [0.0, 10.0, 20.0, 30.0, 40.0]
+    assert all(later - earlier >= 10.0 for earlier, later in pairwise(request_times))
+
+
+def test_source_interval_recomputes_timeout_and_skips_request_past_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = _FakeClock()
+    monkeypatch.setattr(research_http, "time", SimpleNamespace(monotonic=clock.monotonic))
+    request_details: list[tuple[float, float]] = []
+
+    def connection_factory(*args: Any, **kwargs: Any) -> _Connection:
+        request_details.append((clock.monotonic(), kwargs["timeout"]))
+        return _Connection(_Response(200, {"Content-Type": "text/html"}, b"ok"))
+
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(8),
+        resolver=_public_resolver,
+        connection_factory=connection_factory,
+        retries=0,
+        minimum_host_interval_seconds=0.2,
+        sleep=clock.sleep,
+    )
+    source = _registry().get("amazon_engineering_guidance")
+    url = "https://www.aboutamazon.com/news/company-news"
+
+    fetcher.fetch(source, url, maximum_bytes=1024, deadline=100)
+    fetcher.fetch(source, url, maximum_bytes=1024, deadline=12)
+    with pytest.raises(ResearchFetchError) as error:
+        fetcher.fetch(source, url, maximum_bytes=1024, deadline=15)
+
+    assert request_details == [(0.0, 12.0), (10.0, 2.0)]
+    assert error.value.error_code == "run_deadline_exceeded"
+    assert error.value.request_count == 0
+    assert fetcher.request_budget.used == 2
+
+
+def test_unconfigured_source_keeps_default_host_interval(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = _FakeClock()
+    monkeypatch.setattr(research_http, "time", SimpleNamespace(monotonic=clock.monotonic))
+    request_times: list[float] = []
+
+    def connection_factory(*args: Any, **kwargs: Any) -> _Connection:
+        request_times.append(clock.monotonic())
+        return _Connection(_Response(200, {"Content-Type": "text/html"}, b"ok"))
+
+    fetcher = ResearchFetcher(
+        request_budget=ResearchRequestBudget(4),
+        resolver=_public_resolver,
+        connection_factory=connection_factory,
+        retries=0,
+        minimum_host_interval_seconds=0.2,
+        sleep=clock.sleep,
+    )
+    source = _registry().get("anthropic_economics")
+    url = "https://www.anthropic.com/research/labor-market-impacts"
+
+    fetcher.fetch(source, url, maximum_bytes=1024, deadline=100)
+    fetcher.fetch(source, url, maximum_bytes=1024, deadline=100)
+
+    assert source.minimum_request_interval_seconds is None
+    assert request_times == [0.0, 0.2]

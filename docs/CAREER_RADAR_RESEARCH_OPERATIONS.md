@@ -272,3 +272,11 @@ or PDF documents remain rejected. A candidate URL, title, publication date, or
 extraction text is not evidence by itself. Research claims do not share
 job-posting denominators and do not establish employment change merely by
 measuring model exposure.
+
+Amazon's source is labeled **Employer guidance** and contributes a company
+case study, not a research-publisher or labor-market measurement. Index
+discovery requires both AI-related and software-role context. Its configured
+10-second per-host minimum request interval applies to robots, index, document,
+redirect, and retry requests to respect the publisher's current
+`Crawl-delay: 10`; this nonstandard directive is handled through an explicit
+source setting, not general robots parsing.
