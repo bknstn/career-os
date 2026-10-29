@@ -191,12 +191,13 @@ Collector limits are recorded by `career-os research plan`: 64 MiB total
 body bytes, 96 wire requests, at most 32 configured seed bodies for the
 backfill, at most 12 document bodies in normal runs, at most eight new index
 candidates per source, 12-second request timeout, 15-minute run deadline, one
-retry, four redirects, and 0.2 seconds minimum between host requests. A source
-response cap may be raised to 25 MiB for the verified OpenAI report PDF; the
-whole run remains capped at 64 MiB. Daily runs do not redownload fixed seeds;
-they discover index links and rotate overdue candidates, including already
-acquired documents. Robots policy is fetched once per exact host and evaluated
-for every target path using the declared `CareerOSResearch/0.1` HTTP user agent.
+retry, four redirects, and 0.2 seconds minimum between host requests. OpenAI
+and Deloitte sources use a 25 MiB per-response cap; all other sources retain
+the 12 MiB default. The whole run remains capped at 64 MiB. Daily runs do not
+redownload fixed seeds; they discover index links and rotate overdue
+candidates, including already acquired documents. Robots policy is fetched
+once per exact host and evaluated for every target path using the declared
+`CareerOSResearch/0.1` HTTP user agent.
 The parser handles applicable REP groups, `*`, terminal `$`, longest octet
 match with allow precedence on ties, and URI octet normalization; unsupported,
 malformed, or unavailable policy fails closed. This is a bounded pilot parser,

@@ -155,6 +155,8 @@ def relevant_candidates(
         raise ValueError("candidate limit must be positive")
     selected: list[ResearchDiscoveryCandidate] = []
     seen: set[str] = set()
+    excluded_urls = set(excluded_canonical_urls)
+    excluded_urls.update(registry.excluded_document_urls(source.key))
     for link in links:
         title = " ".join(link.title.split())
         context = " ".join((link.context or "").split())
@@ -175,7 +177,7 @@ def relevant_candidates(
             canonical = registry.canonical_document_url(source.key, link.url)
         except ValueError:
             continue
-        if canonical in seen or canonical in excluded_canonical_urls:
+        if canonical in seen or canonical in excluded_urls:
             continue
         seen.add(canonical)
         selected.append(

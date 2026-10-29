@@ -273,6 +273,13 @@ extraction text is not evidence by itself. Research claims do not share
 job-posting denominators and do not establish employment change merely by
 measuring model exposure.
 
+Source entries may classify exact `excluded_document_urls` as pages that are
+not standalone publications. These URLs are filtered from new discovery,
+stored-candidate rotation, and document acquisition. The rule applies to the
+configured URL after normal URL and alias handling; it does not change the
+source host allowlist or robots policy, and an index URL can still be used for
+discovery when separately configured.
+
 Amazon's source is labeled **Employer guidance** and contributes a company
 case study, not a research-publisher or labor-market measurement. Index
 discovery requires both AI-related and software-role context. Its configured

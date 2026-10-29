@@ -65,6 +65,7 @@ class ResearchSource(BaseModel):
     discovery_methods: tuple[DiscoveryMethod, ...] = ()
     discovery_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     candidate_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
+    excluded_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     document_aliases: tuple[ResearchDocumentAlias, ...] = ()
     max_response_bytes: int = Field(default=12 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
     minimum_request_interval_seconds: float | None = Field(default=None, ge=0, le=60)
@@ -81,6 +82,8 @@ class ResearchSource(BaseModel):
             raise ValueError("discovery_urls must be unique")
         if len(set(self.candidate_document_urls)) != len(self.candidate_document_urls):
             raise ValueError("candidate_document_urls must be unique")
+        if len(set(self.excluded_document_urls)) != len(self.excluded_document_urls):
+            raise ValueError("excluded_document_urls must be unique")
         for group in self.discovery_required_term_groups:
             if not group or any(not term.strip() for term in group):
                 raise ValueError("each discovery term group must contain non-blank terms")
@@ -93,8 +96,13 @@ class ResearchSource(BaseModel):
             normalize_research_url(url, allowed_hosts=tuple(hosts))
             for url in self.candidate_document_urls
         }
+        normalized_exclusions = [
+            normalize_research_url(url, allowed_hosts=tuple(hosts))
+            for url in self.excluded_document_urls
+        ]
         for url in (*self.discovery_urls, *self.candidate_document_urls):
             normalize_research_url(url, allowed_hosts=tuple(hosts))
+        alias_targets: dict[str, str] = {}
         for alias in self.document_aliases:
             normalized_alias = normalize_research_url(alias.alias_url, allowed_hosts=tuple(hosts))
             normalized_canonical = normalize_research_url(
@@ -104,6 +112,12 @@ class ResearchSource(BaseModel):
                 raise ValueError("a document alias must differ from its canonical URL")
             if normalized_canonical not in candidates:
                 raise ValueError("document alias targets must be configured candidate URLs")
+            alias_targets[normalized_alias] = normalized_canonical
+        canonical_exclusions = [alias_targets.get(url, url) for url in normalized_exclusions]
+        if len(canonical_exclusions) != len(set(canonical_exclusions)):
+            raise ValueError("excluded_document_urls must be unique after URL normalization")
+        if candidates.intersection(canonical_exclusions):
+            raise ValueError("excluded document URLs must not conflict with candidate URLs")
         if self.enabled and (not self.discovery_methods or not self.discovery_urls):
             raise ValueError("enabled sources require at least one discovery method and URL")
         if not self.enabled and (self.discovery_methods or self.discovery_urls):
@@ -169,6 +183,19 @@ class ResearchSourceRegistry:
             for alias in source.document_aliases
         }
         return aliases.get(normalized, normalized)
+
+    def excluded_document_urls(self, source_key: str) -> frozenset[str]:
+        """Return normalized, canonical URLs classified as non-document pages."""
+        source = self.get(source_key)
+        return frozenset(
+            self.canonical_document_url(source_key, value)
+            for value in source.excluded_document_urls
+        )
+
+    def is_excluded_document_url(self, source_key: str, value: str) -> bool:
+        """Check a URL after applying the source's normal URL and alias rules."""
+        canonical = self.canonical_document_url(source_key, value)
+        return canonical in self.excluded_document_urls(source_key)
 
     @classmethod
     def load(cls, path: str | Path) -> ResearchSourceRegistry:

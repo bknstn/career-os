@@ -1,4 +1,4 @@
-version: research-sources-v3
+version: research-sources-v4
 sources:
   - key: anthropic_economics
     publisher: Anthropic Economic Research
@@ -13,6 +13,8 @@ sources:
       - https://www.anthropic.com/research/economic-index-june-2026-report
       - https://www.anthropic.com/research/81k-economics
       - https://www.anthropic.com/research/claude-code-expertise
+    excluded_document_urls:
+      - https://www.anthropic.com/economic-index
     document_aliases:
       - alias_url: https://cdn.sanity.io/files/4zrzovbb/website/2b5bbaf2c1eb81dbf6e6fb813c1a24e35a64d376.pdf
         canonical_url: https://www.anthropic.com/research/labor-market-impacts
@@ -79,6 +81,7 @@ sources:
     publisher: Deloitte State of AI in the Enterprise
     enabled: true
     allowed_hosts: [www.deloitte.com]
+    max_response_bytes: 26214400
     discovery_methods: [html_index]
     discovery_urls:
       - https://www.deloitte.com/us/en/what-we-do/capabilities/applied-artificial-intelligence/content/state-of-ai-in-the-enterprise.html

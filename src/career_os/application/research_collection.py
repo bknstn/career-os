@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Literal
@@ -133,13 +133,17 @@ def fair_due_candidates(
     *,
     now: datetime,
     limit: int,
+    excluded_urls_by_source: Mapping[str, frozenset[str]] | None = None,
 ) -> tuple[ScheduledResearchCandidate, ...]:
     """Choose due work without allowing one publisher's backlog to starve others."""
     if limit < 1 or not source_order:
         return ()
     queues: dict[str, list[ScheduledResearchCandidate]] = {key: [] for key in source_order}
+    excluded_by_source = excluded_urls_by_source or {}
     for candidate in candidates:
         if candidate.source_key not in queues:
+            continue
+        if candidate.canonical_url in excluded_by_source.get(candidate.source_key, frozenset()):
             continue
         interval = ACQUIRED_REVISIT_INTERVAL if candidate.has_version else UNFETCHED_RETRY_INTERVAL
         if candidate.last_attempt_at is not None and now - candidate.last_attempt_at < interval:
@@ -438,6 +442,9 @@ class ResearchCollectionService:
             tuple(source_by_key),
             now=datetime.now(UTC),
             limit=max(0, document_limit - counts.documents_considered),
+            excluded_urls_by_source={
+                key: self.registry.excluded_document_urls(key) for key in source_by_key
+            },
         )
         for candidate in due:
             source = source_by_key[candidate.source_key]
@@ -473,6 +480,8 @@ class ResearchCollectionService:
         document_limit: int,
     ) -> None:
         canonical = self.registry.canonical_document_url(source.key, value)
+        if self.registry.is_excluded_document_url(source.key, canonical):
+            return
         identity = (source.key, canonical)
         if identity in seen_urls:
             return

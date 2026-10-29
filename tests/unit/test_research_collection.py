@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID, uuid4
 
 import pytest
 
+from career_os.adapters.research_http import ResearchFetcher, ResearchRequestBudget
 from career_os.application.research_collection import (
     ACQUIRED_REVISIT_INTERVAL,
     ROBOTS_USER_AGENT,
+    ResearchCollectionService,
     ResearchRobotsPolicy,
     ScheduledResearchCandidate,
+    _RunCounts,
     fair_due_candidates,
     parse_robots_rules,
     robots_policy_allows,
 )
+from career_os.config.research_sources import ResearchSource, ResearchSourceRegistry
 
 
 def _candidate(
@@ -85,6 +92,139 @@ def test_daily_due_queue_skips_recent_failures_and_unchanged_documents_until_due
         "failed-due",
         "version-due",
     }
+
+
+def test_daily_due_queue_skips_already_stored_excluded_documents() -> None:
+    now = datetime(2026, 10, 29, 9, tzinfo=UTC)
+    excluded_url = "https://www.anthropic.com/economic-index"
+    candidates = (
+        ScheduledResearchCandidate(
+            source_key="anthropic_economics",
+            canonical_url=excluded_url,
+            discovered_url=excluded_url,
+            title="Economic Index dashboard",
+            has_version=False,
+            last_attempt_at=None,
+        ),
+        _candidate("other", "paper"),
+    )
+
+    selected = fair_due_candidates(
+        candidates,
+        ("anthropic_economics", "other"),
+        now=now,
+        limit=8,
+        excluded_urls_by_source={"anthropic_economics": frozenset({excluded_url})},
+    )
+
+    assert [candidate.canonical_url for candidate in selected] == ["https://other.example/paper"]
+
+
+def test_stored_candidate_rotation_excludes_dashboard_before_limited_selection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = ResearchSourceRegistry.load(
+        Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
+    )
+    source = registry.get("anthropic_economics")
+    dashboard_url = "https://www.anthropic.com/economic-index"
+    publication_url = "https://www.anthropic.com/research/queued-ai-labor-study"
+    rows = (
+        SimpleNamespace(
+            source_key=source.key,
+            canonical_url=dashboard_url,
+            discovered_url=dashboard_url,
+            title="Economic Index dashboard",
+            latest_version=None,
+            last_attempt_at=None,
+        ),
+        SimpleNamespace(
+            source_key=source.key,
+            canonical_url=publication_url,
+            discovered_url=publication_url,
+            title="AI labor study",
+            latest_version=None,
+            last_attempt_at=None,
+        ),
+    )
+
+    class StubResult:
+        def all(self) -> tuple[SimpleNamespace, ...]:
+            return rows
+
+    class StubSession:
+        def __enter__(self) -> StubSession:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def execute(self, _statement: object) -> StubResult:
+            return StubResult()
+
+    service = ResearchCollectionService(
+        lambda: StubSession(),  # type: ignore[arg-type]
+        registry,
+        fetcher=ResearchFetcher(request_budget=ResearchRequestBudget(8)),
+    )
+    acquired: list[tuple[str, str]] = []
+
+    def record_acquisition(
+        _run_id: UUID, candidate_source: ResearchSource, value: str, **_kwargs: object
+    ) -> None:
+        acquired.append((candidate_source.key, value))
+
+    monkeypatch.setattr(service, "_acquire_document", record_acquisition)
+    service._retry_stored_candidates(
+        uuid4(),
+        (source,),
+        deadline=float("inf"),
+        counts=_RunCounts(),
+        seen_urls=set(),
+        fetched_html={},
+        robots_cache={},
+        document_limit=1,
+    )
+
+    assert acquired == [(source.key, publication_url)]
+
+
+def test_direct_acquisition_returns_before_network_or_storage_for_excluded_url() -> None:
+    registry = ResearchSourceRegistry.load(
+        Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
+    )
+
+    def forbidden_storage_access() -> None:
+        raise AssertionError("excluded document must not access storage")
+
+    service = ResearchCollectionService(
+        forbidden_storage_access,  # type: ignore[arg-type]
+        registry,
+        fetcher=ResearchFetcher(request_budget=ResearchRequestBudget(8)),
+    )
+    source = registry.get("anthropic_economics")
+    dashboard_url = "https://www.anthropic.com/economic-index"
+    counts = _RunCounts()
+    seen_urls: set[tuple[str, str]] = set()
+
+    service._acquire_document(
+        uuid4(),
+        source,
+        dashboard_url,
+        discovered_url=dashboard_url,
+        title="Economic Index dashboard",
+        deadline=float("inf"),
+        counts=counts,
+        seen_urls=seen_urls,
+        fetched_html={},
+        robots_cache={},
+        document_limit=4,
+    )
+
+    assert seen_urls == set()
+    assert counts.candidate_urls_seen == 0
+    assert counts.documents_considered == 0
+    assert service.request_budget.used == 0
 
 
 def test_robots_policy_prefers_specific_agent_group_then_uses_wildcard_fallback() -> None:

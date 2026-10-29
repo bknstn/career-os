@@ -19,7 +19,7 @@ def test_registry_has_eight_research_publishers_one_guidance_and_four_disabled()
     project_root = Path(__file__).resolve().parents[2]
     registry = ResearchSourceRegistry.load(project_root / "config/radar/research.sources.v1.yaml")
 
-    assert registry.version == "research-sources-v3"
+    assert registry.version == "research-sources-v4"
     assert len(registry.enabled_sources) == 9
     assert len(registry.sources) == 13
     assert {source.key for source in registry.sources if not source.enabled} == {
@@ -29,6 +29,16 @@ def test_registry_has_eight_research_publishers_one_guidance_and_four_disabled()
         "bls",
     }
     assert sum(len(source.candidate_document_urls) for source in registry.enabled_sources) == 21
+    raised_cap_keys = {"openai_economic_research", "deloitte_state_of_ai"}
+    assert {source.key: source.max_response_bytes for source in registry.sources} == {
+        source.key: (25 * 1024 * 1024 if source.key in raised_cap_keys else 12 * 1024 * 1024)
+        for source in registry.sources
+    }
+    anthropic = registry.get("anthropic_economics")
+    assert anthropic.excluded_document_urls == ("https://www.anthropic.com/economic-index",)
+    assert registry.excluded_document_urls("anthropic_economics") == frozenset(
+        {"https://www.anthropic.com/economic-index"}
+    )
     amazon = registry.get("amazon_engineering_guidance")
     assert amazon.publisher == "Amazon · Employer guidance"
     assert amazon.allowed_hosts == ("www.aboutamazon.com",)
@@ -75,6 +85,54 @@ def test_source_registry_rejects_unlisted_hosts_and_disabled_discovery_urls() ->
                 "allowed_hosts": ["publisher.example"],
                 "discovery_methods": [],
                 "discovery_urls": ["https://publisher.example/research"],
+            }
+        )
+
+
+def test_source_registry_validates_excluded_document_urls_and_contradictions() -> None:
+    base = {
+        "key": "sample",
+        "publisher": "Sample Publisher",
+        "enabled": True,
+        "allowed_hosts": ["publisher.example"],
+        "discovery_methods": ["html_index"],
+        "discovery_urls": ["https://publisher.example/research"],
+    }
+
+    with pytest.raises(ValidationError, match="outside the exact source allowlist"):
+        ResearchSource.model_validate(
+            {**base, "excluded_document_urls": ["https://other.example/dashboard"]}
+        )
+    with pytest.raises(ValidationError, match="unique after URL normalization"):
+        ResearchSource.model_validate(
+            {
+                **base,
+                "excluded_document_urls": [
+                    "https://PUBLISHER.example/dashboard#first",
+                    "https://publisher.example/dashboard#second",
+                ],
+            }
+        )
+    with pytest.raises(ValidationError, match="must not conflict with candidate URLs"):
+        ResearchSource.model_validate(
+            {
+                **base,
+                "candidate_document_urls": ["https://publisher.example/report"],
+                "excluded_document_urls": ["https://publisher.example/report"],
+            }
+        )
+    with pytest.raises(ValidationError, match="must not conflict with candidate URLs"):
+        ResearchSource.model_validate(
+            {
+                **base,
+                "candidate_document_urls": ["https://publisher.example/report"],
+                "document_aliases": [
+                    {
+                        "alias_url": "https://publisher.example/report-page",
+                        "canonical_url": "https://publisher.example/report",
+                    }
+                ],
+                "excluded_document_urls": ["https://publisher.example/report-page"],
             }
         )
 

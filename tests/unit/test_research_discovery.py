@@ -97,6 +97,33 @@ def test_discovery_fills_limit_after_known_urls_and_caps_parsed_links() -> None:
     ]
 
 
+def test_configured_dashboard_exclusion_keeps_real_research_links_eligible() -> None:
+    registry = ResearchSourceRegistry.load(
+        Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
+    )
+    source = registry.get("anthropic_economics")
+    dashboard_url = "https://www.anthropic.com/economic-index"
+    publication_url = "https://www.anthropic.com/research/ai-labor-study"
+    links = parse_visible_index_links(
+        f"""
+        <main>
+          <a href="{dashboard_url}">Economic Index dashboard</a>
+          <a href="{publication_url}">AI labor study</a>
+        </main>
+        """,
+        base_url="https://www.anthropic.com/research/team/economics",
+    )
+
+    candidates = relevant_candidates(
+        source,
+        links,
+        registry,
+        limit=1,
+    )
+
+    assert [candidate.canonical_url for candidate in candidates] == [publication_url]
+
+
 def test_amazon_index_requires_ai_and_software_role_context() -> None:
     registry = ResearchSourceRegistry.load(
         Path(__file__).resolve().parents[2] / "config/radar/research.sources.v1.yaml"
