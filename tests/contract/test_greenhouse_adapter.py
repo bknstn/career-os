@@ -99,6 +99,7 @@ def test_populated_recording_preserves_source_native_payload_and_completes() -> 
             12.0,
         )
     ]
+    _assert_one_terminal_outcome(events)
 
 
 def test_empty_recording_is_a_complete_empty_scan() -> None:
@@ -128,6 +129,7 @@ def test_malformed_items_produce_a_partial_terminal_outcome_after_valid_evidence
         ),
         diagnostics=ScanDiagnostics(http_requests=1, rejected_items=3),
     )
+    _assert_one_terminal_outcome(events)
 
 
 @pytest.mark.parametrize(
@@ -220,15 +222,6 @@ def test_malformed_success_response_is_partial_not_complete(
     assert isinstance(events[0], ScanOutcome)
     assert events[0].status is ScanStatus.PARTIAL
     _assert_one_terminal_outcome(events)
-
-
-@pytest.mark.parametrize("fixture_name", ["populated.json", "empty.json", "malformed.json"])
-def test_successful_response_stream_has_one_final_terminal_outcome(fixture_name: str) -> None:
-    adapter = GreenhouseAdapter(
-        config=_config(), http_client=_FakeHttpClient([_response(200, _fixture(fixture_name))])
-    )
-
-    _assert_one_terminal_outcome(_fetch(adapter))
 
 
 def test_permanent_http_error_is_not_retried() -> None:

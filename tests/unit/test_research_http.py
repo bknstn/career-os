@@ -286,6 +286,7 @@ def test_partial_read_bytes_are_carried_across_retry_and_failure() -> None:
         resolver=_public_resolver,
         connection_factory=lambda *args, **kwargs: _Connection(next(responses)),
         retry_delay_seconds=0,
+        minimum_host_interval_seconds=0,
     )
 
     result = fetcher.fetch(

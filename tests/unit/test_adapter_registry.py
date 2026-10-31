@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import AsyncIterator, Callable
-from datetime import UTC, datetime
 
 import pytest
 
@@ -163,15 +161,6 @@ def test_build_all_preserves_source_order_and_task_seven_contract() -> None:
 
     assert [adapter.kind for adapter in adapters] == ["greenhouse", "lever"]
     assert all(isinstance(adapter, SourceAdapter) for adapter in adapters)
-
-
-def test_fake_adapter_remains_usable_with_the_scan_contract() -> None:
-    async def collect_terminal_event() -> FetchEvent:
-        adapter = _FakeAdapter("greenhouse")
-        context = FetchContext(run_id="run-1", fetched_at=datetime.now(UTC))
-        return await anext(adapter.fetch(context))
-
-    assert asyncio.run(collect_terminal_event()) == ScanOutcome(ScanStatus.COMPLETE)
 
 
 def test_build_rejects_a_kind_config_class_mismatch_without_calling_its_factory() -> None:

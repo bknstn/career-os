@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from functools import cache
 from uuid import UUID, uuid5
 
 import pytest
 
 from career_os.application.radar_mvp_history import compare_mvp_history
 from career_os.config.radar_panel import RadarPanelSource
-from career_os.config.skills import load_skill_taxonomy
+from career_os.config.skills import SkillTaxonomy
 from career_os.normalization.skills import SkillExtractor
 from career_os.persistence.radar_mvp import RadarMvpSource
 from career_os.radar.aggregate import (
@@ -20,7 +20,6 @@ from career_os.radar.aggregate import (
 )
 from career_os.radar.mvp_roles import classify_mvp_role
 
-ROOT = Path(__file__).resolve().parents[2]
 _NAMESPACE = UUID("9e62bc8e-6e12-4d3d-8157-2e79d7a4f458")
 
 
@@ -97,9 +96,18 @@ def _history_fixture(period_days=30, descriptions=None, title=None):
         )
         for item in panel_sources
     )
-    taxonomy = load_skill_taxonomy(ROOT / "config/taxonomy/skills.v1.yaml")
+    # History tests need one skill; the full published corpus has its own regression test.
+    taxonomy = SkillTaxonomy.model_validate(
+        {
+            "version": "1.0.0",
+            "skills": [
+                {"id": "python", "label": "Python", "category": "language", "aliases": ["Python"]}
+            ],
+        }
+    )
     extractor = SkillExtractor(taxonomy)
 
+    @cache
     def analyze(title: str, description: str):
         return (
             classify_mvp_role(title, description),

@@ -61,8 +61,7 @@ def test_quality_review_loader_is_strict_and_preserves_review_evidence(tmp_path:
         _load_quality_review(artifact)
 
 
-@pytest.mark.parametrize("color", [False, True])
-def test_help_paths_construct_without_database_or_network_io(monkeypatch, color) -> None:
+def test_help_paths_construct_without_database_or_network_io(monkeypatch) -> None:
     def unexpected_io(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("CLI help must not initialize persistence")
 
@@ -106,8 +105,9 @@ def test_help_paths_construct_without_database_or_network_io(monkeypatch, color)
         ["jobs", "--help"],
         ["jobs", "list", "--help"],
     ):
-        assert runner.invoke(app, arguments, color=color).exit_code == 0
-    help_text = runner.invoke(app, ["collect", "--help"], color=color).output
+        result = runner.invoke(app, arguments, color=True)
+        assert result.exit_code == 0, result.output
+    help_text = runner.invoke(app, ["collect", "--help"], color=True).output
     assert "--radar-panel-manifest" in unstyle(help_text)
 
 

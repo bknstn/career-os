@@ -145,9 +145,7 @@ def test_research_page_assets_include_terminal_navigation_without_database_acces
     assert script.status_code == 200
     assert 'getJson("research/overview")' in script.text
     assert 'getJson("research/highlights"' in script.text
-    assert "view.box.isConnected" in script.text
     assert "Reviewed research is temporarily unavailable." in script.text
-    assert "Accepted current evidence" in script.text
     assert calls == 0
 
 

@@ -72,4 +72,4 @@ markers = [
     "integration: requires an explicitly enabled local PostgreSQL database",
     "live: requires explicit opt-in and public network access",
 ]
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/contract"]

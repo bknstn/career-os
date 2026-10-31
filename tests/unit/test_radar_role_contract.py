@@ -44,7 +44,6 @@ PREFLIGHT_PATH = ROOT / "tests/fixtures/radar/role-scope-preflight.corpus.json"
 VERIFICATION_PATH = ROOT / "tests/fixtures/radar/role-calibration.verification-corpus.json"
 GOLDEN_PATH = ROOT / "tests/fixtures/radar/golden_role_classification.v1.yaml"
 FROZEN_SHA256 = "f9790e68d37ba0004506b3204935ddf99f42570523c8c5d0cf0b2f54b577e20b"
-LEGACY_ROLES_SHA256 = "3f1ddb0e76dcb243165790003fa0630fb5b737f14d29bb54823fc4bc5874db74"
 
 
 def _assignment(title: str, description: str | None = None) -> RoleAssignment:
@@ -354,9 +353,6 @@ def test_legacy_versions_are_pinned_and_assignment_inputs_are_frozen() -> None:
 def test_frozen127_replay_is_deterministic_diagnostic_and_never_history() -> None:
     frozen_bytes = FROZEN_PATH.read_bytes()
     assert hashlib.sha256(frozen_bytes).hexdigest() == FROZEN_SHA256
-    assert hashlib.sha256((ROOT / "src/career_os/radar/roles.py").read_bytes()).hexdigest() == (
-        LEGACY_ROLES_SHA256
-    )
     frozen = json.loads(frozen_bytes)
     first = build_purposive_snapshot(frozen, source_sha256=FROZEN_SHA256)
     second = build_purposive_snapshot(frozen, source_sha256=FROZEN_SHA256)

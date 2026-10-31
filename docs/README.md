@@ -7,6 +7,7 @@ Start with the [project README](../README.md) for the purpose and local setup.
 | [Product thesis](PRODUCT_THESIS.md) | Career Thesis as the intended product wedge, post-pivot direction, and value validation |
 | [Architecture](architecture.md) | Components, data flow, and storage boundaries |
 | [Development](development.md) | Quality checks, database tests, and live tests |
+| [Test audit](test-audit.md) | Coverage decisions, removed duplication, and the short validation loop |
 | [Contracts](contracts.md) | Profile, market, review, Radar, and research formats |
 | [Collection operations](operations.md) | Health, diagnostics, recovery, and retention |
 | [Research operations](CAREER_RADAR_RESEARCH_OPERATIONS.md) | Collection, review, and monitoring |

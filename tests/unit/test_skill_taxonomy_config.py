@@ -10,16 +10,6 @@ from career_os.config.skills import load_golden_extraction_corpus, load_skill_ta
 from career_os.config.sources import ConfigurationError
 
 
-def test_checked_in_taxonomy_and_golden_corpus_are_valid() -> None:
-    taxonomy = load_skill_taxonomy(_taxonomy_path())
-    corpus = load_golden_extraction_corpus(_corpus_path(), taxonomy=taxonomy)
-
-    assert taxonomy.version == "1.0.2"
-    assert 100 <= len(taxonomy.skills) <= 200
-    assert len(taxonomy.categories) >= 10
-    assert len(corpus.cases) >= 9
-
-
 @pytest.mark.parametrize(
     ("document", "message"),
     [

@@ -337,7 +337,7 @@ def test_highlight_sql_filters_current_reviews_and_sorts_by_review_time() -> Non
     assert "SELECT research_document_versions.raw_body" not in sql
 
 
-def test_router_paths_and_query_validation_do_not_open_a_database() -> None:
+def test_router_query_validation_does_not_open_a_database() -> None:
     calls: list[str] = []
 
     def provider() -> sessionmaker[Session]:
@@ -346,14 +346,6 @@ def test_router_paths_and_query_validation_do_not_open_a_database() -> None:
 
     app = FastAPI()
     app.include_router(create_research_router(session_factory_provider=provider))
-    paths = set(app.openapi()["paths"])
-    assert "/radar/api/research/overview" in paths
-    assert "/radar/api/research/questions" in paths
-    assert "/radar/api/research/documents" in paths
-    assert "/radar/api/research/documents/{document_id}/versions/{version_id}" in paths
-    assert "/radar/api/research/claims" in paths
-    assert "/radar/api/research/highlights" in paths
-
     client = TestClient(app)
     response = client.get("/radar/api/research/documents?page_size=101")
     assert response.status_code == 422

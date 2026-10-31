@@ -151,17 +151,6 @@ def test_comparison_fails_closed_for_taxonomy_mismatch_unknown_or_duplicate_mark
         service.calculate(_profile("unknown_skill"), _market(skills=()))
 
 
-@pytest.mark.parametrize(
-    "thresholds",
-    [
-        GapThresholds(min_job_count=0, min_job_share=Decimal(0)),
-        GapThresholds(min_job_count=5, min_job_share=Decimal(1)),
-    ],
-)
-def test_valid_gap_threshold_edges(thresholds: GapThresholds) -> None:
-    assert thresholds.min_job_count >= 0
-
-
 def test_invalid_thresholds_and_representative_limit_are_rejected() -> None:
     with pytest.raises(ValueError, match="min_job_count"):
         GapThresholds(min_job_count=-1)

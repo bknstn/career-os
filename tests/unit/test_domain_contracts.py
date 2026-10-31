@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta, timezone
 from types import MappingProxyType
 
@@ -10,11 +9,9 @@ import pytest
 
 from career_os.domain import (
     FetchContext,
-    FetchEvent,
     RawJobPosting,
     ScanOutcome,
     ScanStatus,
-    SourceAdapter,
 )
 
 
@@ -113,26 +110,3 @@ def test_scan_outcome_requires_unambiguous_completeness(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         ScanOutcome(status, incomplete_reason=reason)
-
-
-class _FakeAdapter:
-    kind = "fake"
-
-    async def validate(self) -> None:
-        return None
-
-    async def fetch(self, context: FetchContext) -> AsyncIterator[FetchEvent]:
-        yield RawJobPosting(
-            source_key="example",
-            source_kind=self.kind,
-            external_id="123",
-            source_url=None,
-            apply_url=None,
-            payload={"run_id": context.run_id},
-            fetched_at=context.fetched_at,
-        )
-        yield ScanOutcome(ScanStatus.COMPLETE)
-
-
-def test_runtime_protocol_accepts_a_streaming_adapter() -> None:
-    assert isinstance(_FakeAdapter(), SourceAdapter)

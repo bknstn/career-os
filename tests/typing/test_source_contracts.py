@@ -29,10 +29,6 @@ assert_type(
 )
 
 
-def test_typing_fixture_is_importable() -> None:
-    assert adapter.kind == "typed_fake"
-
-
 def build_typed_fake(source_config: GreenhouseSourceConfig) -> SourceAdapter:
     return TypedRegistryAdapter(source_config.kind)
 

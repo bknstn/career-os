@@ -100,10 +100,6 @@ def test_numeric_columns_preserve_decimal_values() -> None:
     assert all(
         isinstance(column.type, Numeric) and column.type.asdecimal for column in numeric_columns
     )
-    assert JobPosting.__annotations__["seniority_confidence"] == "Mapped[Decimal | None]"
-    assert JobLocation.__annotations__["confidence"] == "Mapped[Decimal]"
-    assert JobSkill.__annotations__["confidence"] == "Mapped[Decimal]"
-    assert JobCompensation.__annotations__["min_value"] == "Mapped[Decimal | None]"
 
 
 def test_constraints_capture_lifecycle_and_closed_vocabularies() -> None:

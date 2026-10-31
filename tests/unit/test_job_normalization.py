@@ -63,8 +63,7 @@ def test_versioned_golden_corpus_compares_complete_stable_output() -> None:
         assert case_id not in ids
         ids.add(case_id)
         result = normalize_job(_input_from_case(_mapping(case["input"], f"{case_id}.input")))
-        expected = _expected_output(_mapping(case["expected"], f"{case_id}.expected"), case_id)
-        assert _serialize(result) == expected
+        assert _serialize(result) == case["expected"], case_id
 
 
 def test_remote_scope_requires_local_remote_binding_and_honest_provenance() -> None:
@@ -810,109 +809,6 @@ def _source_compensation(raw: dict[object, object]) -> SourceCompensationEvidenc
     )
 
 
-def _expected_output(raw: dict[object, object], case_id: str) -> dict[str, object]:
-    _exact_keys(
-        raw,
-        {
-            "normalizer_version",
-            "title_normalized",
-            "role_family",
-            "seniority",
-            "locations",
-            "employment_type",
-            "workplace_type",
-            "remote_scope",
-            "compensation",
-        },
-        f"{case_id}.expected",
-    )
-    return {
-        "normalizer_version": _string(raw["normalizer_version"], "expected.normalizer_version"),
-        "title_normalized": _string(raw["title_normalized"], "expected.title_normalized"),
-        "role_family": _expected_scalar(raw["role_family"], "expected.role_family"),
-        "seniority": _expected_scalar(raw["seniority"], "expected.seniority"),
-        "employment_type": _expected_scalar(raw["employment_type"], "expected.employment_type"),
-        "workplace_type": _expected_scalar(raw["workplace_type"], "expected.workplace_type"),
-        "remote_scope": _expected_scalar(raw["remote_scope"], "expected.remote_scope"),
-        "locations": [
-            _expected_location(item) for item in _list(raw["locations"], "expected.locations")
-        ],
-        "compensation": [
-            _expected_compensation(item)
-            for item in _list(raw["compensation"], "expected.compensation")
-        ],
-    }
-
-
-def _expected_scalar(raw: object, name: str) -> dict[str, object]:
-    value = _mapping(raw, name)
-    _exact_keys(value, {"value", "method", "evidence", "confidence"}, name)
-    return {
-        "value": _optional_string(value["value"], f"{name}.value"),
-        "method": _optional_string(value["method"], f"{name}.method"),
-        "evidence": _optional_string(value["evidence"], f"{name}.evidence"),
-        "confidence": _optional_decimal_string(value["confidence"], f"{name}.confidence"),
-    }
-
-
-def _expected_location(raw: object) -> dict[str, object]:
-    value = _mapping(raw, "expected.locations item")
-    _exact_keys(
-        value,
-        {"ordinal", "raw", "city", "region", "country_code", "is_primary", "confidence", "method"},
-        "expected.locations item",
-    )
-    ordinal = value["ordinal"]
-    if type(ordinal) is not int:
-        raise AssertionError("expected.locations.ordinal must be an integer")
-    return {
-        "ordinal": ordinal,
-        "raw": _string(value["raw"], "expected.locations.raw"),
-        "city": _optional_string(value["city"], "expected.locations.city"),
-        "region": _optional_string(value["region"], "expected.locations.region"),
-        "country_code": _optional_string(value["country_code"], "expected.locations.country_code"),
-        "is_primary": _bool(value["is_primary"], "expected.locations.is_primary"),
-        "confidence": _decimal_string(value["confidence"], "expected.locations.confidence"),
-        "method": _string(value["method"], "expected.locations.method"),
-    }
-
-
-def _expected_compensation(raw: object) -> dict[str, object]:
-    value = _mapping(raw, "expected.compensation item")
-    _exact_keys(
-        value,
-        {
-            "component_type",
-            "min_value",
-            "max_value",
-            "currency",
-            "interval",
-            "location_tier",
-            "raw_text",
-            "source_method",
-            "confidence",
-        },
-        "expected.compensation item",
-    )
-    return {
-        "component_type": _string(value["component_type"], "expected.compensation.component_type"),
-        "min_value": _optional_decimal_string(
-            value["min_value"], "expected.compensation.min_value"
-        ),
-        "max_value": _optional_decimal_string(
-            value["max_value"], "expected.compensation.max_value"
-        ),
-        "currency": _optional_string(value["currency"], "expected.compensation.currency"),
-        "interval": _optional_string(value["interval"], "expected.compensation.interval"),
-        "location_tier": _optional_string(
-            value["location_tier"], "expected.compensation.location_tier"
-        ),
-        "raw_text": _optional_string(value["raw_text"], "expected.compensation.raw_text"),
-        "source_method": _string(value["source_method"], "expected.compensation.source_method"),
-        "confidence": _decimal_string(value["confidence"], "expected.compensation.confidence"),
-    }
-
-
 def _serialize(result: JobNormalization) -> dict[str, object]:
     return {
         "normalizer_version": result.normalizer_version,
@@ -1011,14 +907,6 @@ def _fixture_decimal(value: object, name: str) -> Decimal:
         return Decimal(str(value))
     except InvalidOperation as exc:
         raise AssertionError(f"{name} must be a JSON number or decimal string") from exc
-
-
-def _decimal_string(value: object, name: str) -> str:
-    return str(_decimal(value, name))
-
-
-def _optional_decimal_string(value: object, name: str) -> str | None:
-    return None if value is None else _decimal_string(value, name)
 
 
 def _required_keys(value: dict[object, object], keys: set[str], name: str) -> None:

@@ -46,21 +46,10 @@ def test_no_review_keeps_opportunities_and_emits_schema_valid_limited_result() -
     with pytest.raises(TypeError):
         result.quality.observed_values["matching_job_count"] = 99  # type: ignore[index]
 
-    schema = json.loads(
-        (PROJECT_ROOT / "docs/h1-hybrid-result-contract.schema.json").read_text(encoding="utf-8")
-    )
-    errors = list(
-        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(
-            result.to_payload()
-        )
-    )
-    assert errors == [], [(list(error.path), error.message) for error in errors]
+    _assert_schema_valid(result.to_payload())
     response = _report_response(result)
     response_payload = response.model_dump(mode="json")
-    response_errors = list(
-        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(response_payload)
-    )
-    assert response_errors == [], [(list(error.path), error.message) for error in response_errors]
+    _assert_schema_valid(response_payload)
     assert response_payload["observations"]["sample"]["source_coverage"]["source_share"] == 2 / 3
 
 
@@ -82,6 +71,7 @@ def test_reviewed_twenty_jobs_can_pass_all_gates_without_broad_claims() -> None:
         "skill_semantics": "mentions_only",
         "fit_probability": "not_provided",
     }
+    _assert_schema_valid(result.to_payload())
 
 
 def test_d9_like_reviewed_sample_keeps_all_jobs_when_concentration_fails() -> None:
@@ -146,6 +136,7 @@ def test_zero_matching_jobs_keeps_panel_denominator_and_null_ratios() -> None:
     assert result.observations.sample.source_coverage.source_share == Decimal("0")
     assert result.quality.compensation_coverage is None
     assert result.observations.sample.max_company_concentration is None
+    _assert_schema_valid(result.to_payload())
 
 
 def test_invalid_review_ids_are_rejected_before_result_construction() -> None:
@@ -201,6 +192,14 @@ def test_result_rejects_compensation_aggregate_that_changes_source_evidence() ->
             result,
             observations=replace(result.observations, compensation=(changed_group,)),
         )
+
+
+def _assert_schema_valid(payload: dict[str, object]) -> None:
+    schema = json.loads(
+        (PROJECT_ROOT / "docs/h1-hybrid-result-contract.schema.json").read_text(encoding="utf-8")
+    )
+    errors = list(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(payload))
+    assert errors == [], [(list(error.path), error.message) for error in errors]
 
 
 def _result(

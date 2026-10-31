@@ -12,7 +12,6 @@ from career_os.config.sources import ConfigurationError
 
 TAXONOMY_PATH = Path("config/taxonomy/skills.v1.yaml")
 EXAMPLE_PATH = Path("config/profile.example.yaml")
-INITIAL_PATH = Path("config/profile.example.yaml")
 
 
 def test_checked_in_profile_example_validates_against_current_taxonomy() -> None:
@@ -24,13 +23,7 @@ def test_checked_in_profile_example_validates_against_current_taxonomy() -> None
         "platform_engineering",
     )
     assert profile.skill_ids == frozenset({"python", "postgresql", "kafka", "terraform"})
-
-
-def test_profile_example_has_only_declared_sample_skills() -> None:
-    profile = load_profile(INITIAL_PATH, taxonomy=load_skill_taxonomy(TAXONOMY_PATH))
-
     assert profile.seniority == "senior"
-    assert profile.skill_ids == frozenset({"python", "postgresql", "kafka", "terraform"})
 
 
 def test_profile_file_loads_declared_metadata_and_taxonomy_skills(tmp_path: Path) -> None:
