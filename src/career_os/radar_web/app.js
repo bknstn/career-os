@@ -16,6 +16,7 @@
   let renderSequence = 0;
   let savedJobs = readSavedJobs();
   let showAllSources = false;
+  let snapshotDetailsOpen = false;
 
   const ISSUE_COPY = {
     source_stale: "Some sources have not had a successful full scan recently.",
@@ -345,10 +346,6 @@
     const heading = element("div", "page-heading");
     const copy = element("div");
     const eyebrow = text("p", "eyebrow", kicker);
-    const prompt = element("span", "terminal-prompt");
-    prompt.setAttribute("aria-hidden", "true");
-    append(prompt, text("span", "", ">"), text("span", "terminal-cursor", "_"));
-    eyebrow.prepend(prompt);
     append(copy, eyebrow, text("h1", "", title));
     if (description) copy.append(text("p", "", description));
     heading.append(copy);
@@ -632,60 +629,83 @@
     navigate(page, params);
   }
 
-  function jobsPanel(items, total, title = "Recently observed jobs", showAll = true) {
-    const link = showAll ? element("a", "panel-link", "View all →") : null;
-    if (link) link.href = "#/explore";
-    const view = panel(title, "Cards show saved descriptions and the last observation time.", link);
-    const list = element("div", "job-list");
-    const rows = Array.isArray(items) ? items : [];
-    if (rows.length) for (const job of rows) list.append(jobCard(job));
-    else list.append(emptyState("⌕", "No jobs yet", "Postings will appear here after a successful collection. Unclassified roles remain visible in the results."));
-    view.body.append(list);
-    if (total !== null && total !== undefined) {
-      const footer = element("div", "list-footer");
-      footer.append(text("span", "mini-note", `Total in this snapshot: ${formatNumber(total)}`));
-      view.body.append(footer);
+  function renderOverview(data) {
+    const summary = data.summary || {};
+    const heading = pageHeading("CAREER RADAR", "Evidence for your next move.", "Explore roles and skills in saved job postings, alongside reviewed research on developer work.", actionGroup(buttonLink("#/explore", "Browse jobs →", "button button-primary")));
+    heading.classList.add("overview-heading");
+    const stats = element("dl", "overview-stats");
+    for (const [label, value] of [["saved active postings", summary.posting_count], ["companies", summary.company_count]]) {
+      const metric = element("div");
+      append(metric, text("dt", "", label), text("dd", "", formatNumber(value)));
+      stats.append(metric);
     }
+    append(root, heading, stats);
+
+    const grid = element("div", "overview-grid");
+    const highlights = researchHighlightsPanel();
+    grid.append(overviewRoles(data), highlights.box);
+    append(root, grid, overviewSnapshotDetails(data));
+    loadResearchHighlights(renderSequence, highlights);
+  }
+
+  function overviewRoles(data) {
+    const view = panel("Start with a role", "Browse postings by their detected role.");
+    view.box.classList.add("overview-roles");
+    const list = element("div", "overview-role-list");
+    const occupations = Array.isArray(data.occupations) ? data.occupations : [];
+    const classified = occupations.filter((item) => item.id !== "unknown");
+    const rows = classified.slice(0, 4);
+    const unknown = occupations.find((item) => item.id === "unknown");
+    const unknownCount = data.summary && data.summary.unknown_occupation_count;
+    if (unknown || Number(unknownCount) > 0) rows.push(unknown || { id: "unknown", count: unknownCount });
+    for (const item of rows) {
+      const href = item.id === "unknown" ? "#/explore?occupation=unknown" : `#/occupation/${encodeURIComponent(item.id)}`;
+      const row = buttonLink(href, "", "overview-role");
+      append(row, text("span", "", displayLabel(item)), text("span", "overview-role-count", formatNumber(item.count)), text("span", "overview-role-arrow", "↗"));
+      row.lastChild.setAttribute("aria-hidden", "true");
+      list.append(row);
+    }
+    if (!rows.length) list.append(text("p", "empty-inline", "Roles will appear after the first successful collection."));
+    append(view.body, list, text("p", "mini-note", "Labels are rule-based; unclassified postings stay visible."));
+    if (classified.length > 4) view.body.append(buttonLink("#/explore", "Explore all roles →", "panel-link"));
     view.box.append(view.body);
     return view.box;
   }
 
-  function renderOverview(data) {
-    const summary = data.summary || {};
-    const heading = pageHeading("CAREER RADAR", "Roles and skills in real job postings", "Explore postings from collected company job boards. Summaries show detected mentions and keep unknown cases visible.", actionGroup(buttonLink("#/explore", "All jobs", "button"), buttonLink("#/explore?occupation=technical_engineering", "Engineering jobs", "button button-primary")));
-    heading.classList.add("overview-heading");
-    const scope = element("div", "radar-scope");
-    scope.setAttribute("aria-hidden", "true");
-    heading.append(scope);
-    append(root, heading, snapshotBanner(data));
-    const stats = element("div", "stat-grid");
-    append(stats,
-      statCard("Jobs in the snapshot", summary.posting_count, "Saved active postings", "▤"),
-      statCard("Companies", summary.company_count, `${formatNumber(summary.source_count)} sources in the panel`, "⌂"),
-      statCard("Engineering roles", summary.technical_engineering_count, "Based on classifier rules", "⌘"),
-      statCard("Unclassified roles", summary.unknown_occupation_count, `${formatNumber(summary.missing_description_count)} without a description`, "?"));
-    root.append(stats);
-
-    const grid = element("div", "content-grid overview-content-grid");
-    const left = element("div", "stack overview-left");
-    const right = element("div", "stack overview-support");
-    const highlights = researchHighlightsPanel();
-    left.append(distributionPanel("Role distribution", data.occupations, summary.posting_count, "occupation", "Share of all postings, including unknown roles", summary.unknown_occupation_count));
-    left.append(distributionPanel("Specialties", data.specialties, summary.technical_engineering_count, "specialty", "Share of engineering postings"));
-    left.append(distributionPanel("Common skill mentions", data.skills, summary.posting_count, "skill", "Share of postings with a detected mention"));
-    left.append(jobsPanel((data.jobs && data.jobs.items || []).slice(0, 5), data.jobs && data.jobs.total, "Recent observations"));
-    right.append(sourcesPanel(data.sources));
-    right.append(trendPanel(data.history, data.history && data.history.metrics, routeFromHash()));
-    grid.append(left, highlights.box, right);
-    root.append(grid);
-    loadResearchHighlights(renderSequence, highlights);
+  function overviewSnapshotDetails(data) {
+    const details = element("details", "overview-details");
+    details.open = snapshotDetailsOpen;
+    const summary = element("summary", "overview-details-summary");
+    const copy = element("span", "overview-details-copy");
+    append(copy, text("span", "", "About this snapshot"), text("span", "overview-snapshot-date", data.data_as_of_utc ? `As of ${formatDate(data.data_as_of_utc)}` : "Snapshot date unknown"));
+    const quality = data.quality || {};
+    const stale = Number(quality.stale_source_count || (data.sources || []).filter((source) => source.stale).length || 0);
+    const warning = quality.state && !["ok", "fresh", "complete", "good", "ready"].includes(String(quality.state).toLowerCase());
+    const hasWarning = Boolean(stale || warning || Array.isArray(quality.issues) && quality.issues.length);
+    const status = stale ? `${formatNumber(stale)} ${stale === 1 ? "source needs" : "sources need"} attention`
+      : hasWarning ? "Limited data coverage" : "Sources & data quality";
+    append(summary, copy, text("span", `overview-data-status${hasWarning ? " has-warning" : ""}`, status));
+    details.append(summary);
+    // Build secondary summaries on demand; keep quality warnings visible while closed.
+    details.addEventListener("toggle", () => {
+      if (!details.isConnected) return;
+      snapshotDetailsOpen = details.open;
+      if (!details.open || details.childElementCount > 1) return;
+      const body = element("div", "overview-details-body");
+      body.append(snapshotBanner(data));
+      const grid = element("div", "overview-grid");
+      append(grid, sourcesPanel(data.sources), trendPanel(data.history, data.history && data.history.metrics, routeFromHash()));
+      append(body, grid, buttonLink("#/methodology", "How to read the data →", "panel-link"));
+      details.append(body);
+    });
+    return details;
   }
 
   function researchHighlightsPanel() {
     const link = buttonLink("#/research", "All research →", "panel-link");
     const view = panel(
-      "What’s happening",
-      "Latest reviewed research · original study dates below.",
+      "From the research",
+      "Reviewed evidence on how work is changing.",
       link
     );
     view.box.classList.add("overview-highlights");
@@ -699,14 +719,14 @@
 
   async function loadResearchHighlights(seq, view) {
     try {
-      const response = await getJson("research/highlights", new URLSearchParams({ limit: "3" }));
+      const response = await getJson("research/highlights", new URLSearchParams({ limit: "2" }));
       if (seq !== renderSequence || !view.box.isConnected) return;
       view.body.replaceChildren();
       const items = Array.isArray(response.items) ? response.items : [];
       if (!items.length) {
         view.body.append(text("p", "research-note", "No current reviewed highlights are available yet."));
       } else {
-        for (const item of items) view.body.append(researchHighlightCard(item));
+        for (const item of items.slice(0, 2)) view.body.append(researchHighlightCard(item));
       }
       view.body.setAttribute("aria-busy", "false");
     } catch {
@@ -745,35 +765,27 @@
     const limitation = typeof item.limitation === "string" && item.limitation.trim()
       ? item.limitation.trim()
       : missingReasonLabel(item.limitation_state);
+    const heading = text("h3", "research-highlight-statement", "");
+    if (versionLink) {
+      versionLink.className = "research-highlight-link";
+      versionLink.textContent = item.statement || "Claim statement unavailable.";
+      heading.append(versionLink);
+    } else heading.textContent = item.statement || "Claim statement unavailable.";
+    const details = element("details", "research-highlight-details");
+    append(details,
+      text("summary", "", "Context & limitations"),
+      text("p", "research-highlight-source", method),
+      text("p", "research-highlight-dates", periodText),
+      text("p", "research-highlight-limitation", `Key limitation: ${limitation}`),
+      text("p", "research-highlight-review", `Reviewed ${formatDate(item.accepted_at)}`)
+    );
     append(card,
       text("div", "research-highlight-question", questionLabels[String(item.question)] || "Research question"),
-      text("h3", "research-highlight-statement", item.statement || "Claim statement unavailable."),
-      text("p", "research-highlight-source", `${publisherLabel(document.source_key)} · ${method}`),
-      text("p", "research-highlight-dates", `${publicationText} · ${periodText}`),
-      researchHighlightLimitation(limitation),
-      text("p", "research-highlight-review", `Reviewed ${formatDate(item.accepted_at)}`),
-      versionLink
+      heading,
+      text("p", "research-highlight-source", `${publisherLabel(document.source_key)} · ${publicationText}`),
+      details
     );
     return card;
-  }
-
-  function researchHighlightLimitation(limitation) {
-    if (limitation.length <= 180) {
-      return text("p", "research-highlight-limitation", `Key limitation: ${limitation}`);
-    }
-    const disclosure = element("details", "research-highlight-limitation-details");
-    let excerpt = "";
-    for (const word of limitation.trim().split(/\s+/)) {
-      const candidate = excerpt ? `${excerpt} ${word}` : word;
-      if (candidate.length > 177) break;
-      excerpt = candidate;
-    }
-    const summaryText = excerpt
-      ? `Key limitation: ${excerpt}${excerpt === limitation ? "" : "…"}`
-      : "Key limitation · open to read";
-    const summary = text("summary", "research-highlight-limitation", summaryText);
-    disclosure.append(summary, text("p", "research-highlight-limitation", limitation));
-    return disclosure;
   }
 
   function buttonLink(href, label, className = "button") {

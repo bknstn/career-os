@@ -19,6 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
+from career_os import __version__
 from career_os.api.cursors import InvalidCursorError, decode_job_cursor, encode_job_cursor
 from career_os.api.radar_mvp import create_radar_mvp_router
 from career_os.api.research import create_research_router
@@ -131,7 +132,7 @@ def create_app(dependencies: ApiDependencies | None = None) -> FastAPI:
     policy_provider = deps.operational_policy_provider or _default_operational_policy_provider
     app = FastAPI(
         title="Career OS read API",
-        version="0.1.0",
+        version=__version__,
         description="Localhost-only, read-only Market Explorer API.",
     )
 
