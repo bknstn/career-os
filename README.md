@@ -45,6 +45,8 @@ the intended output, and how to validate its value.
 - Browse saved postings by role, company, geography, work mode, and literal skill
   mentions; inspect original text and matching evidence.
 - Keep a shortlist in the current browser's local storage.
+- Watch company-board, role, specialty, skill, and text-search slices in a
+  browser-local Watchlist with 30-, 90-, and 180-day historical evidence.
 - Collect public Greenhouse, Lever, and Ashby boards, with Workable public
   collection available through an explicit opt-in.
 - Inspect source freshness, partial scans, unclassified roles, and whether
@@ -110,10 +112,17 @@ make radar
 ```
 
 Open [Career Radar](http://127.0.0.1:8765/radar/) or its
+[Watchlist](http://127.0.0.1:8765/radar/#/watchlist) or
 [Research view](http://127.0.0.1:8765/radar/#/research).
 The server binds to `127.0.0.1:8765`. The first read can take longer while text
 features are prepared. The refresh button rereads saved data; run
 `make radar-refresh` to fetch boards again.
+
+From Explore, apply a company, role, specialty, skill, or text filter and save
+the applied slice to Watchlist. The Watchlist stores up to 20 filters in this
+browser, separately from Saved jobs. It shows current active posting counts and
+source freshness alongside eligible historical comparisons. See the
+[Watchlist guide](docs/CAREER_RADAR_WATCHLIST.md) for the comparison limits.
 
 Research starts empty until its sources are collected. See the
 [research operations guide](docs/CAREER_RADAR_RESEARCH_OPERATIONS.md) for
@@ -179,8 +188,9 @@ uv run pre-commit install
 ```
 
 `make check` runs Ruff formatting and linting, strict mypy, and the default test
-suite. Database and live-source tests require explicit opt-in; see the
-[development guide](docs/development.md).
+suite, including the browser behavior tests. The checks require Node.js 20+;
+running Career Radar itself does not. Database and live-source tests require
+explicit opt-in; see the [development guide](docs/development.md).
 `make security` checks public files for secret candidates and private content;
 `make security-history` also checks reachable Git history.
 

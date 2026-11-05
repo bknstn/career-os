@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 — Watchlist
+
+- Added browser-local saved filter slices with 30-, 90-, and 180-day historical
+  evidence, source freshness, and existing comparison quality gates.
+- Added behavioral checks for Watchlist storage, selected-metric comparisons,
+  period selection, per-target request failures, and stale-render handling.
+
 ## 1.0.0 — UI 2.0
 
 ### Changed

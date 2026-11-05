@@ -1,4 +1,4 @@
-.PHONY: format format-check lint typecheck test pre-commit check security security-history db-up db-down db-logs db-status migration-up migration-down migration-current radar radar-refresh
+.PHONY: format format-check lint typecheck test test-web pre-commit check security security-history db-up db-down db-logs db-status migration-up migration-down migration-current radar radar-refresh
 
 format:
 	uv run ruff format .
@@ -15,10 +15,13 @@ typecheck:
 test:
 	uv run pytest
 
+test-web:
+	node --test tests/web/test_radar_watchlist.cjs
+
 pre-commit:
 	uv run pre-commit run --all-files
 
-check: format-check lint typecheck test
+check: format-check lint typecheck test test-web
 
 security:
 	uv tool run --from detect-secrets==1.5.0 python scripts/check_public_content.py

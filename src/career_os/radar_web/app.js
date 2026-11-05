@@ -3,9 +3,12 @@
 
   const API_BASE = new URL("api/", document.baseURI);
   const STORAGE_KEY = "career-radar.saved.v1";
+  const WATCHLIST = window.CareerRadarWatchlistCore;
   const root = document.getElementById("app");
   const breadcrumb = document.getElementById("breadcrumb");
   const savedCount = document.getElementById("saved-count");
+  const watchlistCount = document.getElementById("watchlist-count");
+  const watchlistStorageStatus = document.getElementById("watchlist-storage-status");
   const refreshButton = document.getElementById("refresh-button");
   const skipLink = document.querySelector(".skip-link");
   const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -15,6 +18,10 @@
   });
   let renderSequence = 0;
   let savedJobs = readSavedJobs();
+  let watchlistTargets = [];
+  let watchlistStorageError = null;
+  let watchlistWriteBlocked = false;
+  let watchlistNotice = "";
   let showAllSources = false;
   let snapshotDetailsOpen = false;
 
@@ -98,6 +105,75 @@
       // The current page remains usable if browser storage is disabled or full.
     }
     savedCount.textContent = String(savedJobs.length);
+    watchlistCount.textContent = String(watchlistTargets.length);
+  }
+
+  function browserStorage() {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  function updateWatchlistStatus() {
+    watchlistCount.textContent = String(watchlistTargets.length);
+    watchlistStorageStatus.textContent = watchlistStorageError
+      ? `Watchlist: ${watchlistStorageError}`
+      : "";
+    watchlistStorageStatus.hidden = !watchlistStorageError;
+  }
+
+  function loadWatchlist() {
+    const stored = WATCHLIST.read(browserStorage());
+    watchlistTargets = stored.targets;
+    watchlistStorageError = stored.error;
+    watchlistWriteBlocked = stored.writeBlocked;
+    updateWatchlistStatus();
+  }
+
+  function persistWatchlist() {
+    if (watchlistWriteBlocked) {
+      if (!String(watchlistStorageError || "").includes("page-only")) {
+        watchlistStorageError = `${watchlistStorageError || "Browser storage is unavailable."} New changes are page-only and will be lost when this page closes.`;
+      }
+      updateWatchlistStatus();
+      return false;
+    }
+    if (!WATCHLIST.write(browserStorage(), watchlistTargets)) {
+      watchlistStorageError = "Changes could not be saved. They are page-only and will be lost when this page closes.";
+      updateWatchlistStatus();
+      return false;
+    }
+    watchlistStorageError = null;
+    updateWatchlistStatus();
+    return true;
+  }
+
+  function isWatching(filters) {
+    const key = WATCHLIST.filterKey(filters);
+    return Boolean(key && watchlistTargets.some((target) => WATCHLIST.filterKey(target.filters) === key));
+  }
+
+  function updateWatchTarget(filters, label) {
+    if (isWatching(filters)) {
+      watchlistTargets = WATCHLIST.remove(watchlistTargets, filters);
+      watchlistNotice = "Slice removed from your Watchlist.";
+      persistWatchlist();
+    } else {
+      const result = WATCHLIST.add(watchlistTargets, { filters, label });
+      if (!result.added) {
+        watchlistNotice = result.reason === "limit"
+          ? `Your Watchlist is full (${WATCHLIST.MAX_TARGETS} slices). Remove one before adding another.`
+          : result.reason === "duplicate" ? "This slice is already on your Watchlist." : "Add a company, role, specialty, skill or search term first.";
+      } else {
+        watchlistTargets = result.targets;
+        watchlistNotice = "Slice added to your Watchlist.";
+        persistWatchlist();
+      }
+    }
+    updateWatchlistStatus();
+    renderRoute();
   }
 
   function isSaved(id) {
@@ -801,6 +877,67 @@
     return params;
   }
 
+  function currentWatchFilters(route) {
+    const params = routeFilterParams(route);
+    return WATCHLIST.normalizeFilters({
+      q: params.get("q"),
+      occupation: params.get("occupation"),
+      specialty: params.get("specialty"),
+      skill: params.get("skill"),
+      source: params.get("source"),
+      period_days: params.get("period_days") || 90,
+    });
+  }
+
+  function watchTargetLabel(filters, data) {
+    const options = data && data.filter_options || {};
+    function lookup(rows, id, extraKey = "") {
+      const item = (Array.isArray(rows) ? rows : []).find((row) => String(row.id ?? row.key) === String(id));
+      return item && (item.label || item.company_name || item[extraKey]) || LABELS[String(id)] || String(id);
+    }
+    const parts = [];
+    if (filters.source) parts.push(lookup(options.sources, filters.source, "key"));
+    if (filters.occupation) parts.push(lookup(options.occupations || data.occupations, filters.occupation));
+    if (filters.specialty) parts.push(lookup(options.specialties || data.specialties, filters.specialty));
+    if (filters.skill) parts.push(lookup(options.skills || data.skills, filters.skill));
+    if (filters.q) parts.push(`Search: ${filters.q}`);
+    return parts.join(" · ").slice(0, 120) || "Saved filter";
+  }
+
+  function watchlistUrl(filters, periodOverride = null) {
+    const params = new URLSearchParams();
+    for (const key of ["q", "occupation", "specialty", "skill", "source"]) {
+      if (filters[key]) params.set(key, filters[key]);
+    }
+    params.set("period_days", String(periodOverride || filters.period_days || 90));
+    return `#/explore?${params.toString()}`;
+  }
+
+  function watchControl(data, route) {
+    const wrap = element("div", "watch-control");
+    const filters = currentWatchFilters(route);
+    if (!filters) {
+      wrap.append(text("span", "filter-status", "Choose a company, role, specialty, skill or search term to watch a slice."));
+      return wrap;
+    }
+    const label = watchTargetLabel(filters, data);
+    const watched = isWatching(filters);
+    const button = element("button", `button button-small${watched ? " button-secondary" : ""}`, watched ? "Stop watching" : "Watch applied filters");
+    button.type = "button";
+    button.setAttribute("aria-pressed", watched ? "true" : "false");
+    button.addEventListener("click", () => updateWatchTarget(filters, label));
+    wrap.append(button);
+    wrap.append(text("span", "filter-status", "Uses saved active postings from enabled sources. Apply edits before watching."));
+    if (filters.source) wrap.append(text("span", "filter-status", "A company means its configured job board, not necessarily every vacancy."));
+    if (watchlistNotice) {
+      const notice = text("span", "watchlist-inline-status", watchlistNotice);
+      notice.setAttribute("role", "status");
+      wrap.append(notice);
+    }
+    if (watchlistStorageError) wrap.append(text("span", "watchlist-inline-status", watchlistStorageError));
+    return wrap;
+  }
+
   function requestParams(route) {
     const formParams = routeFilterParams(route);
     const allowed = ["q", "occupation", "specialty", "skill", "source", "period_days", "include_inactive", "enabled_only", "page", "page_size"];
@@ -895,7 +1032,7 @@
     enabledLabel.prepend(enabledOnly);
     append(checks, includeLabel, element("span", "", "　"), enabledLabel);
     const hint = text("span", "filter-status", "The period changes the historical comparison only, not the saved job inventory.");
-    append(bottom, checks, hint);
+    append(bottom, checks, hint, watchControl(data, route));
     form.append(bottom);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -954,6 +1091,196 @@
     sideStack.append(trendPanel(data.history, data.history && data.history.metrics, route));
     split.append(mainStack, sideStack);
     root.append(split);
+  }
+
+  function watchlistWindowLine(history, name, metric = null) {
+    const windowInfo = history && history.windows && history.windows[name] || {};
+    const dates = windowInfo.start_utc || windowInfo.end_utc
+      ? `${windowInfo.start_utc ? formatDate(windowInfo.start_utc) : "start unknown"} to ${windowInfo.end_utc ? formatDate(windowInfo.end_utc) : "end unknown"}`
+      : "dates unavailable";
+    const count = metric && metric[`${name === "previous" ? "previous" : "current"}_count`];
+    const denominator = metric && metric[`${name === "previous" ? "previous" : "current"}_denominator`];
+    let evidence = "Historical posting count unavailable";
+    if (metric && count !== null && count !== undefined) {
+      evidence = `${formatNumber(count)} of ${formatNumber(denominator)} selected postings`;
+    } else if (windowInfo.N_panel !== null && windowInfo.N_panel !== undefined) {
+      evidence = `${formatNumber(windowInfo.N_panel)} panel postings`;
+    }
+    const line = element("div", "watch-window-line");
+    append(line, text("strong", "", name === "previous" ? "Previous window" : "Current window"), text("span", "", `${dates} · ${evidence}`));
+    return line;
+  }
+
+  function watchlistEvidence(history, filters, singleCompany) {
+    const comparison = WATCHLIST.resolveComparison(history, filters);
+    const view = element("section", "watch-evidence");
+    const period = Number(history && history.period_days) || Number(filters.period_days) || 90;
+    const metric = comparison.metric;
+    let headline = "History coverage only";
+    let details = "Choose a role, specialty or skill to track its historical share. This target currently shows inventory and coverage only.";
+    let stateClass = "watch-state-neutral";
+    if (comparison.state === "up" || comparison.state === "down") {
+      const change = Number(metric.delta_pp);
+      const direction = comparison.state === "up" ? "increased" : "decreased";
+      headline = `Selected share ${direction} · ${change > 0 ? "+" : ""}${formatNumber(change)} pp`;
+      details = `${metric.label || history.selected_metric.label || "Selected metric"}: ${formatPercent(metric.previous_share)} to ${formatPercent(metric.current_share)}. Denominator: ${history.selected_metric.denominator || metric.denominator || "selected postings"}.`;
+      stateClass = comparison.state === "up" ? "watch-state-up" : "watch-state-down";
+    } else if (comparison.state === "stable") {
+      const change = Number(metric.delta_pp);
+      headline = `Stable within ±1.0 pp · ${change > 0 ? "+" : ""}${formatNumber(change)} pp`;
+      details = `${metric.label || history.selected_metric.label || "Selected metric"}: ${formatPercent(metric.previous_share)} to ${formatPercent(metric.current_share)}. The existing stability band is ±1 percentage point.`;
+      stateClass = "watch-state-stable";
+    } else if (comparison.state === "insufficient" || comparison.state === "uncertain") {
+      headline = comparison.state === "uncertain" ? "Direction is uncertain" : "Not enough comparable evidence";
+      details = historyReasonMessage(comparison.reason);
+      if (singleCompany) details += " Multi-company evidence checks still apply, so one company may not meet the comparison threshold.";
+      stateClass = "watch-state-neutral";
+    } else if (comparison.state === "unavailable") {
+      headline = "Historical comparison unavailable";
+      details = historyReasonMessage(comparison.reason);
+      if (singleCompany) details += " Multi-company evidence checks still apply, so one company may not meet the comparison threshold.";
+    }
+    append(view, text("div", `watch-state ${stateClass}`, headline), text("p", "watch-evidence-copy", details));
+    view.append(watchlistWindowLine(history, "previous", metric));
+    view.append(watchlistWindowLine(history, "current", metric));
+    const quality = history && history.quality || {};
+    if (quality.matched_slots !== null && quality.matched_slots !== undefined && quality.expected_slots !== null && quality.expected_slots !== undefined) {
+      view.append(text("div", "watch-evidence-meta", `${formatNumber(quality.matched_slots)} of ${formatNumber(quality.expected_slots)} expected scan pairs matched.`));
+    }
+    view.append(text("p", "watch-evidence-note", `These are adjacent saved windows for ${period} days, not a change since your last visit. History uses the registered panel snapshots and may include boards that are now disabled; a company filter narrows the historical panel. Posting observations do not establish hires, closures or new openings.`));
+    if (filters.q) {
+      view.append(text("p", "watch-evidence-note", "Historical text matching checks titles and descriptions. Current search also checks company and source names; use a company filter to watch one configured board."));
+    }
+    return view;
+  }
+
+  function watchlistFreshness(data, filters) {
+    const sources = Array.isArray(data.sources) ? data.sources : [];
+    if (filters.source) {
+      const source = sources.find((item) => String(item.key) === filters.source);
+      if (!source) {
+        return {
+          unavailable: true,
+          node: text("p", "watch-freshness watch-warning", "Company board is not in the enabled source roster. A zero count cannot confirm that its board is empty."),
+        };
+      }
+      const state = sourceStatus(source);
+      const unknown = !source.last_success_at_utc;
+      const node = text("p", `watch-freshness${state.style.includes("warning") || state.style.includes("error") ? " watch-warning" : ""}`, `Board freshness · ${state.label} · last successful scan ${formatDate(source.last_success_at_utc)}.${unknown ? " Current board coverage is unknown." : ""}`);
+      return { unavailable: unknown, node };
+    }
+    const stale = Number((data.quality || {}).stale_source_count ?? sources.filter((source) => source.stale).length);
+    const freshness = stale
+      ? `${formatNumber(stale)} of ${formatNumber(sources.length)} enabled sources need attention`
+      : `${formatNumber(sources.length)} enabled sources; none currently flagged stale`;
+    const asOf = data.data_as_of_utc ? ` Current snapshot data as of ${formatDate(data.data_as_of_utc)}.` : " Snapshot date unknown.";
+    return { unavailable: false, node: text("p", `watch-freshness${stale ? " watch-warning" : ""}`, `Source freshness · ${freshness}.${asOf}`) };
+  }
+
+  function watchlistTargetCard(target, result, periodDays, seq) {
+    const card = element("article", "watch-card");
+    const heading = element("div", "watch-card-heading");
+    const title = element("div", "watch-card-title");
+    const remove = element("button", "button button-danger button-small", "Remove");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove ${target.label} from Watchlist`);
+    remove.addEventListener("click", () => {
+      watchlistTargets = WATCHLIST.remove(watchlistTargets, target.filters);
+      watchlistNotice = `${target.label} removed from your Watchlist.`;
+      persistWatchlist();
+      renderRoute();
+    });
+    append(title, text("h2", "", target.label), text("div", "watch-filter-summary", `${target.filters.source ? "Configured company board" : "Company-board panel"} · active postings · ${periodDays}-day history`));
+    append(heading, title, remove);
+    card.append(heading);
+
+    const links = element("div", "watch-card-links");
+    append(links,
+      buttonLink(watchlistUrl(target.filters, periodDays), "View filtered postings →", "panel-link"),
+      buttonLink("#/methodology", "Methodology →", "panel-link")
+    );
+    card.append(links);
+
+    if (!result.ok) {
+      const failure = element("div", "watch-request-error");
+      append(failure,
+        text("strong", "", "Snapshot request failed"),
+        text("p", "", "Current inventory, source freshness and history are unavailable for this target. Reload to retry.")
+      );
+      card.append(failure);
+      return card;
+    }
+
+    if (seq !== renderSequence) return card;
+    const data = result.value;
+    const freshness = watchlistFreshness(data, target.filters);
+    const inventory = element("section", "watch-inventory");
+    const count = freshness.unavailable ? "Unavailable" : formatNumber(data.summary && data.summary.posting_count);
+    append(inventory,
+      text("div", "watch-inventory-label", "Current saved active postings"),
+      text("div", `watch-inventory-count${freshness.unavailable ? " watch-count-unavailable" : ""}`, count),
+      freshness.node
+    );
+    card.append(inventory);
+    card.append(watchlistEvidence(data.history, target.filters, Boolean(target.filters.source)));
+    return card;
+  }
+
+  function changeWatchlistPeriod(periodDays, route) {
+    const params = new URLSearchParams(route.params);
+    params.set("period_days", String(periodDays));
+    navigate("watchlist", params);
+  }
+
+  async function renderWatchlist(seq, route) {
+    root.replaceChildren();
+    const rawPeriod = Number(route.params.get("period_days") || 90);
+    const periodDays = [30, 90, 180].includes(rawPeriod) ? rawPeriod : 90;
+    const heading = pageHeading("YOUR WATCHLIST", "Company and role signals", "Track active saved postings, source freshness and the historical evidence for filters you choose.", actionGroup(buttonLink("#/explore", "Explore filters →", "button button-primary")));
+    append(root, heading, text("p", "watchlist-intro", "A company selection represents its configured job board, not necessarily all of its vacancies. Historical windows compare saved observations; they do not measure hiring outcomes."));
+    if (watchlistStorageError) {
+      const storageNote = text("p", "watch-storage-inline", `Watchlist storage: ${watchlistStorageError}`);
+      storageNote.setAttribute("role", "status");
+      root.append(storageNote);
+    }
+    if (watchlistNotice) {
+      const notice = text("p", "watchlist-notice", watchlistNotice);
+      notice.setAttribute("role", "status");
+      root.append(notice);
+    }
+    const controls = element("div", "watchlist-toolbar");
+    const periodGroup = element("div", "period-tabs");
+    periodGroup.setAttribute("role", "group");
+    periodGroup.setAttribute("aria-label", "Watchlist history period");
+    for (const value of [30, 90, 180]) {
+      const tab = element("button", "period-tab", `${value} days`);
+      tab.type = "button";
+      tab.setAttribute("aria-pressed", value === periodDays ? "true" : "false");
+      tab.addEventListener("click", () => changeWatchlistPeriod(value, route));
+      periodGroup.append(tab);
+    }
+    append(controls, text("span", "watchlist-toolbar-label", "Historical comparison"), periodGroup);
+    root.append(controls);
+    if (!watchlistTargets.length) {
+      root.append(emptyState("◷", "Your Watchlist is empty", "Save a company board, role, specialty, skill or text search from Explore. You can combine filters to watch a specific slice.", buttonLink("#/explore", "Explore postings", "button button-primary")));
+      return;
+    }
+    const requests = await WATCHLIST.mapBounded(watchlistTargets, 4, async (target) => {
+      if (seq !== renderSequence) throw new Error("stale render");
+      const params = new URLSearchParams();
+      for (const key of ["q", "occupation", "specialty", "skill", "source"]) {
+        if (target.filters[key]) params.set(key, target.filters[key]);
+      }
+      params.set("period_days", String(periodDays));
+      params.set("page", "1");
+      params.set("page_size", "1");
+      return getJson("snapshot", params);
+    });
+    if (seq !== renderSequence) return;
+    const list = element("div", "watchlist-grid");
+    watchlistTargets.forEach((target, index) => list.append(watchlistTargetCard(target, requests[index], periodDays, seq)));
+    root.append(list);
+    root.append(text("p", "watchlist-limit-note", `Up to ${WATCHLIST.MAX_TARGETS} filters are stored in this browser. Saved jobs remain in your separate shortlist.`));
   }
 
   function pagination(jobs) {
@@ -1580,6 +1907,11 @@
         renderSaved();
         return;
       }
+      if (page === "watchlist") {
+        updateNav("watchlist", "Watchlist");
+        await renderWatchlist(seq, route);
+        return;
+      }
       if (page === "methodology") {
         await renderMethodology(seq);
         return;
@@ -1619,6 +1951,7 @@
     event.preventDefault();
     document.getElementById("main").focus();
   });
+  loadWatchlist();
   persistSavedJobs();
   renderRoute();
 })();

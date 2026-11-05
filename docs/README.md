@@ -11,6 +11,7 @@ Start with the [project README](../README.md) for the purpose and local setup.
 | [Contracts](contracts.md) | Profile, market, review, Radar, and research formats |
 | [Collection operations](operations.md) | Health, diagnostics, recovery, and retention |
 | [Research operations](CAREER_RADAR_RESEARCH_OPERATIONS.md) | Collection, review, and monitoring |
+| [Career Radar Watchlist](CAREER_RADAR_WATCHLIST.md) | Browser-local filters, historical evidence, and interpretation limits |
 | [Skill taxonomy](skill-taxonomy.md) | Versioning and deterministic extraction |
 | [Normalization](normalization-rules.md) | Job fields and evidence semantics |
 | [Workable public](workable-public-stability.md) | Opt-in and completeness limits |

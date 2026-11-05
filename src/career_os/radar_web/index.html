@@ -6,8 +6,9 @@
     <meta name="theme-color" content="#101310">
     <meta name="description" content="Career Radar — jobs, roles and skill mentions from collected company job boards.">
     <title>Career Radar</title>
-    <link rel="stylesheet" href="style.css?v=ui-2.0.0">
-    <script src="app.js?v=ui-2.0.0" defer></script>
+    <link rel="stylesheet" href="style.css?v=ui-2.1.0">
+    <script src="watchlist.js?v=ui-2.1.0" defer></script>
+    <script src="app.js?v=ui-2.1.0" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -21,11 +22,13 @@
           <a href="#/overview" data-nav="overview"><span class="nav-icon" aria-hidden="true">◫</span> Overview</a>
           <a href="#/explore" data-nav="explore"><span class="nav-icon" aria-hidden="true">⌕</span> Jobs</a>
           <a href="#/saved" data-nav="saved"><span class="nav-icon" aria-hidden="true">♡</span> Saved <span class="saved-count" id="saved-count">0</span></a>
+          <a href="#/watchlist" data-nav="watchlist"><span class="nav-icon" aria-hidden="true">◷</span> Watchlist <span class="saved-count" id="watchlist-count">0</span></a>
           <a href="#/research" data-nav="research"><span class="nav-icon" aria-hidden="true">⌁</span> Research</a>
           <a href="#/methodology" data-nav="methodology"><span class="nav-icon" aria-hidden="true">ⓘ</span> Methodology</a>
         </nav>
         <div class="sidebar-bottom">
-          <p class="local-note">Your shortlist stays in this browser.</p>
+          <p class="local-note">Your shortlist and Watchlist stay in this browser.</p>
+          <p class="watchlist-storage-status" id="watchlist-storage-status" role="status" aria-live="polite"></p>
         </div>
       </aside>
 

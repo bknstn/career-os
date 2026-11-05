@@ -1,14 +1,17 @@
 # Development
 
-Install with `uv sync --all-groups --frozen`, then run:
+Install with `uv sync --all-groups --frozen` and use Node.js 20 or newer for the
+browser behavior checks, then run:
 
 ```sh
 make check
 make security
 ```
 
-`make check` runs formatting, lint, strict typing, and tests. `make test` (or
-`uv run pytest`) collects only `tests/unit` and `tests/contract`; both run offline.
+`make check` runs formatting, lint, strict typing, Python tests, and the
+browser-local Watchlist behavior tests. `make test` (or `uv run pytest`)
+collects only `tests/unit` and `tests/contract`; both run offline. `make test-web`
+runs the built-in Node.js DOM harness without third-party packages.
 `tests/typing` belongs to `make typecheck`. PostgreSQL and live HTTP tests require
 an explicit path and opt-in. `make format` applies formatting. Install hooks with
 `uv run pre-commit install`.
