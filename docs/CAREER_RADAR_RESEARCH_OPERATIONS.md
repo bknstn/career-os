@@ -38,6 +38,12 @@ available for collection-only diagnostics:
 career-os research collect --trigger daily
 ```
 
+The checked-in registry uses a 100 MiB document limit across publishers and a
+100 MiB total response-body budget per run. The collector processes each source
+body in memory, saves its extracted text and provenance, and releases the
+original. Quote-bound candidates and accepted evidence still use the separate
+review workflow.
+
 On the first monitor invocation, existing current accepted claims become the
 baseline; they do not flood the first automatic weekly report. To create an
 initial weekly snapshot and unresolved monthly review proposal from the current
@@ -233,10 +239,16 @@ notify.
 ## Backup and restore
 
 The PostgreSQL database remains the canonical catalog for source attempts,
-original HTML/PDF bytes, document versions, candidate claims, and append-only
-claim reviews. Include that database in the existing Career OS backup and
-restore procedure; a database-only restore loses no research bodies or review
-history.
+extracted document versions, candidate claims, and append-only reviews.
+Backups include normalized text, source URLs, locators, original byte counts,
+hashes, and any originals archived under the previous storage policy. For a new
+version, recovering the original requires downloading it from the source and
+checking its hash.
+
+Migration `20261107_0007` preserves the earlier rows and enables extraction-only
+versions. A schema downgrade succeeds before the first such write. Afterward,
+use the pre-migration backup for rollback to the earlier schema, or retain the
+new schema and address the issue forward.
 
 The 2026-10-20 restore check used schema `20261019_0006`, matched all 17 table
 fingerprints, preserved all ten legacy tables, and verified 43 raw-body digests

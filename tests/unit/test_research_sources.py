@@ -19,7 +19,7 @@ def test_registry_has_eight_research_publishers_one_guidance_and_four_disabled()
     project_root = Path(__file__).resolve().parents[2]
     registry = ResearchSourceRegistry.load(project_root / "config/radar/research.sources.v1.yaml")
 
-    assert registry.version == "research-sources-v5"
+    assert registry.version == "research-sources-v6"
     assert len(registry.enabled_sources) == 9
     assert len(registry.sources) == 13
     assert {source.key for source in registry.sources if not source.enabled} == {
@@ -29,15 +29,7 @@ def test_registry_has_eight_research_publishers_one_guidance_and_four_disabled()
         "bls",
     }
     assert sum(len(source.candidate_document_urls) for source in registry.enabled_sources) == 21
-    raised_cap_keys = {
-        "openai_economic_research",
-        "linkedin_economic_graph",
-        "deloitte_state_of_ai",
-    }
-    assert {source.key: source.max_response_bytes for source in registry.sources} == {
-        source.key: (25 * 1024 * 1024 if source.key in raised_cap_keys else 12 * 1024 * 1024)
-        for source in registry.sources
-    }
+    assert {source.max_response_bytes for source in registry.sources} == {100 * 1024 * 1024}
     anthropic = registry.get("anthropic_economics")
     assert anthropic.excluded_document_urls == ("https://www.anthropic.com/economic-index",)
     assert registry.excluded_document_urls("anthropic_economics") == frozenset(

@@ -20,9 +20,14 @@ from career_os.adapters.research_http import (
     ResearchFetchResult,
     ResearchRequestBudget,
 )
-from career_os.application.research_discovery import parse_visible_index_links, relevant_candidates
+from career_os.application.research_discovery import (
+    ResearchIndexLink,
+    parse_visible_index_links,
+    relevant_candidates,
+)
 from career_os.config.research_sources import ResearchSource, ResearchSourceRegistry
 from career_os.domain.research import (
+    MAX_RESEARCH_DOCUMENT_BYTES,
     ResearchDataPeriod,
     ResearchDateState,
     ResearchMediaType,
@@ -41,7 +46,7 @@ from career_os.persistence.research import ResearchRepository
 from career_os.research.extraction import ResearchExtraction, extract_research_document
 
 ResearchTrigger = Literal["daily", "manual", "backfill"]
-MAX_RUN_BODY_BYTES = 64 * 1024 * 1024
+MAX_RUN_BODY_BYTES = 100 * 1024 * 1024
 MAX_WIRE_REQUESTS = 96
 MAX_DOCUMENTS_PER_RUN = 32
 MAX_DAILY_DOCUMENTS_PER_RUN = 12
@@ -225,7 +230,7 @@ class ResearchCollectionService:
         self._robots_cache.clear()
         deadline = time.monotonic() + self.deadline_seconds
         seen_urls: set[tuple[str, str]] = set()
-        fetched_html: dict[tuple[str, str], tuple[ResearchFetchResult, ResearchExtraction]] = {}
+        seed_index_links: dict[tuple[str, str], tuple[ResearchIndexLink, ...]] = {}
         document_limit = min(
             self.maximum_documents,
             MAX_DOCUMENTS_PER_RUN if trigger == "backfill" else MAX_DAILY_DOCUMENTS_PER_RUN,
@@ -246,7 +251,7 @@ class ResearchCollectionService:
                             deadline=deadline,
                             counts=counts,
                             seen_urls=seen_urls,
-                            fetched_html=fetched_html,
+                            seed_index_links=seed_index_links,
                             robots_cache=self._robots_cache,
                             document_limit=document_limit,
                         )
@@ -257,7 +262,7 @@ class ResearchCollectionService:
                     deadline=deadline,
                     counts=counts,
                     seen_urls=seen_urls,
-                    fetched_html=fetched_html,
+                    seed_index_links=seed_index_links,
                     robots_cache=self._robots_cache,
                 )
             self._retry_stored_candidates(
@@ -266,7 +271,6 @@ class ResearchCollectionService:
                 deadline=deadline,
                 counts=counts,
                 seen_urls=seen_urls,
-                fetched_html=fetched_html,
                 robots_cache=self._robots_cache,
                 document_limit=document_limit,
             )
@@ -369,7 +373,6 @@ class ResearchCollectionService:
         deadline: float,
         counts: _RunCounts,
         seen_urls: set[tuple[str, str]],
-        fetched_html: dict[tuple[str, str], tuple[ResearchFetchResult, ResearchExtraction]],
         robots_cache: dict[str, ResearchRobotsPolicy],
         document_limit: int,
     ) -> None:
@@ -457,7 +460,6 @@ class ResearchCollectionService:
                 deadline=deadline,
                 counts=counts,
                 seen_urls=seen_urls,
-                fetched_html=fetched_html,
                 robots_cache=robots_cache,
                 document_limit=document_limit,
             )
@@ -475,9 +477,9 @@ class ResearchCollectionService:
         deadline: float,
         counts: _RunCounts,
         seen_urls: set[tuple[str, str]],
-        fetched_html: dict[tuple[str, str], tuple[ResearchFetchResult, ResearchExtraction]],
         robots_cache: dict[str, ResearchRobotsPolicy],
         document_limit: int,
+        seed_index_links: dict[tuple[str, str], tuple[ResearchIndexLink, ...]] | None = None,
     ) -> None:
         canonical = self.registry.canonical_document_url(source.key, value)
         if self.registry.is_excluded_document_url(source.key, canonical):
@@ -525,7 +527,7 @@ class ResearchCollectionService:
             )
             return
         remaining_bytes = self.maximum_body_bytes - counts.body_bytes
-        maximum_bytes = min(source.max_response_bytes, 50 * 1024 * 1024, remaining_bytes)
+        maximum_bytes = min(source.max_response_bytes, MAX_RESEARCH_DOCUMENT_BYTES, remaining_bytes)
         try:
             response = self.fetcher.fetch(
                 source,
@@ -562,7 +564,13 @@ class ResearchCollectionService:
         extraction = extract_research_document(
             response.body, response.media_type, charset=response.charset
         )
-        fetched_html[identity] = (response, extraction)
+        if seed_index_links is not None and "html_index" in source.discovery_methods:
+            index_urls = (
+                normalize_research_url(url, allowed_hosts=tuple(source.allowed_hosts))
+                for url in source.discovery_urls
+            )
+            if canonical in index_urls:
+                seed_index_links[identity] = _visible_index_links(response)
         version = self._original_version(
             source,
             canonical,
@@ -693,7 +701,7 @@ class ResearchCollectionService:
         deadline: float,
         counts: _RunCounts,
         seen_urls: set[tuple[str, str]],
-        fetched_html: dict[tuple[str, str], tuple[ResearchFetchResult, ResearchExtraction]],
+        seed_index_links: dict[tuple[str, str], tuple[ResearchIndexLink, ...]],
         robots_cache: dict[str, ResearchRobotsPolicy],
     ) -> None:
         if "html_index" not in source.discovery_methods:
@@ -710,13 +718,8 @@ class ResearchCollectionService:
             canonical_index = normalize_research_url(
                 index_url, allowed_hosts=tuple(source.allowed_hosts)
             )
-            document_identity = (
-                source.key,
-                self.registry.canonical_document_url(source.key, canonical_index),
-            )
-            if document_identity in fetched_html and document_identity[1] == canonical_index:
-                response, extraction = fetched_html[document_identity]
-            else:
+            links = seed_index_links.pop((source.key, canonical_index), None)
+            if links is None:
                 if not self._robots_allowed(
                     run_id,
                     source,
@@ -786,13 +789,10 @@ class ResearchCollectionService:
                     bytes_received=response.bytes_received,
                     error_code=extraction.error_code,
                 )
-            if response.media_type is not ResearchMediaType.HTML:
+                links = _visible_index_links(response)
+                del response
+            if not links:
                 continue
-            try:
-                html = response.body.decode(response.charset or "utf-8", errors="replace")
-            except LookupError:
-                html = response.body.decode("utf-8", errors="replace")
-            links = parse_visible_index_links(html, base_url=response.retrieved_url)
             with self.session_factory() as session:
                 existing_urls = frozenset(
                     session.scalars(
@@ -976,6 +976,16 @@ class ResearchCollectionService:
                 error_code=error_code,
             )
         )
+
+
+def _visible_index_links(response: ResearchFetchResult) -> tuple[ResearchIndexLink, ...]:
+    if response.media_type is not ResearchMediaType.HTML:
+        return ()
+    try:
+        html = response.body.decode(response.charset or "utf-8", errors="replace")
+    except LookupError:
+        html = response.body.decode("utf-8", errors="replace")
+    return parse_visible_index_links(html, base_url=response.retrieved_url)
 
 
 def _text_digest(value: str | None) -> str | None:

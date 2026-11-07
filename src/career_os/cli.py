@@ -52,7 +52,7 @@ from career_os.application.operations import (
 from career_os.application.profile_fit import ProfileComparisonConsistencyError
 from career_os.application.radar import RadarBuildPersistenceError, RadarBuildService
 from career_os.application.report import MarketReportService
-from career_os.application.research_collection import ResearchCollectionService
+from career_os.application.research_collection import MAX_RUN_BODY_BYTES, ResearchCollectionService
 from career_os.application.research_evidence import (
     ResearchEvidenceService,
     SqlResearchEvidenceReadStore,
@@ -708,7 +708,7 @@ def research_plan(
             "network_requests_performed": 0,
             "database_reads_or_writes_performed": 0,
             "limits": {
-                "max_total_download_bytes": 64 * 1024 * 1024,
+                "max_total_download_bytes": MAX_RUN_BODY_BYTES,
                 "max_wire_requests": 96,
                 "max_daily_document_bodies": 12,
                 "max_backfill_document_bodies": 32,

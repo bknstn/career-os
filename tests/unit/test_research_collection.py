@@ -181,7 +181,6 @@ def test_stored_candidate_rotation_excludes_dashboard_before_limited_selection(
         deadline=float("inf"),
         counts=_RunCounts(),
         seen_urls=set(),
-        fetched_html={},
         robots_cache={},
         document_limit=1,
     )
@@ -216,7 +215,6 @@ def test_direct_acquisition_returns_before_network_or_storage_for_excluded_url()
         deadline=float("inf"),
         counts=counts,
         seen_urls=seen_urls,
-        fetched_html={},
         robots_cache={},
         document_limit=4,
     )

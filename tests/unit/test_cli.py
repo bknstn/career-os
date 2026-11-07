@@ -125,7 +125,8 @@ def test_research_plan_reports_finite_limits_without_database_or_network(monkeyp
     payload = json.loads(result.stdout)
     assert payload["network_requests_performed"] == 0
     assert payload["database_reads_or_writes_performed"] == 0
-    assert payload["limits"]["max_total_download_bytes"] >= 45_336_666
+    assert payload["limits"]["max_total_download_bytes"] == 100 * 1024 * 1024
+    assert {source["max_document_bytes"] for source in payload["sources"]} == {100 * 1024 * 1024}
     assert payload["limits"]["max_daily_document_bodies"] == 12
     assert payload["limits"]["max_backfill_document_bodies"] == 32
     assert payload["limits"]["minimum_host_interval_seconds"] == 0.2

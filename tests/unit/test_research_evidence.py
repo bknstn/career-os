@@ -292,13 +292,14 @@ def test_claim_projection_includes_review_history_and_current_exclusion() -> Non
     assert claim["version"]["id"] == str(version_id)
 
 
-def test_sql_projections_measure_body_bytes_without_selecting_body_content() -> None:
+def test_sql_projections_use_original_body_size_with_legacy_fallback() -> None:
     session = UnusedSession()
     store = SqlResearchEvidenceReadStore(cast(Session, session))
     statement = store._claim_select()
     sql = str(statement)
 
     assert "octet_length(research_document_versions.raw_body)" in sql
+    assert "coalesce(research_document_versions.original_size_bytes," in sql
     assert "SELECT research_document_versions.raw_body" not in sql
     assert "research_document_versions.normalized_text," not in sql
 

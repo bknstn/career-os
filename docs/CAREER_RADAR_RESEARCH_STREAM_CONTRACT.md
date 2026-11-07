@@ -77,13 +77,15 @@ the daily candidate budget.
 
 Use the existing Career OS PostgreSQL/Alembic and FastAPI/Typer boundaries. Add
 research tables to the same database rather than a second database or an
-independently locked file catalog. PostgreSQL stores metadata and the exact
-retrieved HTML/PDF entity bytes in an immutable document-version row, with
-SHA-256, media type, byte length, selected response validators, and retrieval
-time. This keeps body, digest, version, and catalog commit atomic and lets the
-existing API remain a read-only database projection. Per-document and per-run
-byte limits prevent unbounded downloads; archive size and rejected/blocked
-attempts stay visible. Backups must include the existing database backup.
+independently locked file catalog. For each retrieved HTML or PDF, PostgreSQL
+stores an immutable document version with normalized text, citation locators,
+source URL, SHA-256 of the original response, media type, original byte length,
+selected response validators, and retrieval time. The collector extracts and
+hashes the response in memory and releases it after processing. Versions
+created under the earlier storage policy retain their archived originals.
+The catalog commit is atomic, and the API remains a read-only projection.
+Per-document and per-run byte limits bound downloads. Acquisition attempts
+retain their outcomes and byte counts.
 
 Keep the checked-in, strict source registry as configuration, with a version
 and digest recorded on every discovery run. It defines source identity, official
@@ -108,14 +110,16 @@ decisions rather than overwriting them. A reviewer may confirm a claim's
 continuation, create a new version-bound claim, or record an explicit version
 supersession or retraction. Superseded and retracted evidence remains visible in
 history. A failed/blocked request records its attempt and status but never
-creates a body-bearing document version or satisfies the seed count.
+creates a document version or satisfies the seed count.
 
-Retain the original HTML/PDF and prior versions. HTML extraction uses a pinned,
+Retain prior normalized versions and their locators. HTML extraction uses a pinned,
 deterministic text normalization that preserves headings and character offsets;
 PDF extraction uses local open-source text parsing and preserves page numbers.
 No paid API, OCR service, browser automation, or model-generated extraction is
-required. Scanned/encrypted PDFs and unsupported pages remain stored with an
-explicit extraction failure and cannot support quote-bound accepted claims.
+required. For scanned/encrypted PDFs and other extraction failures, retain
+source provenance and the error. These versions cannot support quote-bound
+accepted claims. Re-extraction requires retrieving the source again. A matching
+original SHA-256 identifies the same response if it is still available.
 
 An accepted claim is an explicitly reviewed structured record bound to one
 immutable document version. It carries the exact quote and a locator (HTML
@@ -187,13 +191,14 @@ unresolved; no summary silently upgrades them into facts.
 
 ## Collection bounds
 
-Collector limits are recorded by `career-os research plan`: 64 MiB total
-body bytes, 96 wire requests, at most 32 configured seed bodies for the
+The `career-os research plan` command reports the collector limits. They include
+100 MiB per document across the checked-in sources, 100 MiB total body bytes
+per run, 96 wire requests, at most 32 configured seed bodies for the
 backfill, at most 12 document bodies in normal runs, at most eight new index
 candidates per source, 12-second request timeout, 15-minute run deadline, one
-retry, four redirects, and 0.2 seconds minimum between host requests. OpenAI,
-LinkedIn, and Deloitte sources use a 25 MiB per-response cap; all other sources
-retain the 12 MiB default. The whole run remains capped at 64 MiB. Daily runs
+retry, four redirects, and 0.2 seconds minimum between host requests. The
+effective limit for a document is also bounded by the remaining run budget,
+which includes discovery and robots responses. Daily runs
 do not redownload fixed seeds; they discover index links and rotate overdue
 candidates, including already acquired documents. Robots policy is fetched
 once per exact host and evaluated for every target path using the declared

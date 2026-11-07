@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from yaml.nodes import MappingNode
 from yaml.resolver import BaseResolver
 
-from career_os.domain.research import normalize_research_url
+from career_os.domain.research import MAX_RESEARCH_DOCUMENT_BYTES, normalize_research_url
 
 
 class ResearchConfigurationError(ValueError):
@@ -67,7 +67,9 @@ class ResearchSource(BaseModel):
     candidate_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     excluded_document_urls: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     document_aliases: tuple[ResearchDocumentAlias, ...] = ()
-    max_response_bytes: int = Field(default=12 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    max_response_bytes: int = Field(
+        default=MAX_RESEARCH_DOCUMENT_BYTES, ge=1024, le=MAX_RESEARCH_DOCUMENT_BYTES
+    )
     minimum_request_interval_seconds: float | None = Field(default=None, ge=0, le=60)
     discovery_required_term_groups: tuple[tuple[Annotated[str, Field(min_length=1)], ...], ...] = ()
 

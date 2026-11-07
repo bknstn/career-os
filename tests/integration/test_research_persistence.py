@@ -61,12 +61,12 @@ def test_research_repository_serializes_versions_and_preserves_revision_history(
     alembic_config = Config(str(project_root / "alembic.ini"))
     registry = ResearchSourceRegistry.load(project_root / "config/radar/research.sources.v1.yaml")
     engine = create_database_engine(settings)
-    upgraded = False
+    disposable = False
     try:
         assert_disposable_test_database(database_url_from_settings(settings))
         assert_initial_schema_is_absent(inspect(engine).get_table_names())
+        disposable = True
         command.upgrade(alembic_config, "head")
-        upgraded = True
 
         session_factory = sessionmaker(engine, class_=Session, expire_on_commit=False)
         small_limit_registry = ResearchSourceRegistry(
@@ -119,6 +119,12 @@ def test_research_repository_serializes_versions_and_preserves_revision_history(
 
         with session_factory.begin() as session:
             repository = ResearchRepository(session, registry)
+            stored = session.get(ResearchDocumentVersion, first.id)
+            assert stored is not None
+            assert stored.raw_body is None
+            assert stored.body_bytes == len(first.original_bytes)
+            assert stored.raw_sha256 == first.raw_sha256
+            assert stored.normalized_text == first.normalized_text
             candidate1 = repository.upsert_candidate(
                 source_key="metr",
                 discovered_url=first.canonical_url,
@@ -330,14 +336,19 @@ def test_research_repository_serializes_versions_and_preserves_revision_history(
                 {"version_id": first.id},
             )
 
-        command.downgrade(alembic_config, "20261011_0005")
-        assert not (
-            {name for name in CAREER_OS_TABLE_NAMES if name.startswith("research_")}
-            & set(inspect(engine).get_table_names())
-        )
+        with pytest.raises(DBAPIError, match="contains null values"):
+            command.downgrade(alembic_config, "20261019_0006")
+        with engine.connect() as connection:
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == (
+                "20261107_0007"
+            )
+            assert connection.scalar(select(func.count(ResearchDocumentVersion.id))) == 6
     finally:
         try:
-            if upgraded or "alembic_version" in inspect(engine).get_table_names():
+            if disposable and "alembic_version" in inspect(engine).get_table_names():
+                if "research_documents" in inspect(engine).get_table_names():
+                    with engine.begin() as connection:
+                        connection.execute(text("TRUNCATE research_documents CASCADE"))
                 command.downgrade(alembic_config, "base")
                 with engine.begin() as connection:
                     connection.execute(text("DROP TABLE IF EXISTS alembic_version"))

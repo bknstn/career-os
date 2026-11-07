@@ -40,7 +40,7 @@ class ResearchPersistenceError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class ResearchVersionInsert:
-    """Stored version row and whether this transaction appended a new body."""
+    """Stored version row and whether this transaction appended a new observation."""
 
     version: ResearchDocumentVersion
     inserted: bool
@@ -95,7 +95,7 @@ class ResearchRepository:
         return self.session.execute(statement).scalar_one()
 
     def append_version(self, value: ResearchOriginalVersion) -> ResearchVersionInsert:
-        """Append exact original bytes once and classify text-equivalent revisions safely."""
+        """Append extraction and source provenance after consuming the transient body."""
         source = self.registry.get(value.source_key)
         if not source.enabled:
             raise ResearchPersistenceError("disabled sources cannot acquire documents")
@@ -103,7 +103,8 @@ class ResearchRepository:
         canonical = normalize_research_url(value.canonical_url, allowed_hosts=allowed_hosts)
         discovered = normalize_research_url(value.discovered_url, allowed_hosts=allowed_hosts)
         retrieved = normalize_research_url(value.retrieved_url, allowed_hosts=allowed_hosts)
-        if len(value.original_bytes) > source.max_response_bytes:
+        original_size = len(value.original_bytes)
+        if original_size > source.max_response_bytes:
             raise ResearchPersistenceError("response exceeds the configured source byte limit")
         if value.media_type.value not in {"text/html", "application/pdf"}:
             raise ResearchPersistenceError("unsupported research media type")
@@ -133,9 +134,10 @@ class ResearchRepository:
             .order_by(ResearchDocumentVersion.version_number.desc())
             .limit(1)
         )
-        if previous is not None and previous.raw_sha256 == value.raw_sha256:
-            if previous.raw_body != value.original_bytes:
-                raise ResearchPersistenceError("SHA-256 collision detected for stored body")
+        raw_sha256 = value.raw_sha256
+        if previous is not None and previous.raw_sha256 == raw_sha256:
+            if previous.body_bytes != original_size:
+                raise ResearchPersistenceError("Matching source hash has a different body size")
             if _same_observation(previous, value):
                 return ResearchVersionInsert(previous, inserted=False)
         relation = _relation(previous, value.normalized_text_sha256)
@@ -164,8 +166,8 @@ class ResearchRepository:
             response_etag=value.response_etag,
             response_last_modified=value.response_last_modified,
             media_type=value.media_type.value,
-            raw_body=value.original_bytes,
-            raw_sha256=value.raw_sha256,
+            original_size_bytes=original_size,
+            raw_sha256=raw_sha256,
             normalized_text=value.normalized_text,
             normalized_text_sha256=value.normalized_text_sha256,
             extraction_version=value.extraction_version,

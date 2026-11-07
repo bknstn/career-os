@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — Research storage
+
+- Applied a 100 MiB limit per research document across configured publishers
+  and a 100 MiB total download budget per run.
+- Processed new PDFs and HTML in memory and retained extracted text, citation
+  locators, and source provenance. The migration preserves archived originals
+  from earlier releases.
+
 ## 1.1.0 — Watchlist
 
 - Added browser-local saved filter slices with 30-, 90-, and 180-day historical

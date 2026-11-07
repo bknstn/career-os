@@ -12,6 +12,8 @@ from types import MappingProxyType
 from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID
 
+MAX_RESEARCH_DOCUMENT_BYTES = 100 * 1024 * 1024
+
 
 class ResearchQuestion(StrEnum):
     """The three questions tracked by the first research stream."""
@@ -235,7 +237,7 @@ def quote_matches_location(text: str, quote: str, location: ResearchTextLocation
 
 @dataclass(frozen=True, slots=True)
 class ResearchOriginalVersion:
-    """Immutable fetched source body and the extraction tied to that body."""
+    """Transient fetched source body and the extraction tied to that body."""
 
     id: UUID
     source_key: str
@@ -293,8 +295,8 @@ class ResearchOriginalVersion:
         _validate_https_url(self.canonical_url)
         _validate_https_url(self.discovered_url)
         _validate_https_url(self.retrieved_url)
-        if len(self.original_bytes) > 50 * 1024 * 1024:
-            raise ValueError("original_bytes exceeds the 50 MiB hard storage limit")
+        if len(self.original_bytes) > MAX_RESEARCH_DOCUMENT_BYTES:
+            raise ValueError("original_bytes exceeds the 100 MiB document limit")
         if self.normalized_text is not None and not isinstance(self.normalized_text, str):
             raise TypeError("normalized_text must be text or None")
         if self.normalized_text is None:
@@ -320,7 +322,7 @@ class ResearchOriginalVersion:
 
     @property
     def raw_sha256(self) -> str:
-        """SHA-256 of the retained original response body."""
+        """SHA-256 of the original response body."""
         return sha256(self.original_bytes).hexdigest()
 
     @property

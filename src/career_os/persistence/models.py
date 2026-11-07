@@ -22,12 +22,14 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, column_property, mapped_column
 
+from career_os.domain.research import MAX_RESEARCH_DOCUMENT_BYTES
 from career_os.domain.versions import NO_ENRICHMENT_NORMALIZER_VERSION
 
 
@@ -388,7 +390,7 @@ class ResearchDocument(Base):
 
 
 class ResearchDocumentVersion(Base):
-    """Append-only original response bytes plus extraction and date provenance."""
+    """Append-only extraction and provenance, with response bytes on legacy rows."""
 
     __tablename__ = "research_document_versions"
     __table_args__ = (
@@ -416,6 +418,12 @@ class ResearchDocumentVersion(Base):
         CheckConstraint(
             "octet_length(raw_body) BETWEEN 1 AND 52428800",
             name="ck_research_document_versions_body_size",
+        ),
+        CheckConstraint(
+            "(raw_body IS NOT NULL AND original_size_bytes IS NULL) OR "
+            "(raw_body IS NULL AND original_size_bytes IS NOT NULL AND "
+            f"original_size_bytes BETWEEN 1 AND {MAX_RESEARCH_DOCUMENT_BYTES})",
+            name="ck_research_document_versions_body_representation",
         ),
         CheckConstraint(
             "(publication_date_state = 'reported' AND publication_date IS NOT NULL) OR "
@@ -477,7 +485,11 @@ class ResearchDocumentVersion(Base):
     response_etag: Mapped[str | None] = mapped_column(String)
     response_last_modified: Mapped[str | None] = mapped_column(String)
     media_type: Mapped[str] = mapped_column(String, nullable=False)
-    raw_body: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    raw_body: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    original_size_bytes: Mapped[int | None] = mapped_column(Integer)
+    body_bytes: Mapped[int] = column_property(
+        func.coalesce(original_size_bytes, func.octet_length(raw_body))
+    )
     raw_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     normalized_text: Mapped[str | None] = mapped_column(Text)
     normalized_text_sha256: Mapped[str | None] = mapped_column(String(64))

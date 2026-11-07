@@ -459,7 +459,7 @@ class SqlResearchEvidenceReadStore:
                 ResearchDocumentVersion.extraction_version,
                 ResearchDocumentVersion.extraction_error,
                 ResearchDocumentVersion.version_relation,
-                func.octet_length(ResearchDocumentVersion.raw_body).label("body_bytes"),
+                ResearchDocumentVersion.body_bytes.label("body_bytes"),
             )
             .join(latest, latest.c.document_id == ResearchDocument.id)
             .join(
@@ -497,7 +497,7 @@ class SqlResearchEvidenceReadStore:
                 ResearchDocumentVersion.response_etag,
                 ResearchDocumentVersion.response_last_modified,
                 ResearchDocumentVersion.media_type,
-                func.octet_length(ResearchDocumentVersion.raw_body).label("body_bytes"),
+                ResearchDocumentVersion.body_bytes.label("body_bytes"),
                 ResearchDocumentVersion.raw_sha256,
                 ResearchDocumentVersion.normalized_text,
                 ResearchDocumentVersion.normalized_text_sha256,
@@ -805,7 +805,7 @@ class SqlResearchEvidenceReadStore:
                 ResearchDocumentVersion.response_etag,
                 ResearchDocumentVersion.response_last_modified,
                 ResearchDocumentVersion.media_type,
-                func.octet_length(ResearchDocumentVersion.raw_body).label("body_bytes"),
+                ResearchDocumentVersion.body_bytes.label("body_bytes"),
                 ResearchDocumentVersion.raw_sha256,
                 ResearchDocumentVersion.normalized_text_sha256.label("claim_text_digest"),
                 ResearchDocumentVersion.extraction_version,
